@@ -6,16 +6,15 @@ import type { SidekiqJob, SidekiqJobStatus } from "@/lib/types/sidekiq";
 import { formatDistanceToNow } from "date-fns";
 import { Check, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 
-const statusPresentation: Record<
-	SidekiqJobStatus,
-	{ label: string; variant: "secondary" | "default" | "success" | "destructive" | "outline" }
-> = {
-	pending: { label: "Queued", variant: "secondary" },
-	running: { label: "Running", variant: "default" },
-	completed: { label: "Completed", variant: "success" },
-	failed: { label: "Failed", variant: "destructive" },
-	cancelled: { label: "Cancelled", variant: "outline" },
+const statusPresentation: Record<SidekiqJobStatus, { variant: "secondary" | "default" | "success" | "destructive" | "outline" }> = {
+	pending: { variant: "secondary" },
+	running: { variant: "default" },
+	completed: { variant: "success" },
+	failed: { variant: "destructive" },
+	cancelled: { variant: "outline" },
 };
 
 interface SidekiqJobsSectionProps {
@@ -25,7 +24,9 @@ interface SidekiqJobsSectionProps {
 	onDismiss: (ids: string[]) => void;
 }
 
+/** 本地化任务进度及操作，保留停止确认和不可恢复语义。 */
 export default function SidekiqJobsSection({ jobs, cancellingId, onCancel, onDismiss }: SidekiqJobsSectionProps) {
+	const { t, i18n } = useTranslation("observability");
 	// Cancelling is final (a cancelled job is not resumable), so it takes a second click.
 	const [confirmId, setConfirmId] = useState<string>();
 
@@ -33,20 +34,20 @@ export default function SidekiqJobsSection({ jobs, cancellingId, onCancel, onDis
 		return (
 			<section
 				data-testid="sidekiq-jobs-section"
-				aria-label="Background jobs"
+				aria-label={t("jobs.title")}
 				className="flex h-44 flex-col items-center justify-center gap-2 px-6 text-center"
 			>
 				<span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
 					<Check className="size-4" />
 				</span>
-				<p className="text-sm font-medium">No background jobs</p>
-				<p className="text-muted-foreground text-xs">Long-running tasks will show their progress here.</p>
+				<p className="text-sm font-medium">{t("jobs.empty")}</p>
+				<p className="text-muted-foreground text-xs">{t("jobs.emptyDescription")}</p>
 			</section>
 		);
 	}
 
 	return (
-		<section data-testid="sidekiq-jobs-section" aria-label="Background jobs">
+		<section data-testid="sidekiq-jobs-section" aria-label={t("jobs.title")}>
 			<ul className="max-h-[min(26rem,calc(100vh-8rem))] divide-y overflow-y-auto">
 				{jobs.map((job) => {
 					const presentation = statusPresentation[job.status] ?? statusPresentation.pending;
@@ -58,12 +59,12 @@ export default function SidekiqJobsSection({ jobs, cancellingId, onCancel, onDis
 							<div className="flex items-center gap-2">
 								<span className="min-w-0 flex-1 truncate text-sm font-medium">{sidekiqJobLabel(job.kind)}</span>
 								<Badge variant={presentation.variant} data-testid={`sidekiq-job-status-${job.id}`}>
-									{presentation.label}
+									{t(`jobs.${job.status in statusPresentation ? job.status : "pending"}`)}
 								</Badge>
 								{!job.cancellable && (
 									<button
 										type="button"
-										aria-label={`Dismiss ${sidekiqJobLabel(job.kind)}`}
+										aria-label={t("jobs.dismiss", { name: sidekiqJobLabel(job.kind) })}
 										onClick={() => onDismiss([job.id])}
 										data-testid={`sidekiq-job-dismiss-${job.id}`}
 										className="text-muted-foreground hover:bg-muted hover:text-foreground -ml-2 flex h-5 w-0 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded opacity-0 transition-[width,margin,opacity] group-hover:ml-0 group-hover:w-5 group-hover:opacity-100 focus-visible:ml-0 focus-visible:w-5 focus-visible:opacity-100"
@@ -74,17 +75,23 @@ export default function SidekiqJobsSection({ jobs, cancellingId, onCancel, onDis
 							</div>
 							{percent !== undefined && job.progress && (
 								<div className="flex items-center gap-2" data-testid={`sidekiq-job-progress-${job.id}`}>
-									<Progress value={percent} aria-label={`${sidekiqJobLabel(job.kind)} progress`} className="h-1.5 flex-1" />
+									<Progress value={percent} aria-label={t("jobs.progress", { name: sidekiqJobLabel(job.kind) })} className="h-1.5 flex-1" />
 									<span className="text-muted-foreground w-24 text-right text-[11px] tabular-nums">
-										{job.status === "completed" ? "Done" : `${job.progress.done.toLocaleString()} / ${job.progress.total.toLocaleString()}`}
+										{job.status === "completed"
+											? t("jobs.done")
+											: `${job.progress.done.toLocaleString(i18n.resolvedLanguage)} / ${job.progress.total.toLocaleString(i18n.resolvedLanguage)}`}
 									</span>
 								</div>
 							)}
 							{detail && <p className="text-muted-foreground line-clamp-2 text-xs">{detail}</p>}
 							<div className="text-muted-foreground flex items-center justify-between text-[11px]">
 								<span>
-									{job.cancellable ? "Started" : "Finished"}{" "}
-									{formatDistanceToNow(new Date(job.cancellable ? job.created_at : finishedAt), { addSuffix: true })}
+									{t(job.cancellable ? "jobs.started" : "jobs.finished", {
+										time: formatDistanceToNow(new Date(job.cancellable ? job.created_at : finishedAt), {
+											addSuffix: true,
+											locale: dateFnsLocale(i18n.resolvedLanguage),
+										}),
+									})}
 								</span>
 								{job.cancellable &&
 									(confirmId === job.id ? (
@@ -100,10 +107,10 @@ export default function SidekiqJobsSection({ jobs, cancellingId, onCancel, onDis
 												}}
 												dataTestId={`sidekiq-job-cancel-confirm-${job.id}`}
 											>
-												Stop job
+												{t("jobs.stop")}
 											</Button>
 											<Button variant="ghost" className="h-6 px-2 text-xs" onClick={() => setConfirmId(undefined)}>
-												Keep
+												{t("jobs.keep")}
 											</Button>
 										</span>
 									) : (
@@ -114,7 +121,7 @@ export default function SidekiqJobsSection({ jobs, cancellingId, onCancel, onDis
 											onClick={() => setConfirmId(job.id)}
 											dataTestId={`sidekiq-job-cancel-${job.id}`}
 										>
-											Cancel
+											{t("labels.cancel")}
 										</Button>
 									))}
 							</div>

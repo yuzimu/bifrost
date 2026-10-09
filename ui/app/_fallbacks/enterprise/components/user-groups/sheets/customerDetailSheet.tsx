@@ -1,10 +1,10 @@
 import { CopyableId } from "@/components/copyableId";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { fiscalQuarterNote, resetDurationLabels } from "@/lib/constants/governance";
 import { Customer } from "@/lib/types/governance";
 import { cn } from "@/lib/utils";
-import { formatCompactNumber } from "@/lib/utils/numbers";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 interface Props {
 	customer: Customer | null;
@@ -12,9 +12,24 @@ interface Props {
 	onOpenChange: (open: boolean) => void;
 }
 
-function formatResetDuration(duration: string | null | undefined): string {
+/** 本地化已知重置周期，未知周期保留服务端原值。 */
+function formatResetDuration(duration: string | null | undefined, t: TFunction<"enterprise">): string {
 	if (!duration) return "";
-	return resetDurationLabels[duration] || duration;
+	return t(`customer.resetDuration.${duration}`, { defaultValue: duration });
+}
+
+/** 仅对非默认的有效季度起始月份显示本地化财年说明。 */
+function formatFiscalQuarterNote(
+	resetDuration: string | undefined,
+	resetConfig: { quarter_start_month?: number } | undefined,
+	t: TFunction<"enterprise">,
+	locale: string,
+): string {
+	if (!resetDuration?.endsWith("Q")) return "";
+	const start = resetConfig?.quarter_start_month;
+	if (start === undefined || !Number.isInteger(start) || start === 1 || start < 1 || start > 12) return "";
+	const month = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, start - 1, 1)));
+	return t("customer.fiscalYearStart", { month });
 }
 
 function formatCurrency(value: number): string {
@@ -32,6 +47,7 @@ function DetailCard({ title, children, contentClassName }: { title: string; chil
 	);
 }
 
+/** 展示预算用量，并随界面语言更新周期与财年说明。 */
 function BudgetLineBar({
 	current,
 	max,
@@ -43,6 +59,7 @@ function BudgetLineBar({
 	resetDuration?: string;
 	resetConfig?: { quarter_start_month?: number };
 }) {
+	const { t, i18n } = useTranslation("enterprise");
 	const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
 	const isOver80 = pct >= 80;
 	const isOver100 = pct >= 100;
@@ -51,8 +68,8 @@ function BudgetLineBar({
 			<div className="flex items-center justify-between text-xs">
 				<span className="font-medium" />
 				<span className="text-muted-foreground">
-					{formatResetDuration(resetDuration)}
-					{fiscalQuarterNote(resetDuration, resetConfig)}
+					{formatResetDuration(resetDuration, t)}
+					{formatFiscalQuarterNote(resetDuration, resetConfig, t, i18n.resolvedLanguage ?? i18n.language)}
 				</span>
 			</div>
 			<div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
@@ -71,7 +88,14 @@ function BudgetLineBar({
 	);
 }
 
+/** 展示速率用量，周期与紧凑数字格式使用当前界面语言。 */
 function RateLimitBar({ label, current, max, resetDuration }: { label: string; current: number; max: number; resetDuration?: string }) {
+	const { t, i18n } = useTranslation("enterprise");
+	const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language, {
+		notation: "compact",
+		compactDisplay: "short",
+		maximumFractionDigits: 2,
+	});
 	const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
 	const isOver80 = pct >= 80;
 	const isOver100 = pct >= 100;
@@ -79,7 +103,7 @@ function RateLimitBar({ label, current, max, resetDuration }: { label: string; c
 		<div className="space-y-1.5">
 			<div className="flex items-center justify-between text-xs">
 				<span>{label}</span>
-				<span className="text-muted-foreground">{formatResetDuration(resetDuration)}</span>
+				<span className="text-muted-foreground">{formatResetDuration(resetDuration, t)}</span>
 			</div>
 			<div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
 				<div
@@ -89,7 +113,7 @@ function RateLimitBar({ label, current, max, resetDuration }: { label: string; c
 			</div>
 			<div className="text-muted-foreground flex items-center justify-between text-xs">
 				<span>
-					{formatCompactNumber(current)} / {formatCompactNumber(max)}
+					{numberFormatter.format(Number.isFinite(current) ? current : 0)} / {numberFormatter.format(Number.isFinite(max) ? max : 0)}
 				</span>
 				<span>{pct.toFixed(0)}%</span>
 			</div>
@@ -97,12 +121,9 @@ function RateLimitBar({ label, current, max, resetDuration }: { label: string; c
 	);
 }
 
-//
-// OSS fallback for the enterprise CustomerDetailSheet. It renders the Info,
-// Budgets, and Rate Limits sections from the customer already in hand, and omits
-// the Teams / Business Units sections, which depend on enterprise-only APIs.
-
+/** 使用已有客户数据展示 OSS 详情，不请求企业版专属信息。 */
 export function CustomerDetailSheet({ customer, open, onOpenChange }: Props) {
+	const { t } = useTranslation("enterprise");
 	const budgets = customer?.budgets ?? [];
 	const rateLimit = customer?.rate_limit;
 	const hasRateLimit = rateLimit?.token_max_limit != null || rateLimit?.request_max_limit != null;
@@ -112,26 +133,26 @@ export function CustomerDetailSheet({ customer, open, onOpenChange }: Props) {
 			<SheetContent className="max-w-[700px] overflow-y-auto p-0 pt-4">
 				<SheetHeader className="flex flex-col items-start px-0 py-4" headerClassName="mb-0 px-4 md:px-8 sticky -top-4 bg-card z-10">
 					<div className="flex min-w-0 items-center gap-1">
-						<SheetTitle className="truncate text-lg">{customer?.name || "Customer Details"}</SheetTitle>
-						{customer?.id && <CopyableId id={customer.id} entityLabel="Customer" />}
+						<SheetTitle className="truncate text-lg">{customer?.name || t("customer.title")}</SheetTitle>
+						{customer?.id && <CopyableId id={customer.id} entityLabel={t("customer.entity")} />}
 					</div>
-					<SheetDescription>Usage details for this customer.</SheetDescription>
+					<SheetDescription>{t("customer.description")}</SheetDescription>
 				</SheetHeader>
 
 				{customer && (
 					<div className="space-y-6 px-4 py-4 md:px-8">
 						{/* ── Info ─────────────────────────────────────────── */}
-						<DetailCard title="Info">
+						<DetailCard title={t("customer.info")}>
 							<div className="grid grid-cols-2 gap-x-8 gap-y-4">
 								<div>
-									<Label className="text-muted-foreground text-xs">Name</Label>
+									<Label className="text-muted-foreground text-xs">{t("customer.name")}</Label>
 									<p className="mt-0.5 text-sm">{customer.name ?? "—"}</p>
 								</div>
 							</div>
 						</DetailCard>
 
 						{/* ── Budgets ──────────────────────────────────────── */}
-						<DetailCard title="Budgets">
+						<DetailCard title={t("customer.budgets")}>
 							{budgets.length > 0 ? (
 								<div className="space-y-3">
 									{[...budgets]
@@ -147,17 +168,17 @@ export function CustomerDetailSheet({ customer, open, onOpenChange }: Props) {
 										))}
 								</div>
 							) : (
-								<p className="text-muted-foreground py-1 text-center text-sm">No budgets configured</p>
+								<p className="text-muted-foreground py-1 text-center text-sm">{t("customer.noBudgets")}</p>
 							)}
 						</DetailCard>
 
 						{/* ── Rate Limits ──────────────────────────────────── */}
-						<DetailCard title="Rate Limits">
+						<DetailCard title={t("customer.rateLimits")}>
 							{rateLimit && hasRateLimit ? (
 								<div className="space-y-3">
 									{rateLimit.token_max_limit != null && (
 										<RateLimitBar
-											label="Tokens"
+											label={t("customer.tokens")}
 											current={rateLimit.token_current_usage ?? 0}
 											max={rateLimit.token_max_limit}
 											resetDuration={rateLimit.token_reset_duration}
@@ -165,7 +186,7 @@ export function CustomerDetailSheet({ customer, open, onOpenChange }: Props) {
 									)}
 									{rateLimit.request_max_limit != null && (
 										<RateLimitBar
-											label="Requests"
+											label={t("customer.requests")}
 											current={rateLimit.request_current_usage ?? 0}
 											max={rateLimit.request_max_limit}
 											resetDuration={rateLimit.request_reset_duration}
@@ -173,7 +194,7 @@ export function CustomerDetailSheet({ customer, open, onOpenChange }: Props) {
 									)}
 								</div>
 							) : (
-								<p className="text-muted-foreground py-1 text-center text-sm">No rate limits configured</p>
+								<p className="text-muted-foreground py-1 text-center text-sm">{t("customer.noRateLimits")}</p>
 							)}
 						</DetailCard>
 					</div>

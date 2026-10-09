@@ -1,5 +1,6 @@
 import { CheckIcon, ChevronDown, PlusIcon, XIcon } from "lucide-react";
 import React, { KeyboardEventHandler, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
 	ClearIndicatorProps,
 	components,
@@ -234,6 +235,7 @@ interface AsyncMultiSelectProps<T> {
 }
 
 export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
+	const { t } = useTranslation("observability");
 	const menuOpenRef = useRef(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 
@@ -329,7 +331,7 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 
 	const customPlaceholderProps: CustomPlaceholderProps = {
 		hideSearchIcon: props.hideSearchIcon,
-		placeholder: props.placeholder,
+		placeholder: props.placeholder ?? t("shared.select"),
 	};
 
 	const customComponentsProps: CustomComponentsProps = {
@@ -366,7 +368,7 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 				defaultOptions={props.defaultOptions}
 				loadOptions={props.isNonAsync ? loadOptionsForNonAsyncComponents : loadOptions}
 				isMulti={!props.isSingleSelect}
-				placeholder={props.placeholder}
+				placeholder={props.placeholder ?? t("shared.select")}
 				closeMenuOnSelect={props.closeMenuOnSelect === true || props.isSingleSelect === true}
 				onChange={(selection, actionMeta) => {
 					switch (actionMeta.action) {
@@ -394,7 +396,8 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 
 					props.onChange && props.onChange(normalizedSelection);
 				}}
-				formatCreateLabel={props.formatCreateLabel}
+				formatCreateLabel={props.formatCreateLabel ?? ((value) => t("shared.useValue", { value }))}
+				loadingMessage={() => t("shared.loading")}
 				controlShouldRenderValue={props.controlShouldRenderValue ?? true}
 				menuPlacement={props.menuPlacement}
 				blurInputOnSelect={false}
@@ -424,7 +427,12 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 				noOptionsMessage={
 					props.noOptionsMessage
 						? props.noOptionsMessage
-						: ({ inputValue }) => (inputValue.length > 0 ? <div>{props.noResultsFoundPlaceholder}</div> : props.emptyResultPlaceholder)
+						: ({ inputValue }) =>
+								inputValue.length > 0 ? (
+									<div>{props.noResultsFoundPlaceholder ?? t("shared.noResults")}</div>
+								) : (
+									(props.emptyResultPlaceholder ?? t("shared.noResults"))
+								)
 				}
 				inputValue={props.inputValue}
 				styles={{

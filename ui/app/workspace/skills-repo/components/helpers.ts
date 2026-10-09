@@ -11,6 +11,8 @@ import {
 	validateVersion,
 } from "@/lib/validators/skills";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 
 // ---------- Constants ----------
 
@@ -19,11 +21,11 @@ export const PAGE_SIZE = 25;
 // ---------- Helpers ----------
 
 export function formatDate(dateStr: string) {
-	return new Date(dateStr).toLocaleString();
+	return new Date(dateStr).toLocaleString(i18n.resolvedLanguage || i18n.language);
 }
 
 export function formatDateShort(dateStr: string) {
-	return new Date(dateStr).toLocaleDateString();
+	return new Date(dateStr).toLocaleDateString(i18n.resolvedLanguage || i18n.language);
 }
 
 export function formatFileSize(bytes: number): string {
@@ -192,7 +194,9 @@ export interface SkillFormState {
 	files: SkillFileEntry[];
 }
 
+/** 保留字段校验触发时机，并随语言变化刷新已显示的错误。 */
 export function useSkillForm(initial?: SkillFormState) {
+	useTranslation("observability");
 	const [name, setName] = useState(initial?.name ?? "");
 	const [description, setDescription] = useState(initial?.description ?? "");
 	const [license, setLicense] = useState(initial?.license ?? "");
@@ -234,6 +238,25 @@ export function useSkillForm(initial?: SkillFormState) {
 	}, [skillMdBody]);
 
 	const hasErrors = Object.keys(errors).length > 0;
+	const localizedErrors = Object.fromEntries(
+		Object.entries(errors).map(([field, message]) => {
+			const current =
+				field === "name"
+					? validateSkillName(name)
+					: field === "description"
+						? validateDescription(description)
+						: field === "version"
+							? validateVersion(version)
+							: field === "extra_frontmatter"
+								? validateExtraFrontmatter(extraFrontmatterJson)
+								: field === "metadata"
+									? validateMetadata(metadataJson)
+									: field === "skill_md_body"
+										? validateSkillMdBody(skillMdBody).error
+										: null;
+			return [field, current ?? message];
+		}),
+	);
 
 	const getPayload = () => {
 		let parsedMetadata: Record<string, string> | undefined;
@@ -328,9 +351,9 @@ export function useSkillForm(initial?: SkillFormState) {
 		addFile,
 		removeFile,
 		updateFile,
-		errors,
+		errors: localizedErrors,
 		hasErrors,
-		bodyWarning,
+		bodyWarning: bodyWarning ? validateSkillMdBody(skillMdBody).warning : null,
 		validateField,
 		getPayload,
 		runValidation,

@@ -1,5 +1,6 @@
 // Frontend quick-check validators for Skills Repository
 // These run before any network request to give instant feedback.
+import i18n from "@/lib/i18n";
 
 export const MAX_SKILL_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 export const MAX_SKILL_FILE_SIZE_LABEL = "50 MB";
@@ -18,35 +19,35 @@ export interface ValidationError {
 	message: string;
 }
 
-/** Validate skill name against Agent Skills spec */
+/** 按当前语言返回名称错误，不改变技能名称约束。 */
 export function validateSkillName(name: string): string | null {
-	if (!name) return "Name is required";
-	if (name.length > 64) return "Name must be 64 characters or fewer";
+	if (!name) return i18n.t("skillValidation.nameRequired", { ns: "observability" });
+	if (name.length > 64) return i18n.t("skillValidation.nameLength", { ns: "observability" });
 	if (!SKILL_NAME_REGEX.test(name)) {
-		return "Name must be lowercase alphanumeric with hyphens only (no leading/trailing/consecutive hyphens)";
+		return i18n.t("skillValidation.nameFormat", { ns: "observability" });
 	}
 	const reservedNames = ["all-skills", "all", "codex", "claude-code"];
 	if (reservedNames.includes(name)) {
-		return `"${name}" is a reserved name used by the skills serving layer`;
+		return i18n.t("skillValidation.reservedName", { ns: "observability", name });
 	}
 	return null;
 }
 
 /** Validate description (hard limit 1024 chars) */
 export function validateDescription(description: string): string | null {
-	if (!description || !description.trim()) return "Description is required";
-	if (description.length > 1024) return `Description exceeds 1024 character limit (${description.length}/1024)`;
+	if (!description || !description.trim()) return i18n.t("skillValidation.descriptionRequired", { ns: "observability" });
+	if (description.length > 1024) return i18n.t("skillValidation.descriptionLength", { ns: "observability", count: description.length });
 	return null;
 }
 
 /** Validate version string as semver */
 export function validateVersion(version: string): string | null {
-	if (!version) return "Version is required";
+	if (!version) return i18n.t("skillValidation.versionRequired", { ns: "observability" });
 	const match = SEMVER_REGEX.exec(version);
-	if (!match) return "Version must be semver format (e.g., 1.0.0 or 1.0.0-beta.1)";
+	if (!match) return i18n.t("skillValidation.versionFormat", { ns: "observability" });
 	const [, major, minor, patch] = match;
 	if (parseInt(major) < 0 || parseInt(minor) < 0 || parseInt(patch) < 0) {
-		return "Version parts must be non-negative integers";
+		return i18n.t("skillValidation.versionParts", { ns: "observability" });
 	}
 	return null;
 }
@@ -121,7 +122,13 @@ export function validateVersionBump(newVersion: string, previousVersion: string)
 		return null;
 	}
 
-	return `Version must be different from ${previousVersion}. Bump at least one of: major (${prev.major + 1}.x.x), minor (${prev.major}.${prev.minor + 1}.x), patch (${prev.major}.${prev.minor}.${prev.patch + 1}), or change the suffix (e.g., -beta.1).`;
+	return i18n.t("skillValidation.versionBump", {
+		ns: "observability",
+		previous: previousVersion,
+		major: prev.major + 1,
+		minor: `${prev.major}.${prev.minor + 1}`,
+		patch: `${prev.major}.${prev.minor}.${prev.patch + 1}`,
+	});
 }
 
 /** Validate extra_frontmatter keys don't conflict with reserved names */
@@ -130,15 +137,15 @@ export function validateExtraFrontmatter(json: string): string | null {
 	try {
 		const parsed = JSON.parse(json);
 		if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
-			return "Extra frontmatter must be a JSON object";
+			return i18n.t("skillValidation.frontmatterObject", { ns: "observability" });
 		}
 		const conflicts = Object.keys(parsed).filter((k) => RESERVED_FRONTMATTER_KEYS.has(k));
 		if (conflicts.length > 0) {
-			return `Reserved keys cannot be used: ${conflicts.join(", ")}`;
+			return i18n.t("skillValidation.reservedKeys", { ns: "observability", keys: conflicts.join(", ") });
 		}
 		return null;
 	} catch {
-		return "Invalid JSON";
+		return i18n.t("skillValidation.invalidJson", { ns: "observability" });
 	}
 }
 
@@ -148,15 +155,15 @@ export function validateMetadata(json: string): string | null {
 	try {
 		const parsed = JSON.parse(json);
 		if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
-			return "Metadata must be a JSON object";
+			return i18n.t("skillValidation.metadataObject", { ns: "observability" });
 		}
 		for (const [key, value] of Object.entries(parsed)) {
-			if (typeof key !== "string") return "Metadata keys must be strings";
-			if (typeof value !== "string") return `Metadata value for "${key}" must be a string`;
+			if (typeof key !== "string") return i18n.t("skillValidation.metadataKeys", { ns: "observability" });
+			if (typeof value !== "string") return i18n.t("skillValidation.metadataValue", { ns: "observability", key });
 		}
 		return null;
 	} catch {
-		return "Invalid JSON";
+		return i18n.t("skillValidation.invalidJson", { ns: "observability" });
 	}
 }
 
@@ -166,13 +173,10 @@ export function validateSkillMdBody(body: string): {
 	warning: string | null;
 } {
 	if (!body || !body.trim()) {
-		return { error: "SKILL.md body is required", warning: null };
+		return { error: i18n.t("skillValidation.bodyRequired", { ns: "observability" }), warning: null };
 	}
 	// Soft limit warning (no blocking)
-	const warning =
-		body.length > 50000
-			? "This SKILL.md body is above the recommended size. Consider moving detailed material into files under references/ and linking to them from the skill body."
-			: null;
+	const warning = body.length > 50000 ? i18n.t("skillValidation.bodySize", { ns: "observability" }) : null;
 	return { error: null, warning };
 }
 
@@ -199,7 +203,7 @@ function dataURLDecodedLength(value: string): number | null {
 
 export function validateSkillFileSize(sizeBytes: number): string | null {
 	if (sizeBytes > MAX_SKILL_FILE_SIZE_BYTES) {
-		return `File exceeds ${MAX_SKILL_FILE_SIZE_LABEL} limit`;
+		return i18n.t("skillValidation.fileSize", { ns: "observability", limit: MAX_SKILL_FILE_SIZE_LABEL });
 	}
 	return null;
 }
@@ -217,15 +221,15 @@ export function validateSourceType(
 ): string | null {
 	switch (sourceType) {
 		case "url":
-			if (!values.url) return "URL is required";
+			if (!values.url) return i18n.t("skillValidation.urlRequired", { ns: "observability" });
 			if (!values.url.startsWith("http://") && !values.url.startsWith("https://")) {
-				return "URL must start with http:// or https://";
+				return i18n.t("skillValidation.urlFormat", { ns: "observability" });
 			}
 			return null;
 		case "dataurl":
-			if (!values.dataurl) return "Data URL is required";
+			if (!values.dataurl) return i18n.t("skillValidation.dataUrlRequired", { ns: "observability" });
 			if (!values.dataurl.startsWith("data:") || !values.dataurl.includes(";base64,")) {
-				return "Data URL must start with data: and contain ;base64,";
+				return i18n.t("skillValidation.dataUrlFormat", { ns: "observability" });
 			}
 			{
 				const decodedLength = dataURLDecodedLength(values.dataurl);
@@ -236,38 +240,38 @@ export function validateSourceType(
 			}
 			return null;
 		case "text":
-			if (!values.content || !values.content.trim()) return "Text content is required";
+			if (!values.content || !values.content.trim()) return i18n.t("skillValidation.textRequired", { ns: "observability" });
 			return validateSkillFileSize(utf8ByteLength(values.content));
 		case "upload":
 			return null; // Upload validation happens during the upload process
 		default:
-			return `Unknown source type: ${sourceType}`;
+			return i18n.t("skillValidation.unknownSource", { ns: "observability", type: sourceType });
 	}
 }
 
 /** Validate file basename (no separators, traversal, or reserved SKILL.md) */
 export function validateFilename(filename: string): string | null {
 	const value = filename.trim();
-	if (!value) return "Filename is required";
-	if (value === "." || value === "..") return "Filename cannot be . or ..";
-	if (value.includes("/") || value.includes("\\")) return "Filename must not include folders";
-	if (value.toLowerCase() === "skill.md") return "SKILL.md is managed by the skill body";
+	if (!value) return i18n.t("skillValidation.filenameRequired", { ns: "observability" });
+	if (value === "." || value === "..") return i18n.t("skillValidation.filenameTraversal", { ns: "observability" });
+	if (value.includes("/") || value.includes("\\")) return i18n.t("skillValidation.filenameFolders", { ns: "observability" });
+	if (value.toLowerCase() === "skill.md") return i18n.t("skillValidation.managedBody", { ns: "observability" });
 	return null;
 }
 
 /** Validate relative file path (no traversal, absolute paths, or reserved SKILL.md) */
 export function validateFilePath(path: string | undefined): string | null {
-	if (!path || !path.trim()) return "File path is required";
+	if (!path || !path.trim()) return i18n.t("skillValidation.pathRequired", { ns: "observability" });
 	const value = path.trim();
-	if (value.startsWith("/")) return "Path must be relative (no leading /)";
-	if (value.endsWith("/")) return "Path must point to a file, not a folder";
-	if (value.includes("\\")) return "Path must use forward slashes only";
+	if (value.startsWith("/")) return i18n.t("skillValidation.pathRelative", { ns: "observability" });
+	if (value.endsWith("/")) return i18n.t("skillValidation.pathFile", { ns: "observability" });
+	if (value.includes("\\")) return i18n.t("skillValidation.pathSlashes", { ns: "observability" });
 	const segments = value.split("/");
 	if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
-		return "Path must not contain empty, current, or parent directory segments";
+		return i18n.t("skillValidation.pathSegments", { ns: "observability" });
 	}
 	if (segments.length === 1 && segments[0].toLowerCase() === "skill.md") {
-		return "SKILL.md is managed by the skill body";
+		return i18n.t("skillValidation.managedBody", { ns: "observability" });
 	}
 	return null;
 }

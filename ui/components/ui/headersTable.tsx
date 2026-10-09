@@ -6,6 +6,7 @@ import { SecretVar } from "@/lib/types/mcp";
 import { cn } from "@/lib/utils";
 import { Trash } from "lucide-react";
 import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Support both plain string values and SecretVar objects
 type HeaderValue = string | SecretVar;
@@ -63,18 +64,23 @@ const isValueEmpty = (val: HeaderValue): boolean => {
 	return !val;
 };
 
+/** 本地化请求头编辑文案，保留重复键检测、固定键和密文输入行为。 */
 export function HeadersTable<T extends HeaderValue>({
 	value,
 	onChange,
-	keyPlaceholder = "Header name",
-	valuePlaceholder = "Header value",
-	label = "Headers",
+	keyPlaceholder: customKeyPlaceholder,
+	valuePlaceholder: customValuePlaceholder,
+	label: customLabel,
 	disabled = false,
 	useSecretVarInput,
 	fixedKeys,
 	renderKeyInput,
 	renderValueInput,
 }: HeadersTableProps<T>) {
+	const { t } = useTranslation("observability");
+	const keyPlaceholder = customKeyPlaceholder ?? t("headerControls.namePlaceholder");
+	const valuePlaceholder = customValuePlaceholder ?? t("headerControls.valuePlaceholder");
+	const label = customLabel ?? t("headerControls.title");
 	// Use explicit prop if provided, otherwise detect from existing values
 	const isSecretVarMode = useSecretVarInput ?? Object.values(value || {}).some((v) => isSecretVar(v));
 
@@ -214,11 +220,11 @@ export function HeadersTable<T extends HeaderValue>({
 				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow>
-							<TableHead className="w-[40%] px-4 py-2">Name</TableHead>
-							<TableHead className="px-4 py-2">Value</TableHead>
+							<TableHead className="w-[40%] px-4 py-2">{t("headerControls.name")}</TableHead>
+							<TableHead className="px-4 py-2">{t("headerControls.value")}</TableHead>
 							{!isFixedKeys && (
 								<TableHead className="w-10 p-0">
-									<span className="sr-only">Actions</span>
+									<span className="sr-only">{t("common:actions")}</span>
 								</TableHead>
 							)}
 						</TableRow>
@@ -272,7 +278,7 @@ export function HeadersTable<T extends HeaderValue>({
 													disabled={disabled}
 												/>
 											)}
-											{hasConflict && <span className="text-destructive px-3 text-xs">Duplicate key</span>}
+											{hasConflict && <span className="text-destructive px-3 text-xs">{t("headerControls.duplicate")}</span>}
 										</div>
 									</TableCell>
 									<TableCell className="p-2">

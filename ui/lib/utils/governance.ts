@@ -1,33 +1,58 @@
-/**
- * Parses a duration string (e.g., "1m", "5m", "1h", "1d", "1w", "1M") into human readable format
- */
+import i18n, { getLocale } from "@/lib/i18n";
+import { budgetOverrideFormSchema } from "@/lib/types/schemas";
+import { formatCompactNumber } from "./numbers";
+import type { TFunction } from "i18next";
+import { fiscalQuarterNote, resetDurationLabels, supportsCalendarAlignment } from "@/lib/constants/governance";
+
+/** 按当前语言显示周期长度，未知协议值保持原样。 */
 export function parseResetPeriod(duration: string): string {
-	if (!duration) return "Unknown";
+	if (!duration) return i18n.t("displayUi.unknownPeriod", { ns: "governance" });
 
 	const timeValue = parseInt(duration.slice(0, -1));
 	const timeUnit = duration.slice(-1);
 
-	const unitMap: Record<string, { singular: string; plural: string }> = {
-		s: { singular: "second", plural: "seconds" },
-		m: { singular: "minute", plural: "minutes" },
-		h: { singular: "hour", plural: "hours" },
-		d: { singular: "day", plural: "days" },
-		w: { singular: "week", plural: "weeks" },
-		M: { singular: "month", plural: "months" },
-		Q: { singular: "quarter", plural: "quarters" },
-		y: { singular: "year", plural: "years" },
+	const unitMap: Record<string, string> = {
+		s: "seconds",
+		m: "minutes",
+		h: "hours",
+		d: "days",
+		w: "weeks",
+		M: "months",
+		Q: "quarters",
+		y: "years",
+		Y: "years",
 	};
 
 	const unit = unitMap[timeUnit];
 	if (!unit) return duration;
 
-	const unitName = timeValue === 1 ? unit.singular : unit.plural;
-	return `${timeValue} ${unitName}`;
+	return i18n.t(`displayUi.duration.${unit}`, { ns: "governance", count: timeValue });
 }
 
-import { budgetOverrideFormSchema } from "@/lib/types/schemas";
+/** 翻译预算周期显示，未知周期与协议值保持原样。 */
+export function formatBudgetResetDuration(duration?: string | null, calendarAligned?: boolean, t?: TFunction): string {
+	if (!duration) return "";
+	const fallback = resetDurationLabels[duration] || duration;
+	const translate = t ?? i18n.t.bind(i18n);
+	const period = translate(`displayUi.periods.${duration}`, {
+		ns: "governance",
+		defaultValue: fallback,
+	});
+	return calendarAligned && supportsCalendarAlignment(duration)
+		? translate("displayUi.calendarPeriod", { ns: "governance", period })
+		: period;
+}
 
-import { formatCompactNumber } from "./numbers";
+/** 翻译财政季度备注，不改变重置日期的计算。 */
+export function formatFiscalQuarterNote(duration?: string, resetConfig?: { quarter_start_month?: number } | null, t?: TFunction): string {
+	const note = fiscalQuarterNote(duration, resetConfig);
+	if (!note || !t) return note;
+	const month = new Date(Date.UTC(2026, (resetConfig?.quarter_start_month ?? 1) - 1, 1)).toLocaleString(getLocale(), {
+		month: "short",
+		timeZone: "UTC",
+	});
+	return t("displayUi.fiscalMonth", { ns: "governance", month });
+}
 
 export function formatCurrency(dollars: number) {
 	return `$${dollars.toFixed(2)}`;
@@ -53,7 +78,11 @@ export function getEffectiveBudgetLimit(budget: BudgetOverrideFields): number {
 
 /** Validates the operator-entered override fields before sending them to the API. Delegates to budgetOverrideFormSchema. */
 export function validateBudgetOverride(amount: number, mode: "cycles" | "forever", cycles: number): string | null {
-	const result = budgetOverrideFormSchema.safeParse({ amount, mode, ...(mode === "cycles" ? { cycles } : {}) });
+	const result = budgetOverrideFormSchema.safeParse({
+		amount,
+		mode,
+		...(mode === "cycles" ? { cycles } : {}),
+	});
 	return result.success ? null : (result.error.issues[0]?.message ?? "Invalid input");
 }
 
@@ -151,22 +180,9 @@ export function getBudgetOverrideValidUntil(
 	return Number.isNaN(validUntil.getTime()) ? null : validUntil;
 }
 
-const shortDurationLabels: Record<string, string> = {
-	"1m": "/min",
-	"5m": "/5min",
-	"15m": "/15min",
-	"30m": "/30min",
-	"1h": "/hr",
-	"6h": "/6hr",
-	"1d": "/day",
-	"1w": "/wk",
-	"1M": "/mo",
-};
+const shortDurationKeys = new Set(["1m", "5m", "15m", "30m", "1h", "6h", "1d", "1w", "1M"]);
 
-/**
- * Formats rate limit into compact display lines.
- * e.g. ["10K tokens/hr", "100 req/hr"]
- */
+/** 本地化速率限制摘要，不改变数值、单位周期和限制规则。 */
 export function formatRateLimitLines(
 	rateLimits:
 		| {
@@ -182,13 +198,17 @@ export function formatRateLimitLines(
 	const lines: string[] = [];
 	if (rateLimits.token_max_limit != null) {
 		const duration = rateLimits.token_reset_duration ?? "";
-		const suffix = shortDurationLabels[duration] ?? (duration ? `/${duration}` : "");
-		lines.push(`${formatCompactNumber(rateLimits.token_max_limit)} tokens${suffix}`);
+		const suffix = duration
+			? `/${shortDurationKeys.has(duration) ? i18n.t(`displayUi.shortPeriods.${duration}`, { ns: "governance" }) : duration}`
+			: "";
+		lines.push(`${formatCompactNumber(rateLimits.token_max_limit)} ${i18n.t("displayUi.tokens", { ns: "governance" })}${suffix}`);
 	}
 	if (rateLimits.request_max_limit != null) {
 		const duration = rateLimits.request_reset_duration ?? "";
-		const suffix = shortDurationLabels[duration] ?? (duration ? `/${duration}` : "");
-		lines.push(`${formatCompactNumber(rateLimits.request_max_limit)} req${suffix}`);
+		const suffix = duration
+			? `/${shortDurationKeys.has(duration) ? i18n.t(`displayUi.shortPeriods.${duration}`, { ns: "governance" }) : duration}`
+			: "";
+		lines.push(`${formatCompactNumber(rateLimits.request_max_limit)} ${i18n.t("displayUi.requests", { ns: "governance" })}${suffix}`);
 	}
 	return lines;
 }
@@ -241,11 +261,7 @@ export const budgetSignature = (budgets?: BudgetComparisonEntry[]) =>
 
 export type GovernanceAction = "create" | "edit" | "delete" | "rotate";
 
-/**
- * Why a governance action is disabled, or undefined when it is allowed. A reason
- * that is not about permissions (e.g. the entity is managed elsewhere) wins, since
- * granting the permission would not unblock the action.
- */
+/** 本地化权限禁用原因；业务禁用原因仍优先，不改变权限判断。 */
 export function actionDisabledReason(
 	allowed: boolean,
 	action: GovernanceAction,
@@ -253,5 +269,19 @@ export function actionDisabledReason(
 	blockedReason?: string,
 ): string | undefined {
 	if (blockedReason) return blockedReason;
-	return allowed ? undefined : `You don't have permission to ${action} ${entityPlural}.`;
+	if (allowed) return undefined;
+	const entities: Record<string, string> = {
+		"virtual keys": "virtualKeys",
+		"model limits": "modelLimits",
+		teams: "teams",
+		customers: "customers",
+	};
+	const entity = entities[entityPlural]
+		? i18n.t(`displayUi.permissionEntities.${entities[entityPlural]}`, { ns: "governance" })
+		: entityPlural;
+	return i18n.t("displayUi.permissionDenied", {
+		ns: "governance",
+		action: i18n.t(`displayUi.permissionActions.${action}`, { ns: "governance" }),
+		entity,
+	});
 }

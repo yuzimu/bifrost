@@ -1,4 +1,5 @@
 import type { RoutingTarget } from "@/lib/types/routingRules";
+import i18n from "@/lib/i18n";
 /**
  * Routing Rules Utility Functions
  * Helper functions for CEL validation, formatting, and rule management
@@ -183,13 +184,13 @@ export function summarizeTargetsTTFT(targets: RoutingTarget[] | undefined): { ms
 	return { ms: mixed ? undefined : first, mixed };
 }
 
-/** Display text for a rule's TTFT deadline, derived from its targets. */
+/** 按当前界面语言显示目标的首 Token 截止时间，不修改目标配置。 */
 export function formatTargetsTTFT(targets: RoutingTarget[] | undefined): string {
 	const { ms, mixed } = summarizeTargetsTTFT(targets);
 	if (mixed) {
-		return "Mixed";
+		return i18n.t("celUi.mixed", { ns: "models" });
 	}
-	return ms ? `${ms} ms (streaming)` : "Off";
+	return ms ? i18n.t("routingDisplay.ttftStreaming", { ns: "enterprise", ms }) : i18n.t("celUi.off", { ns: "models" });
 }
 
 /**

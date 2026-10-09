@@ -4,6 +4,7 @@ import { useGetModelConfigsQuery, useGetVirtualKeysQuery } from "@/lib/store/api
 import { useGetAllKeysQuery } from "@/lib/store/apis/providersApi";
 import { useGetSCIMProvidersQuery } from "@enterprise/lib/store/apis/scimApi";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 export const METADATA_DISMISSED_KEY = "onboarding_dismissed";
 export const METADATA_SKIPPED_KEY = "onboarding_skipped";
@@ -33,11 +34,9 @@ const authValueSet = (secretVar: { value?: string; ref?: string; type?: string }
 	return !!secretVar.value || !!secretVar.ref;
 };
 
-// Shared onboarding checklist state — both the floating OnboardingWidget and
-// the sidebar's "resume setup" promo card read this, so they can't silently
-// disagree on what counts as done. RTK Query dedupes the underlying
-// core-config/keys/governance calls across both consumers automatically.
+/** 按当前语言生成共享初始化步骤，保留完成条件、步骤标识和权限查询。 */
 export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}) {
+	const { t, i18n } = useTranslation("shell");
 	const { data: bifrostConfig } = useGetCoreConfigQuery({}, { skip });
 	const isDismissedForAll = bifrostConfig?.metadata?.[METADATA_DISMISSED_KEY] === true;
 	const shouldSkipChecklistQueries = skip || isDismissedForAll;
@@ -79,14 +78,14 @@ export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}
 		const common: OnboardingStep[] = [
 			{
 				id: "cors",
-				title: "Restrict CORS origins",
+				title: t("onboarding.steps.cors"),
 				route: "/workspace/config/security",
 				section: "Security",
 				complete: allowedOrigins.some((origin) => origin.trim().length > 0) && allowedOrigins.every((origin) => origin.trim() !== "*"),
 			},
 			{
 				id: "dashboard-auth",
-				title: "Set up dashboard auth",
+				title: t("onboarding.steps.dashboard-auth"),
 				route: "/workspace/config/security",
 				section: "Security",
 				complete:
@@ -95,14 +94,14 @@ export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}
 			},
 			{
 				id: "enforce-inference-auth",
-				title: "Enforce auth on inference",
+				title: t("onboarding.steps.enforce-inference-auth"),
 				route: "/workspace/config/security",
 				section: "Security",
 				complete: !!clientConfig?.enforce_auth_on_inference,
 			},
 			{
 				id: "provider-key",
-				title: "Add a provider key",
+				title: t("onboarding.steps.provider-key"),
 				route: "/workspace/providers",
 				section: "Provider Setup",
 				complete: (allKeys?.length ?? 0) > 0,
@@ -112,21 +111,21 @@ export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}
 			? [
 					{
 						id: "scim",
-						title: "Configure SCIM provisioning",
+						title: t("onboarding.steps.scim"),
 						route: "/workspace/scim",
 						section: "Everything Else",
 						complete: (scimProviders?.length ?? 0) > 0,
 					},
 					{
 						id: "models",
-						title: "Configure governance model catalog",
+						title: t("onboarding.steps.models"),
 						route: "/workspace/model-catalog",
 						section: "Everything Else",
 						complete: (modelConfigsResponse?.total_count ?? 0) > 0,
 					},
 					{
 						id: "virtual-keys",
-						title: "Set up virtual keys / access profiles",
+						title: t("onboarding.steps.virtual-keys"),
 						route: "/workspace/virtual-keys",
 						section: "Everything Else",
 						complete: (vksResponse?.total_count ?? 0) > 0,
@@ -134,7 +133,7 @@ export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}
 				]
 			: [];
 		return [...common, ...enterprise];
-	}, [allKeys, clientConfig, authConfig, ssoGatesDashboard, scimProviders, modelConfigsResponse, vksResponse]);
+	}, [allKeys, clientConfig, authConfig, ssoGatesDashboard, scimProviders, modelConfigsResponse, vksResponse, t, i18n.language]);
 
 	return { bifrostConfig, steps, skippedIds, checklistReady, isDismissedForAll };
 }

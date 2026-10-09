@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import NumberInput from "../number";
 import FieldLabel from "./fieldLabel";
 import { Parameter } from "./types";
+import { useTranslation } from "react-i18next";
 
 interface Props {
 	field: Parameter;
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function NumberFieldView(props: Props) {
+	const { t } = useTranslation("observability");
 	const { field, config } = props;
 
 	const invalid = field.range ? isInvalid(config[field.id] as number, field.range) : false;
@@ -71,7 +73,11 @@ export default function NumberFieldView(props: Props) {
 			)}
 			{invalid && (
 				<div className="text-content-error -mt-2">
-					Please keep {field.label} between {field.range?.min} to {field.range?.max}.
+					{t("parameterControls.range", {
+						label: field.label,
+						min: field.range?.min,
+						max: field.range?.max,
+					})}
 				</div>
 			)}
 		</div>

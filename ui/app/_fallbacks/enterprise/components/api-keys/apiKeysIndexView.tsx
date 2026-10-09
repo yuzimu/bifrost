@@ -5,9 +5,13 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Link } from "@tanstack/react-router";
 import { Copy, InfoIcon, KeyRound } from "lucide-react";
 import { useMemo } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import ContactUsView from "../views/contactUsView";
 
+/** 按认证配置展示本地化说明，代码示例与安全配置保持原样。 */
 export default function APIKeysView() {
+	const { t } = useTranslation("config");
+	const { t: te } = useTranslation("enterprise");
 	const { data: bifrostConfig, isLoading } = useGetCoreConfigQuery({ fromDB: true });
 	const isAuthConfigure = useMemo(() => {
 		return bifrostConfig?.auth_config?.is_enabled;
@@ -32,7 +36,7 @@ curl --location 'http://localhost:8080/v1/chat/completions'
 	const { copy: copyToClipboard } = useCopyToClipboard();
 
 	if (isLoading) {
-		return <div>Loading...</div>;
+		return <div>{t("apiKeys.loading")}</div>;
 	}
 	if (!isAuthConfigure) {
 		return (
@@ -40,13 +44,13 @@ curl --location 'http://localhost:8080/v1/chat/completions'
 				<InfoIcon className="text-muted h-4 w-4" />
 				<AlertDescription>
 					<p className="text-md text-muted-foreground">
-						To generate API keys, you need to set up admin username and password first.{" "}
+						{t("apiKeys.needSecurity")}{" "}
 						<Link to="/workspace/config/security" className="text-md text-primary underline">
-							Configure Security Settings
+							{t("apiKeys.configureSecurity")}
 						</Link>
 						.<br />
 						<br />
-						Once generated you will need to use this API key for all API calls to the Bifrost admin APIs and UI.
+						{t("apiKeys.needSecurityAfter")}
 					</p>
 				</AlertDescription>
 			</Alert>
@@ -62,27 +66,38 @@ curl --location 'http://localhost:8080/v1/chat/completions'
 				<AlertDescription>
 					<p className="text-md text-muted-foreground">
 						{isInferenceAuthDisabled ? (
-							<>
-								Authentication is currently <strong>disabled for inference API calls</strong>. You can make inference requests without
-								authentication. Dashboard and admin API calls still require Basic auth with your admin credentials encoded in the standard{" "}
-								<code className="bg-muted rounded px-1 py-0.5 text-sm">username:password</code> format with base64 encoding.
-							</>
+							<Trans
+								t={te}
+								i18nKey="apiKeys.inferenceAuthDisabled"
+								components={{
+									strong: <strong />,
+									credentials: <code className="bg-muted rounded px-1 py-0.5 text-sm" />,
+								}}
+							/>
 						) : (
-							<>
-								Use Basic auth with your admin credentials when making API calls to Bifrost. Encode your credentials in the standard{" "}
-								<code className="bg-muted rounded px-1 py-0.5 text-sm">username:password</code> format with base64 encoding.
-							</>
+							<Trans
+								t={te}
+								i18nKey="apiKeys.basicAuth"
+								components={{ credentials: <code className="bg-muted rounded px-1 py-0.5 text-sm" /> }}
+							/>
 						)}
 					</p>
 					{!isInferenceAuthDisabled && (
 						<>
 							<br />
 							<p className="text-md text-muted-foreground">
-								<strong>Example:</strong>
+								<strong>{t("apiKeys.example")}</strong>
 							</p>
 
 							<div className="relative mt-2 w-full min-w-0 overflow-x-auto">
-								<Button variant="ghost" size="sm" onClick={() => copyToClipboard(curlExample)} className="absolute top-2 right-2 z-10 h-8">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => copyToClipboard(curlExample)}
+									className="absolute top-2 right-2 z-10 h-8"
+									aria-label={te("apiKeys.copyExample")}
+									title={te("apiKeys.copyExample")}
+								>
 									<Copy className="h-4 w-4" />
 								</Button>
 								<pre className="bg-muted min-w-max rounded p-3 pr-12 font-mono text-sm whitespace-pre">{curlExample}</pre>
@@ -95,8 +110,8 @@ curl --location 'http://localhost:8080/v1/chat/completions'
 			<ContactUsView
 				className="mt-4 rounded-md border px-3 py-8"
 				icon={<KeyRound size={48} />}
-				title="Scope Based API Keys"
-				description="Need granular access control with scope-based API keys? Enterprise customers can create multiple API keys with specific permissions for different services, teams, or environments."
+				title={t("enterprise.apiKeysTitle")}
+				description={t("enterprise.apiKeysDescription")}
 				readmeLink="https://docs.getbifrost.io/enterprise/api-keys"
 			/>
 		</div>

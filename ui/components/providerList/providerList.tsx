@@ -8,6 +8,7 @@ import { ProviderIcons, ProviderIconType, RenderProviderIcon } from "@/lib/const
 import { getProviderLabel } from "@/lib/constants/logs";
 import { cn } from "@/lib/utils";
 import { ComponentProps, ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fitCount, measureKey, uniqueProviders } from "./utils";
 
 const GAP_PX = 4; // gap-1
@@ -27,6 +28,7 @@ export interface ProviderListProps {
 	overflowTestId?: string;
 }
 
+/** 根据当前语言的实际徽章宽度计算可见供应商。 */
 export function ProviderList({
 	providers,
 	variant = "icon",
@@ -36,6 +38,8 @@ export function ProviderList({
 	className,
 	overflowTestId,
 }: ProviderListProps) {
+	const { t, i18n } = useTranslation("common");
+	const locale = i18n.resolvedLanguage ?? i18n.language;
 	const [container, setContainer] = useState<HTMLDivElement | null>(null);
 	const mirror = useRef<HTMLDivElement | null>(null);
 	const names = uniqueProviders(providers);
@@ -51,13 +55,22 @@ export function ProviderList({
 		const overflowWidth = chips[chips.length - 1]?.offsetWidth ?? 0;
 		const widths = chips.slice(0, -1).map((chip) => chip.offsetWidth);
 
-		const fit = () => setVisible(fitCount({ widths, containerWidth: container.clientWidth, lines, overflowWidth, gap: GAP_PX }));
+		const fit = () =>
+			setVisible(
+				fitCount({
+					widths,
+					containerWidth: container.clientWidth,
+					lines,
+					overflowWidth,
+					gap: GAP_PX,
+				}),
+			);
 
 		fit();
 		const observer = new ResizeObserver(fit);
 		observer.observe(container);
 		return () => observer.disconnect();
-	}, [container, key, lines, max]);
+	}, [container, key, lines, max, t, locale]);
 
 	if (names.length === 0) return <>{empty}</>;
 
@@ -77,9 +90,9 @@ export function ProviderList({
 							className="h-5 shrink-0 px-1.5 font-mono text-xs"
 							data-testid={overflowTestId}
 							tabIndex={0}
-							aria-label={`${hidden.length} more ${hidden.length === 1 ? "provider" : "providers"}`}
+							aria-label={t("providerList.moreProviders", { count: hidden.length })}
 						>
-							{overflowLabel(hidden.length, variant)}
+							{overflowLabel(hidden.length, variant, t)}
 						</Badge>
 					</TooltipTrigger>
 					<TooltipContent className="shadow-none">
@@ -105,7 +118,7 @@ export function ProviderList({
 						<ProviderChip key={name} name={name} variant={variant} measuring />
 					))}
 					<Badge variant="outline" className="h-5 shrink-0 px-1.5 font-mono text-xs">
-						{overflowLabel(names.length, variant)}
+						{overflowLabel(names.length, variant, t)}
 					</Badge>
 				</div>
 			)}
@@ -113,8 +126,8 @@ export function ProviderList({
 	);
 }
 
-function overflowLabel(count: number, variant: "icon" | "label") {
-	return variant === "label" ? `+${count} more` : `+${count}`;
+function overflowLabel(count: number, variant: "icon" | "label", t: (key: string, options?: { count: number }) => string) {
+	return variant === "label" ? t("providerList.moreCount", { count }) : `+${count}`;
 }
 
 // RenderProviderIcon returns null for providers it has no logo for, which is every custom one.

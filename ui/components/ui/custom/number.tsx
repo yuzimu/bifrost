@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./input.css";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../tooltip";
 import { cn } from "../utils";
+import { useTranslation } from "react-i18next";
 
 const inputVariants = cva(
 	"flex h-8 w-full rounded-md bg-background-primary px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-md file:font-medium placeholder:text-content-disabled focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
@@ -56,13 +57,15 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 		},
 		ref,
 	) => {
+		const { t } = useTranslation("observability");
 		// Internal state to handle intermediate values (like empty string or partial input)
 		const initialValue = value === undefined ? defaultValue : value;
 		const [internalValue, setInternalValue] = useState<string>(() => {
 			if (initialValue === undefined || initialValue === null) return "";
 			return String(initialValue);
 		});
-		const [errorMessage, setErrorMessage] = useState<string | null>(null);
+		const [error, setError] = useState<{ key: string; value?: number } | null>(null);
+		const errorMessage = error ? t(`numberInput.${error.key}`, { value: error.value }) : null;
 		const fallbackValue = defaultValue ?? min ?? 0;
 		const prevValueRef = useRef<number | string | undefined>(value);
 
@@ -83,20 +86,20 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 
 				// Validate min/max
 				if (min !== undefined && numValue < min) {
-					onValueError?.(`Value cannot be less than ${min}`);
-					setErrorMessage(`Value cannot be less than ${min}`);
+					onValueError?.(t("numberInput.minimum", { value: min }));
+					setError({ key: "minimum", value: min });
 					return min.toString();
 				}
 
 				if (max !== undefined && numValue > max) {
-					onValueError?.(`Value cannot be greater than ${max}`);
-					setErrorMessage(`Value cannot be greater than ${max}`);
+					onValueError?.(t("numberInput.maximum", { value: max }));
+					setError({ key: "maximum", value: max });
 					return max.toString();
 				}
 
 				return formattedValue;
 			},
-			[min, max, decimalPlaces, onValueError],
+			[min, max, decimalPlaces, onValueError, t],
 		);
 
 		const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +134,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 					const normalizedNum = normalized ? Number(normalized) : fallbackValue;
 					setInternalValue(String(normalizedNum));
 					prevValueRef.current = normalizedNum;
-					if (!errorMessage) setErrorMessage(`Value cannot be empty, replaced with ${normalizedNum}`);
+					if (!errorMessage) setError({ key: "empty", value: normalizedNum });
 					onChange?.(normalizedNum);
 				}
 				return;
@@ -140,7 +143,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 			const formattedValue = validateAndFormatNumber(internalValue);
 			setInternalValue(formattedValue);
 
-			if (!errorMessage && !formattedValue) setErrorMessage(`Value cannot be empty, replaced with ${fallbackValue}`);
+			if (!errorMessage && !formattedValue) setError({ key: "empty", value: fallbackValue });
 			onChange?.(formattedValue ? Number(formattedValue) : fallbackValue);
 		};
 
@@ -150,22 +153,22 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 
 			// Check if the pasted content is a valid number format
 			if (!/^-?\d*\.?\d*$/.test(pastedText)) {
-				onValueError?.("Invalid number format");
-				setErrorMessage("Invalid number format");
+				onValueError?.(t("numberInput.invalid"));
+				setError({ key: "invalid" });
 				return;
 			}
 
 			// Handle decimal restriction
 			if (!allowDecimal && pastedText.includes(".")) {
-				onValueError?.("Decimal numbers are not allowed");
-				setErrorMessage("Decimal numbers are not allowed");
+				onValueError?.(t("numberInput.noDecimals"));
+				setError({ key: "noDecimals" });
 				return;
 			}
 
 			// Handle negative restriction
 			if (!allowNegative && pastedText.includes("-")) {
-				onValueError?.("Negative numbers are not allowed");
-				setErrorMessage("Negative numbers are not allowed");
+				onValueError?.(t("numberInput.noNegatives"));
+				setError({ key: "noNegatives" });
 				return;
 			}
 
@@ -244,12 +247,12 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 		};
 
 		useEffect(() => {
-			if (!errorMessage) return;
+			if (!error) return;
 			const timer = setTimeout(() => {
-				setErrorMessage(null);
+				setError(null);
 			}, 2000);
 			return () => clearTimeout(timer);
-		}, [errorMessage]);
+		}, [error]);
 
 		useEffect(() => {
 			// Only update if value prop actually changed

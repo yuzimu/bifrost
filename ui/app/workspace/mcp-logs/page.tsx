@@ -12,6 +12,7 @@ import {
 	useGetMCPLogsStatsQuery,
 	useGetUserAgentMappingsQuery,
 } from "@/lib/store";
+import { useTranslation } from "react-i18next";
 import { useLazyGetMCPLogsQuery } from "@/lib/store/apis/mcpLogsApi";
 import type { MCPToolLogEntry, MCPToolLogFilters, Pagination } from "@/lib/types/logs";
 import { dateUtils } from "@/lib/types/logs";
@@ -30,7 +31,10 @@ import { McpHeaderView } from "./views/mcpHeaderView";
 import { MCPLogDetailSheet } from "./views/mcpLogDetailsSheet";
 import { MCPLogsDataTable } from "./views/mcpLogsTable";
 
+/** 展示 MCP 日志，并随数据和语言更新统计卡片。 */
 export default function MCPLogsPage() {
+	const { t, i18n } = useTranslation("observability");
+	const locale = i18n.resolvedLanguage ?? i18n.language;
 	const [error, setError] = useState<string | null>(null);
 	const [showEmptyState, setShowEmptyState] = useState(false);
 	const hasCheckedEmptyState = useRef(false);
@@ -289,7 +293,7 @@ export default function MCPLogsPage() {
 
 	const handleDelete = useCallback(
 		async (log: MCPToolLogEntry) => {
-			if (!hasDeleteAccess) throw new Error("No delete access");
+			if (!hasDeleteAccess) throw new Error(t("common:form.noPermission"));
 			try {
 				await deleteLogs({ ids: [log.id] }).unwrap();
 				if (urlState.selected_log === log.id) {
@@ -302,7 +306,7 @@ export default function MCPLogsPage() {
 				throw new Error(errorMessage);
 			}
 		},
-		[deleteLogs, hasDeleteAccess, urlState.selected_log, setUrlState, refreshAllData],
+		[deleteLogs, hasDeleteAccess, urlState.selected_log, setUrlState, refreshAllData, t],
 	);
 
 	const handlePeriodChange = useCallback(
@@ -339,26 +343,26 @@ export default function MCPLogsPage() {
 	const statCards = useMemo(
 		() => [
 			{
-				title: "Total Records",
+				title: t("mcpLogs.stats.totalExecutions"),
 				value: <NumberFlow value={statsData?.total_executions ?? 0} format={COMPACT_NUMBER_FORMAT} />,
 				icon: <Hash className="size-4" />,
 			},
 			{
-				title: "Success Rate",
+				title: t("mcpLogs.stats.successRate"),
 				value: (
 					<NumberFlow value={statsData?.success_rate ?? 0} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} suffix="%" />
 				),
 				icon: <CheckCircle className="size-4" />,
 			},
 			{
-				title: "Avg Latency",
+				title: t("mcpLogs.stats.avgLatency"),
 				value: (
 					<NumberFlow value={statsData?.average_latency ?? 0} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} suffix="ms" />
 				),
 				icon: <Clock className="size-4" />,
 			},
 			{
-				title: "Total Cost",
+				title: t("mcpLogs.stats.totalCost"),
 				value: (
 					<NumberFlow
 						value={statsData?.total_cost ?? 0}
@@ -372,7 +376,7 @@ export default function MCPLogsPage() {
 				icon: <DollarSign className="size-4" />,
 			},
 		],
-		[statsData],
+		[statsData, t, locale],
 	);
 
 	const { data: userAgentMappingsData } = useGetUserAgentMappingsQuery();
@@ -387,8 +391,8 @@ export default function MCPLogsPage() {
 	}, [userAgentMappingsData?.mappings]);
 
 	const columns = useMemo(
-		() => createMCPColumns(handleDelete, hasDeleteAccess, customAppIcons),
-		[customAppIcons, handleDelete, hasDeleteAccess],
+		() => createMCPColumns(handleDelete, hasDeleteAccess, customAppIcons, t),
+		[customAppIcons, handleDelete, hasDeleteAccess, t],
 	);
 
 	const columnIds = useMemo(
@@ -415,21 +419,21 @@ export default function MCPLogsPage() {
 
 	const MCP_COLUMN_LABELS: Record<string, string> = useMemo(
 		() => ({
-			timestamp: "Time",
-			tool_name: "Tool Name",
-			server_label: "Server",
-			source: "Source",
-			user: "User",
-			team: "Team",
-			customer: "Customer",
-			business_unit: "Business Unit",
-			project: "Project",
-			device: "Device",
-			latency: "Latency",
-			cost: "Cost",
-			virtual_key: "Virtual Key",
+			timestamp: t("labels.time"),
+			tool_name: t("labels.toolName"),
+			server_label: t("labels.server"),
+			source: t("labels.source"),
+			user: t("labels.user"),
+			team: t("labels.team"),
+			customer: t("labels.customer"),
+			business_unit: t("labels.businessUnit"),
+			project: t("labels.project"),
+			device: t("labels.device"),
+			latency: t("labels.latency"),
+			cost: t("labels.cost"),
+			virtual_key: t("labels.virtualKey"),
 		}),
-		[],
+		[t],
 	);
 
 	const selectedLogIndex = useMemo(() => (selectedLogId ? logs.findIndex((l) => l.id === selectedLogId) : -1), [selectedLogId, logs]);

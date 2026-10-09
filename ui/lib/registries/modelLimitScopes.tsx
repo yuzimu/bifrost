@@ -16,6 +16,7 @@
 import type { ComponentType } from "react";
 import { VirtualKeySelector } from "@/components/entitySelectors/virtualKeySelector";
 import type { ModelConfig } from "@/lib/types/governance";
+import i18n from "@/lib/i18n";
 
 export interface ScopePickerProps {
 	value: string;
@@ -147,12 +148,16 @@ export function getModelLimitScopeFilterOptions(): ModelLimitScopeFilterOption[]
 
 registerModelLimitScope({
 	value: "global",
-	label: "Global",
+	get label() {
+		return i18n.t("modelLimits.global", { ns: "models" });
+	},
 });
 
 registerModelLimitScope({
 	value: "virtual_key",
-	label: "Virtual Key",
+	get label() {
+		return i18n.t("virtualKeys.virtualKey", { ns: "models" });
+	},
 	PickerComponent: VirtualKeySelector,
 	buildDeepLink: (scopeId) => ({
 		to: "/workspace/governance/virtual-keys",

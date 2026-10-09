@@ -1,4 +1,5 @@
 import type { SidekiqJob } from "@/lib/types/sidekiq";
+import i18n from "@/lib/i18n";
 
 /**
  * True when the backend has told us notifications can never be served, as
@@ -56,18 +57,16 @@ export function countActiveSidekiqJobs(jobs: Pick<SidekiqJob, "status">[]): numb
 	return jobs.filter((job) => job.status === "pending" || job.status === "running").length;
 }
 
-const SIDEKIQ_JOB_LABELS: Record<string, string> = {
-	logs_recalculate_cost: "Recalculating log costs",
-	warp_log_embedding_backfill: "Indexing logs for Warp",
-	vk_expiry_cleanup: "Virtual key expiry cleanup",
+const SIDEKIQ_JOB_LABEL_KEYS: Record<string, string> = {
+	logs_recalculate_cost: "backgroundJobs.kinds.recalculateCost",
+	warp_log_embedding_backfill: "backgroundJobs.kinds.warpIndex",
+	vk_expiry_cleanup: "backgroundJobs.kinds.virtualKeyCleanup",
 };
 
-/** Friendly name for a job kind; unknown kinds fall back to a humanized kind string. */
+/** 友好名称按当前界面语言读取，未知任务类型保留原文。 */
 export function sidekiqJobLabel(kind: string): string {
-	const known = SIDEKIQ_JOB_LABELS[kind];
-	if (known) return known;
-	const words = kind.replace(/[_-]+/g, " ").trim();
-	return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Background job";
+	const key = SIDEKIQ_JOB_LABEL_KEYS[kind];
+	return typeof key === "string" ? i18n.t(key, { ns: "shell" }) : kind || i18n.t("backgroundJobs.job", { ns: "shell" });
 }
 
 /**

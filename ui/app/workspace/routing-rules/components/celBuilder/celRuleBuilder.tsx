@@ -7,7 +7,8 @@ import { CELBuilderMode, CELRuleBuilder as BaseCELRuleBuilder } from "@/componen
 import { getRoutingFields } from "@/lib/config/celFieldsRouting";
 import { celOperatorsRouting } from "@/lib/config/celOperatorsRouting";
 import { convertRuleGroupToCEL, validateRegexPattern } from "@/lib/utils/celConverterRouting";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { RuleGroupType } from "react-querybuilder";
 
 interface CELRuleBuilderProps {
@@ -24,6 +25,7 @@ interface CELRuleBuilderProps {
 	celError?: string | null;
 }
 
+/** 按当前语言生成显示字段，表达式与字段值沿用原有转换器。 */
 export function CELRuleBuilder({
 	onChange,
 	initialQuery,
@@ -37,7 +39,10 @@ export function CELRuleBuilder({
 	onModeChange,
 	celError = null,
 }: CELRuleBuilderProps) {
-	const fields = useMemo(() => getRoutingFields(providers, models), [providers, models]);
+	const { t } = useTranslation("models");
+	const fields = useMemo(() => getRoutingFields(providers, models, t), [providers, models, t]);
+	const operators = useMemo(() => celOperatorsRouting.map((operator) => ({ ...operator })), [t]);
+	const validateRegex = useCallback((pattern: string) => validateRegexPattern(pattern, t), [t]);
 
 	return (
 		<BaseCELRuleBuilder
@@ -45,9 +50,9 @@ export function CELRuleBuilder({
 			initialQuery={initialQuery}
 			isLoading={isLoading}
 			fields={fields}
-			operators={celOperatorsRouting}
+			operators={operators}
 			convertToCEL={convertRuleGroupToCEL}
-			validateRegex={validateRegexPattern}
+			validateRegex={validateRegex}
 			builderContext={{ allowCustomModels }}
 			allowCelMode={allowCelMode}
 			initialMode={initialMode}

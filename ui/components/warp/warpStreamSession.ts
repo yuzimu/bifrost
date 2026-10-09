@@ -13,6 +13,7 @@ import {
 import type { WarpTurn, WarpTurnToolCall } from "@/lib/contexts/warpContext";
 import type { WarpModel } from "@/lib/types/warp";
 import { getApiBaseUrl } from "@/lib/utils/port";
+import i18n from "@/lib/i18n";
 
 /** What the panel renders while an answer is in flight, plus the last turn's error. */
 export interface WarpStreamSnapshot {
@@ -34,7 +35,12 @@ export interface WarpStreamSink {
 	baseUrl?: () => string;
 }
 
-export const IDLE_WARP_STREAM: WarpStreamSnapshot = { text: "", toolCalls: [], isStreaming: false, error: null };
+export const IDLE_WARP_STREAM: WarpStreamSnapshot = {
+	text: "",
+	toolCalls: [],
+	isStreaming: false,
+	error: null,
+};
 
 /**
  * One Warp request at a time, owned by the provider rather than the panel.
@@ -99,7 +105,7 @@ export class WarpStreamSession {
 		this.patch({ text: "", toolCalls: [], isStreaming: false });
 	};
 
-	/** `model` names one of the exposed models; omitted, the server's default answers. */
+	/** 发送单轮流请求；保留终止帧和请求所有权检查，只本地化客户端生成的错误文案。 */
 	send = async (history: WarpTurn[], question: string, model?: Pick<WarpModel, "provider" | "model">): Promise<void> => {
 		this.stop();
 		const controller = new AbortController();
@@ -130,12 +136,26 @@ export class WarpStreamSession {
 					break;
 				case "tool_call_start":
 					// Offset lets the transcript interleave narration and tool calls in order.
-					toolCalls = [...toolCalls, { id: event.tool_id ?? "", name: event.tool_name ?? "", textOffset: warpTextLength(text) }];
+					toolCalls = [
+						...toolCalls,
+						{
+							id: event.tool_id ?? "",
+							name: event.tool_name ?? "",
+							textOffset: warpTextLength(text),
+						},
+					];
 					this.patch({ toolCalls });
 					break;
 				case "tool_call_end":
 					toolCalls = toolCalls.map((call) =>
-						call.id === event.tool_id ? { ...call, durationMs: event.duration_ms, failed: event.failed, error: event.tool_error } : call,
+						call.id === event.tool_id
+							? {
+									...call,
+									durationMs: event.duration_ms,
+									failed: event.failed,
+									error: event.tool_error,
+								}
+							: call,
 					);
 					this.patch({ toolCalls });
 					break;
@@ -152,7 +172,10 @@ export class WarpStreamSession {
 					break;
 				case "error":
 					// Terminal. Always encoded so a colon in a code-less message isn't read as a code.
-					terminalError = encodeTurnError(event.code, event.message ?? (event.code ? "" : "error"));
+					terminalError = encodeTurnError(
+						event.code,
+						event.message ?? (event.code ? "" : i18n.t("warpExtras.requestFailed", { ns: "observability" })),
+					);
 					sawTerminal = true;
 					break;
 				default:
@@ -203,11 +226,16 @@ export class WarpStreamSession {
 				} catch {
 					reason = "";
 				}
-				throw new Error(encodeTurnError(reason || undefined, reason ? "" : message || `Warp request failed (${response.status})`));
+				throw new Error(
+					encodeTurnError(
+						reason || undefined,
+						reason ? "" : message || `${i18n.t("warpExtras.requestFailed", { ns: "observability" })} (${response.status})`,
+					),
+				);
 			}
 
 			const reader = response.body?.getReader();
-			if (!reader) throw new Error(encodeTurnError(undefined, "Warp returned no response body"));
+			if (!reader) throw new Error(encodeTurnError(undefined, i18n.t("warpExtras.noResponseBody", { ns: "observability" })));
 
 			const decoder = new TextDecoder();
 			let buffer = "";
@@ -215,7 +243,7 @@ export class WarpStreamSession {
 				const { done, value } = await reader.read();
 				if (done) {
 					if (!sawTerminal) {
-						throw new Error(encodeTurnError("upstream_error", "The connection closed before Warp finished answering."));
+						throw new Error(encodeTurnError("upstream_error", i18n.t("warpExtras.connectionClosed", { ns: "observability" })));
 					}
 					break;
 				}
@@ -230,7 +258,7 @@ export class WarpStreamSession {
 		} catch (caught) {
 			// An abort is the user pressing stop: keep the partial answer.
 			if (!(caught instanceof DOMException && caught.name === "AbortError")) {
-				const raw = caught instanceof Error ? caught.message : "Warp request failed";
+				const raw = caught instanceof Error ? caught.message : i18n.t("warpExtras.requestFailed", { ns: "observability" });
 				// Checked against known codes, not a colon: "TypeError: Failed to fetch" is not encoded.
 				terminalError = isEncodedTurnError(raw) ? raw : encodeTurnError(undefined, raw);
 			}

@@ -1,22 +1,79 @@
 // Governance-related constants
+import i18n, { getLocale } from "@/lib/i18n";
+
+/** 每次读取周期标签时使用当前语言，保留周期协议值。 */
+const durationLabel = (duration: string) => i18n.t(`virtualKeys.resetDurations.${duration}`, { ns: "models" });
 
 export const resetDurationOptions = [
-	{ label: "Every Minute", value: "1m" },
-	{ label: "Every 5 Minutes", value: "5m" },
-	{ label: "Every 15 Minutes", value: "15m" },
-	{ label: "Every 30 Minutes", value: "30m" },
-	{ label: "Hourly", value: "1h" },
-	{ label: "Every 6 Hours", value: "6h" },
-	{ label: "Daily", value: "1d" },
-	{ label: "Weekly", value: "1w" },
-	{ label: "Monthly", value: "1M" },
+	{
+		get label() {
+			return durationLabel("1m");
+		},
+		value: "1m",
+	},
+	{
+		get label() {
+			return durationLabel("5m");
+		},
+		value: "5m",
+	},
+	{
+		get label() {
+			return durationLabel("15m");
+		},
+		value: "15m",
+	},
+	{
+		get label() {
+			return durationLabel("30m");
+		},
+		value: "30m",
+	},
+	{
+		get label() {
+			return durationLabel("1h");
+		},
+		value: "1h",
+	},
+	{
+		get label() {
+			return durationLabel("6h");
+		},
+		value: "6h",
+	},
+	{
+		get label() {
+			return durationLabel("1d");
+		},
+		value: "1d",
+	},
+	{
+		get label() {
+			return durationLabel("1w");
+		},
+		value: "1w",
+	},
+	{
+		get label() {
+			return durationLabel("1M");
+		},
+		value: "1M",
+	},
 ];
 
 // Reset periods offered on budgets. Quarterly is budget-only: resetDurationOptions
 // above is shared with the rate-limit selects, and the backend has no notion of a
 // quarterly token or request limit, so adding "1Q" there would offer a window it
 // cannot enforce.
-export const budgetResetDurationOptions = [...resetDurationOptions, { label: "Quarterly", value: "1Q" }];
+export const budgetResetDurationOptions = [
+	...resetDurationOptions,
+	{
+		get label() {
+			return durationLabel("1Q");
+		},
+		value: "1Q",
+	},
+];
 
 // Durations that support calendar-aligned resets (snap to day/week/month/quarter/year boundaries).
 // Must stay in sync with IsCalendarAlignableDuration in framework/configstore/tables/utils.go.
@@ -25,19 +82,41 @@ export const supportsCalendarAlignment = (duration: string): boolean => duration
 
 // Map of duration values to short labels for display
 export const resetDurationLabels: Record<string, string> = {
-	"1m": "Every Minute",
-	"5m": "Every 5 Minutes",
-	"15m": "Every 15 Minutes",
-	"30m": "Every 30 Minutes",
-	"1h": "Hourly",
-	"6h": "Every 6 Hours",
-	"1d": "Daily",
-	"1w": "Weekly",
-	"1M": "Monthly",
-	"1Q": "Quarterly",
+	get "1m"() {
+		return durationLabel("1m");
+	},
+	get "5m"() {
+		return durationLabel("5m");
+	},
+	get "15m"() {
+		return durationLabel("15m");
+	},
+	get "30m"() {
+		return durationLabel("30m");
+	},
+	get "1h"() {
+		return durationLabel("1h");
+	},
+	get "6h"() {
+		return durationLabel("6h");
+	},
+	get "1d"() {
+		return durationLabel("1d");
+	},
+	get "1w"() {
+		return durationLabel("1w");
+	},
+	get "1M"() {
+		return durationLabel("1M");
+	},
+	get "1Q"() {
+		return durationLabel("1Q");
+	},
 };
 
-const MONTH_ABBREVIATIONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** 格式化显示月份，不改变财政季度索引与日期。 */
+const monthName = (index: number, month: "short" | "long" = "short") =>
+	new Date(Date.UTC(2026, index, 1)).toLocaleString(getLocale(), { month, timeZone: "UTC" });
 
 // Fall back to January for a missing, fractional, or out-of-range month, matching
 // BudgetResetConfig.QuarterStart on the Go side. Number.isInteger also rejects a
@@ -70,9 +149,10 @@ function quarterMonthIndices(startMonth?: number): { first: number; last: number
  * Out-of-range or missing months fall back to January, matching
  * BudgetResetConfig.QuarterStart on the Go side.
  */
+/** 根据当前语言生成季度预览，保留财政季度边界。 */
 export function formatQuarterPreview(startMonth?: number): string {
 	return quarterMonthIndices(startMonth)
-		.map((month, quarter) => `Q${quarter + 1} ${MONTH_ABBREVIATIONS[month.first]}-${MONTH_ABBREVIATIONS[month.last]}`)
+		.map((month, quarter) => `Q${quarter + 1} ${monthName(month.first)}-${monthName(month.last)}`)
 		.join(" · ");
 }
 
@@ -82,23 +162,25 @@ export function formatQuarterPreview(startMonth?: number): string {
  * unset start (the default), so it only ever appears when it changes behaviour.
  * Callers append it after the reset-period label (which already reads "Quarterly").
  */
+/** 本地化财政年度起始月份备注，默认一月仍不显示备注。 */
 export function fiscalQuarterNote(resetDuration?: string, resetConfig?: { quarter_start_month?: number } | null): string {
 	if (!resetDuration || !resetDuration.endsWith("Q")) return "";
 	const start = resetConfig?.quarter_start_month;
 	// Number.isInteger also rejects undefined/NaN; a fractional month like 2.5 would
 	// otherwise pass the range check and index MONTH_ABBREVIATIONS between slots.
 	if (start === undefined || !Number.isInteger(start) || start === 1 || start < 1 || start > 12) return "";
-	return ` · FY starts ${MONTH_ABBREVIATIONS[start - 1]}`;
+	return i18n.t("displayUi.fiscalMonth", { ns: "governance", month: monthName(start - 1) });
 }
 
 /**
  * The four fiscal quarters as `{label, range}` for the quarter-map chips, e.g.
  * April → `[{label:"Q1", range:"Apr–Jun"}, …]`. Uses an en-dash to match the design.
  */
+/** 本地化季度范围中的月份，季度标签与范围值保持不变。 */
 export function quarterRanges(startMonth?: number): { label: string; range: string }[] {
 	return quarterMonthIndices(startMonth).map((month, quarter) => ({
 		label: `Q${quarter + 1}`,
-		range: `${MONTH_ABBREVIATIONS[month.first]}–${MONTH_ABBREVIATIONS[month.last]}`,
+		range: `${monthName(month.first)}–${monthName(month.last)}`,
 	}));
 }
 
@@ -127,7 +209,9 @@ export function nextQuarterReset(startMonth?: number, now: Date = new Date()): D
 }
 
 // Month choices for the fiscal quarter start select.
-export const quarterStartMonthOptions = MONTH_ABBREVIATIONS.map((_, index) => ({
-	label: new Date(Date.UTC(2026, index, 1)).toLocaleString("en-US", { month: "long", timeZone: "UTC" }),
+export const quarterStartMonthOptions = Array.from({ length: 12 }, (_, index) => ({
+	get label() {
+		return monthName(index, "long");
+	},
 	value: String(index + 1),
 }));

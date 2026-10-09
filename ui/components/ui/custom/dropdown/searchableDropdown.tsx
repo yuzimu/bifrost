@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CustomDropdown } from "./dropdown";
 import { DropdownOption } from "./types";
 import { cn } from "@/lib/utils";
@@ -35,9 +36,9 @@ export function SearchableDropdown<T = {}>({
 	style,
 	emptyViewText,
 	groupHeadingClassName,
-	searchPlaceholder = "Search",
+	searchPlaceholder,
 	searchClassName,
-	noResultsText = "No results found",
+	noResultsText,
 	maxHeight = "300px",
 	dropdownClassName,
 	removeEmptyGroups,
@@ -45,6 +46,7 @@ export function SearchableDropdown<T = {}>({
 	selectedValues,
 	...props
 }: SearchableDropdownProps<T>) {
+	const { t } = useTranslation("observability");
 	const [searchTerm, setSearchTerm] = useState("");
 	const selectedValuesSafe = selectedValues ?? EMPTY_SELECTED_VALUES;
 
@@ -126,11 +128,11 @@ export function SearchableDropdown<T = {}>({
 				<input
 					autoFocus
 					type="text"
-					placeholder={searchPlaceholder}
+					placeholder={searchPlaceholder ?? t("shared.search")}
 					value={searchTerm}
 					onChange={handleSearchChange}
 					onKeyDown={handleSearchKeyDown}
-					aria-label={searchPlaceholder}
+					aria-label={searchPlaceholder ?? t("shared.search")}
 					className={cn(
 						"w-full rounded-md border border-gray-300 py-2 pr-3 pl-10 text-sm",
 						"focus:outline-none",
@@ -147,7 +149,7 @@ export function SearchableDropdown<T = {}>({
 					defaultValue={defaultValue}
 					value={value}
 					selectFirstOptionByDefault={selectFirstOptionByDefault}
-					emptyViewText={filteredOptions.length === 0 && searchTerm ? noResultsText : emptyViewText}
+					emptyViewText={filteredOptions.length === 0 && searchTerm ? (noResultsText ?? t("shared.noResults")) : emptyViewText}
 					groupHeadingClassName={groupHeadingClassName}
 					className={cn("border-0 p-0", dropdownClassName)}
 					{...props}

@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { CappedBarStack } from "@/app/workspace/dashboard/components/charts/barShape";
-import { CHART_COLORS } from "@/app/workspace/dashboard/utils/chartUtils";
+import { CHART_COLORS, formatTimestamp, formatFullTimestamp } from "@/app/workspace/dashboard/utils/chartUtils";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,42 +81,6 @@ interface LogsVolumeChartProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-// Format timestamp based on bucket size
-function formatTimestamp(timestamp: string, bucketSizeSeconds: number): string {
-	const date = new Date(timestamp);
-
-	if (bucketSizeSeconds >= 86400) {
-		// Daily buckets: "Jan 20"
-		return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-	} else if (bucketSizeSeconds >= 3600) {
-		// Hourly buckets: "10:00"
-		return date.toLocaleTimeString("en-US", {
-			hour: "2-digit",
-			minute: "2-digit",
-			hour12: false,
-		});
-	} else {
-		// Sub-hourly: "10:15"
-		return date.toLocaleTimeString("en-US", {
-			hour: "2-digit",
-			minute: "2-digit",
-			hour12: false,
-		});
-	}
-}
-
-// Format full timestamp for tooltip
-function formatFullTimestamp(timestamp: string): string {
-	const date = new Date(timestamp);
-	return date.toLocaleString("en-US", {
-		month: "short",
-		day: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: false,
-	});
-}
-
 type LogVolumeDataPoint = HistogramBucket & {
 	formattedTime: string;
 	index?: number;
@@ -130,6 +95,7 @@ type ChartMouseEvent = { activeTooltipIndex?: number | string | null };
 
 // Custom tooltip component
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
+	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
 
 	const data = payload[0]?.payload;
@@ -142,28 +108,28 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 				<div className="mt-2 flex items-center justify-between gap-4">
 					<span className="flex items-center gap-1.5">
 						<span className="bg-chart-seq-1 h-2 w-2 rounded-full" />
-						<span className="text-zinc-600 dark:text-zinc-400">Total</span>
+						<span className="text-zinc-600 dark:text-zinc-400">{t("logs.stats.tooltipTotal")}</span>
 					</span>
 					<span className="font-medium">{data.count.toLocaleString()}</span>
 				</div>
 				<div className="flex items-center justify-between gap-4">
 					<span className="flex items-center gap-1.5">
 						<span className="bg-chart-success h-2 w-2 rounded-full" />
-						<span className="text-zinc-600 dark:text-zinc-400">Success</span>
+						<span className="text-zinc-600 dark:text-zinc-400">{t("labels.success")}</span>
 					</span>
 					<span className="text-chart-success-ink font-medium">{data.success.toLocaleString()}</span>
 				</div>
 				<div className="flex items-center justify-between gap-4">
 					<span className="flex items-center gap-1.5">
 						<span className="bg-chart-error h-2 w-2 rounded-full" />
-						<span className="text-zinc-600 dark:text-zinc-400">Error</span>
+						<span className="text-zinc-600 dark:text-zinc-400">{t("labels.error")}</span>
 					</span>
 					<span className="text-chart-error-ink font-medium">{data.error.toLocaleString()}</span>
 				</div>
 				<div className="flex items-center justify-between gap-4">
 					<span className="flex items-center gap-1.5">
 						<span className="bg-chart-neutral h-2 w-2 rounded-full" />
-						<span className="text-zinc-600 dark:text-zinc-400">Cancelled</span>
+						<span className="text-zinc-600 dark:text-zinc-400">{t("labels.cancelled")}</span>
 					</span>
 					<span className="font-medium text-zinc-600 dark:text-zinc-400">{(data.cancelled ?? 0).toLocaleString()}</span>
 				</div>
@@ -184,6 +150,7 @@ export function LogsVolumeChart({
 	period,
 	onOpenChange,
 }: LogsVolumeChartProps) {
+	const { t, i18n } = useTranslation("observability");
 	// State for drag selection
 	const [refAreaLeft, setRefAreaLeft] = useState<number | null>(null);
 	const [refAreaRight, setRefAreaRight] = useState<number | null>(null);
@@ -294,7 +261,7 @@ export function LogsVolumeChart({
 		}
 
 		return filledBuckets;
-	}, [data, effectingTimeRange.startTime, effectingTimeRange.endTime]);
+	}, [data, effectingTimeRange.startTime, effectingTimeRange.endTime, i18n.resolvedLanguage]);
 
 	// Handle mouse down on chart (start selection)
 	const handleMouseDown = useCallback((e: ChartMouseEvent) => {
@@ -375,22 +342,22 @@ export function LogsVolumeChart({
 				<div className="flex items-center justify-between">
 					<CollapsibleTrigger data-testid="logs-volume-chart-trigger" className="flex items-center gap-2 hover:opacity-80">
 						<ChevronDown className={`text-muted-foreground h-4 w-4 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
-						<span className="text-muted-foreground text-sm font-medium">Request Volume</span>
+						<span className="text-muted-foreground text-sm font-medium">{t("dashboard.charts.requestVolume")}</span>
 					</CollapsibleTrigger>
 					<div className="mr-2 flex items-center gap-4">
 						{isOpen && (
 							<div className="flex items-center gap-3 text-xs">
 								<span className="flex items-center gap-1.5">
 									<span className="bg-chart-success h-2 w-2 rounded-full" />
-									<span className="text-muted-foreground">Success</span>
+									<span className="text-muted-foreground">{t("labels.success")}</span>
 								</span>
 								<span className="flex items-center gap-1.5">
 									<span className="bg-chart-error h-2 w-2 rounded-full" />
-									<span className="text-muted-foreground">Error</span>
+									<span className="text-muted-foreground">{t("labels.error")}</span>
 								</span>
 								<span className="flex items-center gap-1.5">
 									<span className="bg-chart-neutral h-2 w-2 rounded-full" />
-									<span className="text-muted-foreground">Cancelled</span>
+									<span className="text-muted-foreground">{t("labels.cancelled")}</span>
 								</span>
 							</div>
 						)}
@@ -401,7 +368,7 @@ export function LogsVolumeChart({
 								className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
 							>
 								<RotateCcw className="h-3 w-3" />
-								Reset zoom
+								{t("logs.resetZoom")}
 							</button>
 						)}
 					</div>

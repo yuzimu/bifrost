@@ -35,6 +35,9 @@ function formatTitlePart(part: string) {
  * topbar agree, with one adjustment: where a sub-item's label is only
  * meaningful under its parent ("Rules", "Approvals", "Connectors", "Settings"),
  * the parent is folded in, because the topbar shows the title alone.
+ *
+ * English values are kept for deriveTitleFromPathname (and its unit tests).
+ * getRouteTitleI18nKey maps the same paths to shell.json keys for live UI.
  */
 const routeTitleOverrides: Record<string, string> = {
 	"/workspace/adaptive-routing/settings": "Adaptive Routing Settings",
@@ -59,6 +62,101 @@ const routeTitleOverrides: Record<string, string> = {
 	"/workspace/routing-rules/tree": "Routing Tree",
 	"/workspace/scim": "User Provisioning",
 };
+
+const routeTitleI18nKeys: Record<string, string> = {
+	"/": "titles.dashboard",
+	"/workspace": "titles.dashboard",
+	"/workspace/home": "nav.home",
+	"/workspace/dashboard": "titles.dashboard",
+	"/workspace/agent-logs": "titles.agentLogs",
+	"/workspace/agent-gateway": "titles.agentCatalog",
+	"/workspace/agent-gateway/push-configs": "titles.pushConfigurations",
+	"/workspace/config/agent-gateway": "titles.agentSettings",
+	"/workspace/adaptive-routing": "nav.adaptiveRouting",
+	"/workspace/adaptive-routing/incidents": "nav.incidents",
+	"/workspace/adaptive-routing/settings": "titles.adaptiveRoutingSettings",
+	"/workspace/alerting": "nav.alerting",
+	"/workspace/alerting/channels": "titles.alertChannels",
+	"/workspace/alerting/history": "titles.alertHistory",
+	"/workspace/alerting/rules": "titles.alertRules",
+	"/workspace/cluster": "titles.clusterConfig",
+	"/workspace/config": "titles.settings",
+	"/workspace/config/api-keys": "nav.apiKeys",
+	"/workspace/config/branding": "nav.branding",
+	"/workspace/config/caching": "nav.caching",
+	"/workspace/config/client-settings": "nav.clientSettings",
+	"/workspace/config/compatibility": "nav.compatibility",
+	"/workspace/config/feature-flags": "nav.featureFlags",
+	"/workspace/config/logging": "nav.logsSettings",
+	"/workspace/config/mcp-gateway": "nav.mcpSettings",
+	"/workspace/config/observability": "titles.observabilityConnectors",
+	"/workspace/config/performance-tuning": "nav.performanceTuning",
+	"/workspace/config/pricing-config": "nav.pricingOverrides",
+	"/workspace/config/proxy": "nav.proxy",
+	"/workspace/config/security": "nav.security",
+	"/workspace/config/warp": "nav.warp",
+	"/workspace/config/license": "titles.licenseInfo",
+	"/workspace/circuit-breaker": "nav.circuitBreaker",
+	"/workspace/complexity-router": "nav.complexityRouter",
+	"/workspace/custom-pricing": "nav.modelSettings",
+	"/workspace/custom-pricing/overrides": "nav.pricingOverrides",
+	"/workspace/edge-control": "nav.edgeControl",
+	"/workspace/edge-control/config": "titles.edgeSettings",
+	"/workspace/edge-control/devices": "titles.edgeDevices",
+	"/workspace/edge-control/inventory": "titles.edgeApprovals",
+	"/workspace/governance/rbac": "titles.rolesPermissions",
+	"/workspace/governance": "nav.governance",
+	"/workspace/governance/access-profiles": "nav.accessProfiles",
+	"/workspace/governance/business-units": "nav.businessUnits",
+	"/workspace/governance/customers": "nav.customers",
+	"/workspace/governance/org-chart": "nav.orgChart",
+	"/workspace/governance/projects": "nav.projects",
+	"/workspace/governance/teams": "nav.teams",
+	"/workspace/governance/users": "nav.users",
+	"/workspace/governance/virtual-keys": "nav.virtualKeys",
+	"/workspace/guardrails": "nav.guardrails",
+	"/workspace/guardrails/configuration": "titles.guardrailRules",
+	"/workspace/guardrails/providers": "titles.guardrailProviders",
+	"/workspace/logs": "titles.llmLogs",
+	"/workspace/logs/connectors": "titles.logConnectors",
+	"/workspace/logs/mcp-logs": "nav.mcpLogs",
+	"/workspace/mcp-logs": "nav.mcpLogs",
+	"/workspace/mcp-auth-config": "nav.authSessions",
+	"/workspace/mcp-gateway": "nav.mcpServers",
+	"/workspace/mcp-registry": "nav.mcpCatalog",
+	"/workspace/mcp-registry/library": "nav.mcpLibrary",
+	"/workspace/mcp-sessions": "nav.authSessions",
+	"/workspace/mcp-settings": "nav.mcpSettings",
+	"/workspace/mcp-tool-groups": "nav.virtualMcps",
+	"/workspace/model-catalog": "nav.modelCatalog",
+	"/workspace/model-limits": "nav.budgetsLimits",
+	"/workspace/oauth-grants": "nav.oauthGrants",
+	"/workspace/observability": "titles.observabilityConnectors",
+	"/workspace/prompt-repo": "titles.promptRepository",
+	"/workspace/providers": "titles.modelProviders",
+	"/workspace/providers/model-limits": "nav.budgetsLimits",
+	"/workspace/providers/routing-rules": "nav.routingRules",
+	"/workspace/plugins": "nav.plugins",
+	"/workspace/rbac": "titles.rolesPermissions",
+	"/workspace/routing-rules": "nav.routingRules",
+	"/workspace/routing-rules/tree": "titles.routingTree",
+	"/workspace/scim": "titles.userProvisioning",
+	"/workspace/skills-repo": "nav.skillsRepository",
+	"/workspace/virtual-keys": "nav.virtualKeys",
+	"/workspace/virtual-mcps": "nav.virtualMcps",
+	"/workspace/webhooks": "nav.webhooks",
+	"/workspace/audit-logs": "nav.auditLogs",
+};
+
+function pathKey(pathname: string): string {
+	const segments = pathname.split("?")[0].split("/").filter(Boolean);
+	return `/${segments.join("/")}`;
+}
+
+/** 为固定工作区路由提供翻译键，未知路径仍保留原有标题推导。 */
+export function getRouteTitleI18nKey(pathname: string): string | undefined {
+	return routeTitleI18nKeys[pathKey(pathname)];
+}
 
 /**
  * Title for a route that does not name itself: an entry from

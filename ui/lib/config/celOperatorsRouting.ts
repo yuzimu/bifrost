@@ -2,6 +2,7 @@
  * CEL Operators Configuration for Routing Rules
  * Maps UI operators to CEL syntax
  */
+import i18n from "@/lib/i18n";
 
 export interface CELOperatorDefinition {
 	name: string;
@@ -31,7 +32,13 @@ export const celOperatorsRouting: CELOperatorDefinition[] = [
 	// Existence operators
 	{ name: "null", label: "does not exist", celSyntax: "!has" },
 	{ name: "notNull", label: "exists", celSyntax: "has" },
-];
+].map((operator) => ({
+	...operator,
+	// 消费组件订阅语言变化并逐次读取标签；表达式标识与语法不变。
+	get label() {
+		return i18n.t(`routingOperators.${operator.name}`, { ns: "enterprise", defaultValue: operator.label });
+	},
+}));
 
 /**
  * Get CEL syntax for a given operator name

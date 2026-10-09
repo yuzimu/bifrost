@@ -1,5 +1,6 @@
 import type { RequestType } from "@/lib/types/config";
 import type { PricingOverrideMatchType, PricingOverridePatch } from "@/lib/types/governance";
+import type { TFunction } from "i18next";
 
 // Shared pricing-field metadata for override editing and display.
 //
@@ -783,6 +784,11 @@ export const fieldLabelByKey = Object.fromEntries(PRICING_FIELDS.map((field) => 
 	string
 >;
 export const patchKeys = PRICING_FIELDS.map((field) => field.key) as PricingFieldKey[];
+
+/** 在显示时读取定价标签，未知字段保留原始键名。 */
+export function getPricingFieldLabel(key: string, t: TFunction<"models">): string {
+	return t(`pricingMetadata.fields.${key}`, { defaultValue: fieldLabelByKey[key as PricingFieldKey] ?? key });
+}
 
 /**
  * Per-field numeric bounds for fields that are not plain "any non-negative

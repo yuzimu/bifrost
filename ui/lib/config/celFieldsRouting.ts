@@ -5,6 +5,7 @@
 
 import { getProviderLabel } from "@/lib/constants/logs";
 import { COMPLEXITY_TIER_VALUES } from "@/lib/types/complexityRouter";
+import type { TFunction } from "i18next";
 
 export interface CELFieldDefinition {
 	name: string;
@@ -146,7 +147,10 @@ export const baseRoutingFields: CELFieldDefinition[] = [
  * Provider field values are populated dynamically from available providers
  * Metric options for rate limits and budget are populated from available providers and models
  */
-export function getRoutingFields(providers: string[] = [], models: string[] = []): CELFieldDefinition[] {
+/** 构造路由字段；可注入界面翻译器，字段与枚举值保持原样。 */
+export function getRoutingFields(providers: string[] = [], models: string[] = [], t?: TFunction): CELFieldDefinition[] {
+	const text = (key: string, fallback: string, values?: Record<string, unknown>) =>
+		t ? t(`celUi.${key}`, { ns: "models", defaultValue: fallback, ...values }) : fallback;
 	// Create provider field values
 	const providerValues =
 		providers.length > 0
@@ -154,7 +158,7 @@ export function getRoutingFields(providers: string[] = [], models: string[] = []
 					name: provider,
 					label: getProviderLabel(provider),
 				}))
-			: [{ name: "_no_providers", label: "No providers configured", disabled: true }];
+			: [{ name: "_no_providers", label: text("noProviders", "No providers configured"), disabled: true }];
 
 	// Create model field values
 	const modelValues =
@@ -167,14 +171,14 @@ export function getRoutingFields(providers: string[] = [], models: string[] = []
 
 	// Create metric options for scope input: providers + models
 	const scopeOptions = [
-		{ name: "", label: "(provider-level)" }, // Empty scope for provider-level
+		{ name: "", label: text("providerLevel", "(provider-level)") }, // Empty scope for provider-level
 		...providers.map((provider) => ({
 			name: provider,
-			label: `${provider} (provider)`,
+			label: text("providerScope", `${provider} (provider)`, { name: provider }),
 		})),
 		...models.map((model) => ({
 			name: model,
-			label: `${model} (model)`,
+			label: text("modelScope", `${model} (model)`, { name: model }),
 		})),
 	];
 
@@ -201,7 +205,18 @@ export function getRoutingFields(providers: string[] = [], models: string[] = []
 		return field;
 	});
 
-	return fieldsWithDynamicValues;
+	return t
+		? fieldsWithDynamicValues.map((field) => ({
+				...field,
+				label: text(`fields.${field.name}.label`, field.label),
+				placeholder: field.placeholder ? text(`fields.${field.name}.placeholder`, field.placeholder) : undefined,
+				description: field.description ? text(`fields.${field.name}.description`, field.description) : undefined,
+				values:
+					field.name === "request_type" || field.name === "complexity_tier"
+						? field.values?.map((value) => ({ ...value, label: text(`values.${value.name}`, value.label) }))
+						: field.values,
+			}))
+		: fieldsWithDynamicValues;
 }
 
 export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {

@@ -18,6 +18,7 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
 import { shouldShowEmptyState } from "../deliveries.page.utils";
+import { useTranslation } from "react-i18next";
 
 export interface DeliveriesPagination {
 	limit: number;
@@ -65,6 +66,7 @@ export function DeliveriesTable({
 	onTogglePin,
 	onReorderColumns,
 }: DeliveriesTableProps) {
+	const { t, i18n } = useTranslation("observability");
 	// The expand chevron and the actions button are structural, not user-configurable.
 	const fixedColumnIds = useMemo(() => new Set<string>(["expand", "actions"]), []);
 
@@ -179,7 +181,7 @@ export function DeliveriesTable({
 										{polling ? (
 											<>
 												<RefreshCw className="h-4 w-4 animate-spin" />
-												Waiting for new deliveries...
+												{t("webhookExtras.waiting")}
 											</>
 										) : (
 											<Button
@@ -190,7 +192,7 @@ export function DeliveriesTable({
 												data-testid="webhook-deliveries-table-refresh-btn"
 											>
 												<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-												Refresh
+												{t("labels.refresh")}
 											</Button>
 										)}
 									</div>
@@ -208,7 +210,12 @@ export function DeliveriesTable({
 													return (
 														<TableCell
 															key={cell.id}
-															style={{ width: size, minWidth: size, maxWidth: size, ...buildPinStyle(cell.column, pinOffsets) }}
+															style={{
+																width: size,
+																minWidth: size,
+																maxWidth: size,
+																...buildPinStyle(cell.column, pinOffsets),
+															}}
 															className={cn(
 																!pinned && "overflow-hidden",
 																pinned && "bg-card",
@@ -239,10 +246,14 @@ export function DeliveriesTable({
 										</Fragment>
 									);
 								})
-							) : !shouldShowEmptyState({ rowCount: table.getRowModel().rows.length, loading, error }) ? null : (
+							) : !shouldShowEmptyState({
+									rowCount: table.getRowModel().rows.length,
+									loading,
+									error,
+							  }) ? null : (
 								<TableRow>
 									<TableCell colSpan={visibleColumnCount} className="h-24 text-center">
-										No deliveries found. Try adjusting your filters and/or time range.
+										{t("webhookExtras.empty")}
 									</TableCell>
 								</TableRow>
 							)}
@@ -252,12 +263,16 @@ export function DeliveriesTable({
 
 				<div className="flex items-center justify-between text-xs" data-testid="pagination">
 					<div className="text-muted-foreground flex items-center gap-2">
-						{startItemDisplay.toLocaleString()}-{endItemDisplay.toLocaleString()} of {totalItems.toLocaleString()} deliveries
+						{t("webhookExtras.entryRange", {
+							start: startItemDisplay.toLocaleString(i18n.resolvedLanguage),
+							end: endItemDisplay.toLocaleString(i18n.resolvedLanguage),
+							total: totalItems.toLocaleString(i18n.resolvedLanguage),
+						})}
 					</div>
 
 					<div className="flex items-center gap-2">
 						<div className="flex items-center gap-1.5">
-							<span className="text-muted-foreground">Rows per page</span>
+							<span className="text-muted-foreground">{t("logs.rowsPerPage")}</span>
 							<ComboboxSelect
 								options={pageSizeOptions}
 								value={String(pageSizePref)}
@@ -265,7 +280,7 @@ export function DeliveriesTable({
 								disableSearch
 								hideClear
 								className="h-7 w-fit gap-1 text-xs"
-								aria-label="Rows per page"
+								aria-label={t("logs.rowsPerPage")}
 								data-testid="page-size-select"
 							/>
 						</div>
@@ -275,15 +290,13 @@ export function DeliveriesTable({
 							onClick={() => goToPage(currentPage - 1)}
 							disabled={currentPage <= 1}
 							data-testid="prev-page"
-							aria-label="Previous page"
+							aria-label={t("labels.previousPage")}
 						>
 							<ChevronLeft className="size-3" />
 						</Button>
 
 						<div className="flex items-center gap-1">
-							<span>Page</span>
-							<span>{currentPage}</span>
-							<span>of {totalPages}</span>
+							<span>{t("logs.pageRange", { page: currentPage, total: totalPages })}</span>
 						</div>
 
 						<Button
@@ -292,7 +305,7 @@ export function DeliveriesTable({
 							onClick={() => goToPage(currentPage + 1)}
 							disabled={totalPages === 0 || currentPage >= totalPages}
 							data-testid="next-page"
-							aria-label="Next page"
+							aria-label={t("labels.nextPage")}
 						>
 							<ChevronRight className="size-3" />
 						</Button>

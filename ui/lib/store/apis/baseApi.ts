@@ -1,4 +1,5 @@
 import { IS_ENTERPRISE } from "@/lib/constants/config";
+import i18n from "@/lib/i18n";
 import { BifrostErrorResponse } from "@/lib/types/config";
 import { getApiBaseUrl } from "@/lib/utils/port";
 import { createBaseQueryWithRefresh } from "@enterprise/lib/store/utils/baseQueryWithRefresh";
@@ -69,7 +70,7 @@ const baseQuery = fetchBaseQuery({
 // Wrap base query with enterprise refresh logic (or passthrough for non-enterprise)
 const baseQueryWithRefresh = createBaseQueryWithRefresh(baseQuery);
 
-// Enhanced base query with error handling
+/** 保留认证处理及原始错误身份，客户端消息不依赖请求时的界面语言。 */
 const baseQueryWithErrorHandling: typeof baseQueryWithRefresh = async (args: any, api: any, extraOptions: any) => {
 	// First apply refresh logic (enterprise-specific, handles 401)
 	const result = await baseQueryWithRefresh(args, api, extraOptions);
@@ -95,41 +96,21 @@ const baseQueryWithErrorHandling: typeof baseQueryWithRefresh = async (args: any
 		}
 
 		// Handle specific error types
-		if (error?.status === "FETCH_ERROR") {
-			// Network error
+		if (error?.status === "FETCH_ERROR" || error?.status === "TIMEOUT_ERROR") {
 			return {
 				...result,
 				error: {
 					...error,
 					data: {
 						error: {
-							message: "Network error: Unable to connect to the server",
+							message: error.status === "TIMEOUT_ERROR" ? "Request timeout" : "Network error: Unable to connect to the server",
 						},
 					},
 				},
 			};
 		}
 
-		// Handle other errors with proper BifrostErrorResponse format
-		if (error?.data) {
-			const errorData = error.data as BifrostErrorResponse;
-			if (errorData.error?.message) {
-				return result;
-			}
-		}
-
-		// Fallback error message
-		return {
-			...result,
-			error: {
-				...error,
-				data: {
-					error: {
-						message: "An unexpected error occurred",
-					},
-				},
-			},
-		};
+		// 原始载荷和诊断不补写；缺失消息的展示兜底由 getErrorMessage 处理。
 	}
 
 	return result;
@@ -233,13 +214,30 @@ export const getErrorCode = (error: unknown): string | undefined => {
 	return typeof data?.error?.code === "string" ? data.error.code : undefined;
 };
 
-// Helper function to extract error message from RTK Query error
+/** 按当前语言展示已确认的客户端错误，未知服务端消息和原始诊断保持原样。 */
 export const getErrorMessage = (error: unknown): string => {
 	if (error === undefined || error === null) {
-		return "An unexpected error occurred";
+		return i18n.t("clientErrors.unexpected", { ns: "common" });
 	}
 	if (error instanceof Error) {
 		return error.message;
+	}
+	if (typeof error === "object" && "status" in error) {
+		if (error.status === "TIMEOUT_ERROR") {
+			return i18n.t("clientErrors.timeout", { ns: "common" });
+		}
+		if (error.status === "FETCH_ERROR") {
+			const data = "data" in error ? error.data : undefined;
+			const isReleaseNetworkError =
+				typeof data === "object" &&
+				data !== null &&
+				"error" in data &&
+				typeof data.error === "object" &&
+				data.error !== null &&
+				"message" in data.error &&
+				data.error.message === "Network error";
+			return i18n.t(isReleaseNetworkError ? "clientErrors.network" : "clientErrors.unableToConnect", { ns: "common" });
+		}
 	}
 	if (
 		typeof error === "object" &&
@@ -253,10 +251,23 @@ export const getErrorMessage = (error: unknown): string => {
 		"message" in error.data.error &&
 		typeof error.data.error.message === "string"
 	) {
-		return error.data.error.message.charAt(0).toUpperCase() + error.data.error.message.slice(1);
+		return error.data.error.message;
+	}
+	if (
+		typeof error === "object" &&
+		"data" in error &&
+		typeof error.data === "object" &&
+		error.data !== null &&
+		"message" in error.data &&
+		typeof error.data.message === "string"
+	) {
+		return error.data.message;
 	}
 	if (typeof error === "object" && error && "message" in error && typeof error.message === "string") {
 		return error.message;
 	}
-	return "An unexpected error occurred";
+	if (typeof error === "object" && "error" in error && typeof error.error === "string") {
+		return error.error;
+	}
+	return i18n.t("clientErrors.unexpected", { ns: "common" });
 };

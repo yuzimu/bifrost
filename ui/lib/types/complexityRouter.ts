@@ -1,3 +1,9 @@
+import i18n from "@/lib/i18n";
+
+/** 读取当前语言的复杂度显示文案，不改变分类协议值。 */
+const complexityUi = (key: string) => i18n.t(`routing.complexityUi.${key}`, { ns: "models" });
+const complexityLabel = (key: string) => i18n.t(`complexityShared.${key}`, { ns: "models" });
+
 /**
  * Complexity Router Type Definitions
  * Mirrors the AnalyzerConfig shape exchanged with /governance/complexity-analyzer-config.
@@ -159,12 +165,22 @@ export const COMPLEXITY_MECHANISM_VALUES = ["semantic", "decision", "llm", "sess
 // deriveComplexityRouting (logs/sheets/logDetailView.tsx) reconstructs those as
 // "lexical" — the classifier that actually wrote them — for the detail view.
 export const COMPLEXITY_MECHANISM_LABELS: Record<string, string> = {
-	lexical: "Lexical",
-	semantic: "Semantic",
-	decision: "Decision model",
+	get lexical() {
+		return complexityLabel("lexical");
+	},
+	get semantic() {
+		return complexityLabel("semantic");
+	},
+	get decision() {
+		return complexityLabel("decision");
+	},
 	llm: "LLM",
-	session: "Session",
-	skipped: "Skipped",
+	get session() {
+		return complexityLabel("session");
+	},
+	get skipped() {
+		return complexityLabel("skipped");
+	},
 };
 
 // One card per tier in the Phrase to Tier Mapping section.
@@ -183,18 +199,30 @@ export const TIER_PHRASE_LIST_DEFINITIONS: Array<{
 }> = [
 	{
 		key: "simple_keywords",
-		label: "Simple",
-		description: "Requests to route to your cheapest, fastest model.",
+		get label() {
+			return complexityUi("tierSimple");
+		},
+		get description() {
+			return complexityUi("tierSimpleDesc");
+		},
 	},
 	{
 		key: "medium_keywords",
-		label: "Medium",
-		description: "Requests that need more capability than your cheapest model, but not your most capable.",
+		get label() {
+			return complexityUi("tierMedium");
+		},
+		get description() {
+			return complexityUi("tierMediumDesc");
+		},
 	},
 	{
 		key: "complex_keywords",
-		label: "Complex",
-		description: "Requests that justify your most capable model.",
+		get label() {
+			return complexityUi("tierComplex");
+		},
+		get description() {
+			return complexityUi("tierComplexDesc");
+		},
 	},
 ];
 
@@ -269,22 +297,37 @@ export const DEFAULT_SEMANTIC_CONFIG: SemanticConfig = {
 export const SEMANTIC_VECTOR_STORE_OPTIONS: Array<{ value: SemanticVectorStore; label: string; tooltip: string }> = [
 	{
 		value: "embedded",
-		label: "Embedded",
-		tooltip: "Keeps phrase vectors in Bifrost's own memory. No infrastructure to run, but every restart re-embeds them.",
+		get label() {
+			return complexityUi("vectorStoreEmbedded");
+		},
+		get tooltip() {
+			return complexityUi("vectorStoreEmbeddedTip");
+		},
 	},
 	{
 		value: "vector_store",
-		label: "Vector Store",
-		tooltip:
-			"Keeps phrase vectors in the vector store configured for Bifrost, so they survive restarts. Falls back to Embedded if no vector store is available.",
+		get label() {
+			return complexityUi("vectorStoreExternal");
+		},
+		get tooltip() {
+			return complexityUi("vectorStoreExternalTip");
+		},
 	},
 ];
 
 export const SEMANTIC_STATUS_LABELS: Record<SemanticStatusInfo["state"], string> = {
-	disabled: "Disabled",
-	warming: "Warming up",
-	ready: "Ready",
-	failed: "Failed",
+	get disabled() {
+		return complexityLabel("disabled");
+	},
+	get warming() {
+		return complexityLabel("warming");
+	},
+	get ready() {
+		return complexityLabel("ready");
+	},
+	get failed() {
+		return complexityLabel("failed");
+	},
 };
 
 // Duration strings round-trip through the API as Go durations ("500ms"), but the
@@ -344,26 +387,43 @@ export const DEFAULT_LLM_CONFIG: LLMConfig = {
 export const SEMANTIC_FALLBACK_OPTIONS: Array<{ value: SemanticFallback; label: string; description: string }> = [
 	{
 		value: "none",
-		label: "None",
-		description: "A request matching no phrase confidently carries no tier, and rules referencing complexity_tier do not match it.",
+		get label() {
+			return complexityUi("fallbackNone");
+		},
+		get description() {
+			return complexityUi("fallbackNoneDesc");
+		},
 	},
 	{
 		value: "llm",
-		label: "LLM classifier",
-		description: "A chat model names the tier instead. Slower and costlier than an embedding, but only unmatched requests pay for it.",
+		get label() {
+			return complexityUi("fallbackLlm");
+		},
+		get description() {
+			return complexityUi("fallbackLlmDesc");
+		},
 	},
 	{
 		value: "decision",
-		label: "Decision model",
-		description:
-			"A decision model names the tier when semantic matching has no result, using the same tier guidance as when it is the primary classifier.",
+		get label() {
+			return complexityUi("decisionClassifier");
+		},
+		get description() {
+			return complexityUi("fallbackDecisionDesc");
+		},
 	},
 ];
 
 export const SEMANTIC_FALLBACK_LABELS: Record<SemanticFallback, string> = {
-	none: "None",
-	llm: "LLM classifier",
-	decision: "Decision model",
+	get none() {
+		return complexityUi("fallbackNone");
+	},
+	get llm() {
+		return complexityUi("fallbackLlm");
+	},
+	get decision() {
+		return complexityUi("decisionClassifier");
+	},
 };
 
 // Same duration round-trip as parseSemanticTimeoutMs, with the llm default.

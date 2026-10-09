@@ -30,8 +30,10 @@ import type { NotificationSeverity } from "@/lib/types/notifications";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
+import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 import { Check, CheckCircle2, CircleAlert, Inbox, Info, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 const severityStyles: Record<NotificationSeverity, string> = {
@@ -48,7 +50,11 @@ const severityIcons = {
 	error: CircleAlert,
 };
 
+/** 展示通知与后台任务，按活动状态轮询并保留独立取消入口。 */
 export default function NotificationCenter() {
+	const { t, i18n } = useTranslation("governance");
+	const { t: tCommon } = useTranslation("common");
+	const { t: tShell } = useTranslation("shell");
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
@@ -103,8 +109,13 @@ export default function NotificationCenter() {
 					type="button"
 					aria-label={
 						unreadCount || activeJobCount
-							? `Notifications, ${[unreadCount && `${unreadCount} unread`, activeJobCount && `${activeJobCount} running`].filter(Boolean).join(", ")}`
-							: "Notifications"
+							? activeJobCount
+								? tShell("backgroundJobs.notificationAria", {
+										notifications: unreadCount ? t("notifications.ariaUnread", { count: unreadCount }) : t("notifications.aria"),
+										count: activeJobCount,
+									})
+								: t("notifications.ariaUnread", { count: unreadCount })
+							: t("notifications.aria")
 					}
 					data-testid="topbar-notifications-btn"
 					// size-8 matches the theme toggle and the menu/user-pill trigger. Every topbar trigger has to
@@ -134,18 +145,18 @@ export default function NotificationCenter() {
 						<div className="flex min-w-0 flex-1 items-center gap-2">
 							{jobsAvailable ? (
 								// TabsList caches trigger widths on mount; remount when a count badge appears or goes so they are re-measured.
-								<TabsList key={`${unreadCount > 0}-${activeJobCount > 0}`} className="h-8 rounded-sm">
+								<TabsList key={`${i18n.language}-${unreadCount > 0}-${activeJobCount > 0}`} className="h-8 rounded-sm">
 									<TabsTrigger value="notifications" className="rounded-sm px-2.5 text-xs" data-testid="notification-tab-notifications">
-										Notifications
+										{t("notifications.title")}
 										{unreadCount > 0 && <TabCount count={unreadCount} />}
 									</TabsTrigger>
 									<TabsTrigger value="jobs" className="rounded-sm px-2.5 text-xs" data-testid="notification-tab-jobs">
-										Background jobs
+										{tShell("backgroundJobs.title")}
 										{activeJobCount > 0 && <TabCount count={activeJobCount} />}
 									</TabsTrigger>
 								</TabsList>
 							) : (
-								<h2 className="px-1 text-sm font-semibold">Notifications</h2>
+								<h2 className="px-1 text-sm font-semibold">{t("notifications.title")}</h2>
 							)}
 							{isFetching && !isLoading && <RefreshCw className="text-muted-foreground size-3 shrink-0 animate-spin" />}
 						</div>
@@ -156,7 +167,7 @@ export default function NotificationCenter() {
 								className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer text-xs whitespace-nowrap transition-colors"
 								data-testid="notifications-mark-all-read"
 							>
-								Mark all read
+								{t("notifications.markAllRead")}
 							</button>
 						)}
 						{tab === "jobs" && finishedJobIds.length > 0 && (
@@ -166,7 +177,7 @@ export default function NotificationCenter() {
 								className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer text-xs whitespace-nowrap transition-colors"
 								data-testid="sidekiq-jobs-clear-finished"
 							>
-								Clear finished
+								{tShell("backgroundJobs.clearFinished")}
 							</button>
 						)}
 					</div>
@@ -179,9 +190,9 @@ export default function NotificationCenter() {
 								onCancel={async (id) => {
 									try {
 										const result = await cancelJob(id).unwrap();
-										if (!result.cancelled) toast.info("That job had already finished");
+										if (!result.cancelled) toast.info(tShell("backgroundJobs.alreadyFinished"));
 									} catch (error) {
-										toast.error("Couldn't cancel the job", { description: getErrorMessage(error) });
+										toast.error(tShell("backgroundJobs.cancelFailed"), { description: getErrorMessage(error) });
 									}
 								}}
 								onDismiss={(ids) => ids.forEach((id) => dispatch(removeNotification(id)))}
@@ -192,13 +203,13 @@ export default function NotificationCenter() {
 					<TabsContent value="notifications">
 						{isLoading ? (
 							<div className="text-muted-foreground flex h-44 items-center justify-center gap-2 text-sm">
-								<RefreshCw className="size-4 animate-spin" /> Loading notifications
+								<RefreshCw className="size-4 animate-spin" /> {t("notifications.loading")}
 							</div>
 						) : isError ? (
 							<div className="flex h-44 flex-col items-center justify-center gap-3 px-6 text-center">
-								<p className="text-muted-foreground text-sm">Notifications could not be loaded.</p>
+								<p className="text-muted-foreground text-sm">{t("notifications.loadFailed")}</p>
 								<button type="button" onClick={() => refetch()} className="text-primary cursor-pointer text-sm font-medium hover:underline">
-									Try again
+									{tCommon("retry")}
 								</button>
 							</div>
 						) : notifications.length === 0 ? (
@@ -209,8 +220,8 @@ export default function NotificationCenter() {
 								<span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
 									<Check className="size-4" />
 								</span>
-								<p className="text-sm font-medium">You&apos;re all caught up</p>
-								<p className="text-muted-foreground text-xs">New notifications will appear here.</p>
+								<p className="text-sm font-medium">{t("notifications.emptyTitle")}</p>
+								<p className="text-muted-foreground text-xs">{t("notifications.emptyDescription")}</p>
 							</div>
 						) : (
 							<ScrollArea className="h-[min(26rem,calc(100vh-8rem))]">
@@ -250,20 +261,27 @@ export default function NotificationCenter() {
 													<span className="min-w-0 flex-1 pr-5">
 														<span className="flex items-start gap-2">
 															<span className={cn("min-w-0 flex-1 text-sm", !isRead && "font-semibold")}>{notification.title}</span>
-															{!isRead && <span className="bg-primary mt-1.5 size-1.5 shrink-0 rounded-full" aria-label="Unread" />}
+															{!isRead && (
+																<span className="bg-primary mt-1.5 size-1.5 shrink-0 rounded-full" aria-label={t("notifications.unread")} />
+															)}
 														</span>
 														<span className="text-muted-foreground mt-0.5 line-clamp-3 block text-xs leading-relaxed">
 															{notification.message}
 														</span>
 														<span className="text-muted-foreground mt-1.5 flex items-center gap-2 text-[11px]">
-															<span>{formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}</span>
+															<span>
+																{formatDistanceToNow(new Date(notification.created_at), {
+																	addSuffix: true,
+																	locale: dateFnsLocale(i18n.language),
+																})}
+															</span>
 															{notification.action_label && <span className="text-primary font-medium">{notification.action_label}</span>}
 														</span>
 													</span>
 												</button>
 												<button
 													type="button"
-													aria-label={`Dismiss ${notification.title}`}
+													aria-label={t("notifications.dismissAria", { title: notification.title })}
 													onClick={() => dispatch(removeNotification(notification.id))}
 													data-testid={`notification-dismiss-${notification.id}`}
 													className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-2.5 right-2.5 cursor-pointer rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
@@ -285,7 +303,7 @@ export default function NotificationCenter() {
 									className="text-muted-foreground hover:text-destructive cursor-pointer text-xs transition-colors"
 									data-testid="notifications-clear-all"
 								>
-									Clear all
+									{t("notifications.clearAll")}
 								</button>
 							</div>
 						)}

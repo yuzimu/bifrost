@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Static class names so Tailwind keeps them; a computed `line-clamp-${n}` would be purged.
 const CLAMP_CLASS: Record<number, string> = {
@@ -18,9 +19,9 @@ interface ExpandableTextProps {
 	className?: string;
 }
 
-// Clamps long text to a few lines with a "View more" / "View less" toggle. The toggle
-// appears only when the text actually overflows, so short text is left untouched.
+/** 根据文本溢出显示本地化展开操作，保留原始文本内容。 */
 export function ExpandableText({ text, lines = 3, toggleAlign = "left", className }: ExpandableTextProps) {
+	const { t } = useTranslation("common");
 	const ref = useRef<HTMLParagraphElement>(null);
 	const [expanded, setExpanded] = useState(false);
 	const [overflowing, setOverflowing] = useState(false);
@@ -44,8 +45,14 @@ export function ExpandableText({ text, lines = 3, toggleAlign = "left", classNam
 			</p>
 			{(overflowing || expanded) && (
 				<div className={cn("mt-2 flex", toggleAlign === "right" ? "justify-end" : "justify-start")}>
-					<button type="button" className="text-primary text-xs font-medium hover:underline" onClick={() => setExpanded((value) => !value)}>
-						{expanded ? "View less" : "View more"}
+					<button
+						type="button"
+						className="text-primary text-xs font-medium hover:underline"
+						onClick={() => setExpanded((value) => !value)}
+						aria-expanded={expanded}
+						data-testid="expandable-text-toggle"
+					>
+						{expanded ? t("viewLess") : t("viewMore")}
 					</button>
 				</div>
 			)}

@@ -5,6 +5,7 @@ import { Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import FieldLabel from "./fieldLabel";
 import { Parameter } from "./types";
+import { useTranslation } from "react-i18next";
 
 interface Props {
 	field: Parameter;
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function TextArrayFieldView(props: Props) {
+	const { t } = useTranslation("observability");
 	const [shouldFocus, setShouldFocus] = useState(false);
 	const { field, config } = props;
 	const fieldValue = (config[field.id] as string[]) || [];
@@ -63,7 +65,11 @@ export default function TextArrayFieldView(props: Props) {
 
 			{invalid && (
 				<div className="mt-1 text-red-600">
-					Please keep {field.label} between {field.array?.minElements} to {field.array?.maxElements}.
+					{t("parameterControls.range", {
+						label: field.label,
+						min: field.array?.minElements,
+						max: field.array?.maxElements,
+					})}
 				</div>
 			)}
 
@@ -77,7 +83,7 @@ export default function TextArrayFieldView(props: Props) {
 					props.onChange([...((config[field.id] as string[]) || []), ""]);
 				}}
 			>
-				Add string
+				{t("parameterControls.addString")}
 			</Button>
 		</div>
 	);

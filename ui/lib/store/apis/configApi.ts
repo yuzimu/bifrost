@@ -68,6 +68,7 @@ export const configApi = baseApi.injectEndpoints({
 
 		// Get latest release from public site
 		getLatestRelease: builder.query<LatestReleaseResponse, void>({
+			/** 查询版本信息，保留稳定错误消息、状态码和原始异常标识。 */
 			queryFn: async (_arg, { signal }) => {
 				try {
 					const response = await axios.get("https://getbifrost.ai/latest-release", {
@@ -98,6 +99,9 @@ export const configApi = baseApi.injectEndpoints({
 							};
 						}
 						console.error("Latest release fetch error:", error.message);
+						if (error.response) {
+							return { error: { status: error.response.status, data: error.response.data } };
+						}
 					} else {
 						console.error("Latest release fetch error:", error);
 					}

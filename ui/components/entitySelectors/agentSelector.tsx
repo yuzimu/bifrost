@@ -10,10 +10,13 @@ import {
 } from "@/components/entitySelectors/entitySelector";
 import { useGetAgentsQuery } from "@/lib/store";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 export type AgentSelectorProps = EntitySelectorCommonProps & EntitySelectorModeProps;
 
+/** 保留智能体筛选方式，仅翻译访问状态和默认实体名。 */
 export function AgentSelector(props: AgentSelectorProps) {
+	const { t } = useTranslation("models");
 	const { open, setOpen, setSearch, debouncedSearch } = useEntitySelectorSearch();
 
 	const { data, isFetching, isError } = useGetAgentsQuery();
@@ -27,15 +30,15 @@ export function AgentSelector(props: AgentSelectorProps) {
 				label: agent.name,
 				// Surfaces the two states that change what a grant means: an open
 				// agent needs none, a disabled one will not answer.
-				description: agent.allow_by_default ? "Open to all keys" : agent.enabled ? undefined : "Disabled",
+				description: agent.allow_by_default ? t("selectorUi.openToAllKeys") : agent.enabled ? undefined : t("selectorUi.disabled"),
 			}));
-	}, [data, debouncedSearch]);
+	}, [data, debouncedSearch, t]);
 
 	return (
 		<EntitySelector
 			{...props}
-			entityLabel="Agent"
-			entityLabelPlural="Agents"
+			entityLabel={t("selectorUi.agent")}
+			entityLabelPlural={t("selectorUi.agents")}
 			options={options}
 			isFetching={isFetching}
 			isError={isError}

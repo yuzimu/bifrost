@@ -5,9 +5,12 @@ import { getErrorMessage, useGetCoreConfigQuery, useUpdateCoreConfigMutation } f
 import { CompatConfig, DefaultCoreConfig } from "@/lib/types/config";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+/** 编辑兼容层转换策略，包括仅推理模型的 Responses 路由。 */
 export default function CompatibilityView() {
+	const { t } = useTranslation("config");
 	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.client_config?.compat;
@@ -40,7 +43,7 @@ export default function CompatibilityView() {
 
 	const handleSave = useCallback(async () => {
 		if (!bifrostConfig) {
-			toast.error("Configuration not loaded");
+			toast.error(t("configNotLoaded"));
 			return;
 		}
 
@@ -52,16 +55,16 @@ export default function CompatibilityView() {
 					compat: localCompatConfig,
 				},
 			}).unwrap();
-			toast.success("Compatibility settings updated successfully.");
+			toast.success(t("compatibility.toastSaved"));
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		}
-	}, [bifrostConfig, localCompatConfig, updateCoreConfig]);
+	}, [bifrostConfig, localCompatConfig, t, updateCoreConfig]);
 
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6">
-			<PageTitle title="Compatibility">
-				Configure request conversions and compatibility fallbacks.{" "}
+			<PageTitle title={t("compatibility.title")}>
+				{t("compatibility.description")}{" "}
 				<a
 					className="text-primary underline"
 					href="https://docs.getbifrost.ai/features/compat-plugin"
@@ -69,7 +72,7 @@ export default function CompatibilityView() {
 					rel="noopener noreferrer"
 					data-testid="litellm-docs-link"
 				>
-					Learn more about the compatibility plugin
+					{t("compatibility.learnMore")}
 				</a>
 			</PageTitle>
 
@@ -77,9 +80,9 @@ export default function CompatibilityView() {
 				<div className="flex items-center justify-between space-x-2">
 					<div className="space-y-0.5">
 						<label htmlFor="compat-convert-text-to-chat" className="text-sm font-medium">
-							Convert Text to Chat
+							{t("compatibility.convertTextToChat")}
 						</label>
-						<p className="text-muted-foreground text-sm">Convert text completion requests to chat for models that only support chat.</p>
+						<p className="text-muted-foreground text-sm">{t("compatibility.convertTextToChatHelp")}</p>
 					</div>
 					<Switch
 						id="compat-convert-text-to-chat"
@@ -94,11 +97,9 @@ export default function CompatibilityView() {
 				<div className="flex items-center justify-between space-x-2">
 					<div className="space-y-0.5">
 						<label htmlFor="compat-convert-chat-to-responses" className="text-sm font-medium">
-							Convert Chat to Responses
+							{t("compatibility.convertChatToResponses")}
 						</label>
-						<p className="text-muted-foreground text-sm">
-							Convert chat completion requests to responses for models that only support responses.
-						</p>
+						<p className="text-muted-foreground text-sm">{t("compatibility.convertChatToResponsesHelp")}</p>
 					</div>
 					<Switch
 						id="compat-convert-chat-to-responses"
@@ -113,9 +114,9 @@ export default function CompatibilityView() {
 				<div className="flex items-center justify-between space-x-2">
 					<div className="space-y-0.5">
 						<label htmlFor="compat-should-drop-params" className="text-sm font-medium">
-							Drop Unsupported Params
+							{t("compatibility.dropUnsupportedParams")}
 						</label>
-						<p className="text-muted-foreground text-sm">Drop unsupported parameters based on model catalog allowlist.</p>
+						<p className="text-muted-foreground text-sm">{t("compatibility.dropUnsupportedParamsHelp")}</p>
 					</div>
 					<Switch
 						id="compat-should-drop-params"
@@ -130,9 +131,9 @@ export default function CompatibilityView() {
 				<div className="flex items-center justify-between space-x-2">
 					<div className="space-y-0.5">
 						<label htmlFor="compat-should-convert-params" className="text-sm font-medium">
-							Convert Unsupported Param Values
+							{t("compatibility.convertUnsupportedParams")}
 						</label>
-						<p className="text-muted-foreground text-sm">Converts model parameter values that are not supported by the model.</p>
+						<p className="text-muted-foreground text-sm">{t("compatibility.convertUnsupportedParamsHelp")}</p>
 					</div>
 					<Switch
 						id="compat-should-convert-params"
@@ -147,11 +148,9 @@ export default function CompatibilityView() {
 				<div className="flex items-center justify-between space-x-2">
 					<div className="space-y-0.5">
 						<label htmlFor="compat-azure-deepseek" className="text-sm font-medium">
-							Use Chat Completion APIs for Azure Deepseek models
+							{t("compatibility.azureDeepseek")}
 						</label>
-						<p className="text-muted-foreground text-sm">
-							Use Chat Completion APIs for Claude Code, Codex, etc. for Azure Deepseek models.
-						</p>
+						<p className="text-muted-foreground text-sm">{t("compatibility.azureDeepseekHelp")}</p>
 					</div>
 					<Switch
 						id="compat-azure-deepseek"
@@ -166,12 +165,9 @@ export default function CompatibilityView() {
 				<div className="flex items-center justify-between space-x-2">
 					<div className="space-y-0.5">
 						<label htmlFor="compat-force-reasoning-only-models-to-responses" className="text-sm font-medium">
-							Use Responses API for reasoning only OpenAI models
+							{t("compatibility.reasoningOnlyResponses")}
 						</label>
-						<p className="text-muted-foreground text-sm">
-							Route chat completion requests to the Responses API for models that cannot reason with tool calls on chat completions, instead
-							of turning reasoning off.
-						</p>
+						<p className="text-muted-foreground text-sm">{t("compatibility.reasoningOnlyResponsesHelp")}</p>
 					</div>
 					<Switch
 						id="compat-force-reasoning-only-models-to-responses"
@@ -186,7 +182,7 @@ export default function CompatibilityView() {
 
 			<div className="flex justify-end pt-2">
 				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess} data-testid="compat-save-button">
-					{isLoading ? "Saving..." : "Save Changes"}
+					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>
 		</div>

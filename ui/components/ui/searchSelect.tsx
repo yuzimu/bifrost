@@ -1,6 +1,7 @@
 import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import { Loader2, Plus, SearchIcon } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,9 +64,10 @@ interface SearchSelectAsyncProps<T extends SearchSelectOption = SearchSelectOpti
 type SearchSelectProps<T extends SearchSelectOption = SearchSelectOption> = SearchSelectSyncProps<T> | SearchSelectAsyncProps<T>;
 
 function RetryButton({ onRetry }: { onRetry: () => void }) {
+	const { t } = useTranslation("observability");
 	return (
 		<button type="button" className="text-foreground ml-2 underline underline-offset-2" onClick={onRetry} data-testid="search-select-retry">
-			Retry
+			{t("shared.retry")}
 		</button>
 	);
 }
@@ -87,15 +89,17 @@ function filterByText(_value: string, search: string, keywords?: string[]) {
 	return (keywords ?? []).reduce((best, keyword) => Math.max(best, defaultFilter(keyword, search)), 0);
 }
 
+/** 保持同步筛选与异步分页语义，并按当前语言提供默认文案。 */
 function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(props: SearchSelectProps<T>) {
+	const { t } = useTranslation("observability");
 	const {
 		options,
 		onValueSelect,
 		label,
 		entryView,
 		footer,
-		searchPlaceholder = "Search...",
-		emptyMessage = "No results found.",
+		searchPlaceholder = t("shared.search"),
+		emptyMessage = t("shared.noResults"),
 		disabled = false,
 		open: controlledOpen,
 		onOpenChange,
@@ -113,7 +117,7 @@ function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(props: 
 	const isSearching = isAsync ? (props.isSearching ?? false) : false;
 	const isLoading = isAsync ? (props.isLoading ?? false) : false;
 	const isError = isAsync ? (props.isError ?? false) : false;
-	const errorMessage = isAsync ? (props.errorMessage ?? "Failed to load.") : "";
+	const errorMessage = isAsync ? (props.errorMessage ?? t("shared.loadFailed")) : "";
 	const loadMoreErrorMessage = isAsync ? props.loadMoreErrorMessage : undefined;
 	const onRetry = isAsync ? props.onRetry : undefined;
 

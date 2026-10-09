@@ -140,6 +140,11 @@ export interface ModelDatasheetResponse {
 	[key: string]: any;
 }
 
+export interface ModelParametersQueryResult {
+	datasheet: ModelDatasheetResponse;
+	source: "builtin-fallback" | "catalog";
+}
+
 export interface ListBaseModelsResponse {
 	models: string[];
 	total: number;
@@ -467,19 +472,18 @@ export const providersApi = baseApi.injectEndpoints({
 			providesTags: ["BaseModels"],
 		}),
 
-		// Get model parameters (parameters, capabilities) from local API
-		// Falls back to default parameters if the API returns an error (e.g. model not found)
-		getModelParameters: builder.query<ModelDatasheetResponse, string>({
+		getModelParameters: builder.query<ModelParametersQueryResult, string>({
+			/** 仅由客户端查询分支标记来源；404 使用内置参数，成功响应保留原始 schema。 */
 			queryFn: async (model, _queryApi, _extraOptions, baseQuery) => {
 				const result = await baseQuery(`/models/parameters?model=${encodeURIComponent(model)}`);
 				if (result.error) {
 					// If the model is not found, return the default parameters
 					if ((result.error as any)?.status === 404) {
-						return { data: DEFAULT_MODEL_PARAMETERS };
+						return { data: { datasheet: DEFAULT_MODEL_PARAMETERS, source: "builtin-fallback" } };
 					}
 					return { error: result.error };
 				}
-				return { data: result.data as ModelDatasheetResponse };
+				return { data: { datasheet: result.data as ModelDatasheetResponse, source: "catalog" } };
 			},
 		}),
 

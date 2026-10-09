@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { cn } from "@/lib/utils";
 import { Copy, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // Show the leading chars, mask the rest. Matches the virtual keys table.
 function maskKey(key: string) {
@@ -26,18 +27,20 @@ interface VirtualKeyListItemProps {
 
 // One virtual-key row: name, masked secret with a copy button, and an optional remove action.
 // Shared by the Virtual MCP access tab and the user detail sheet so the row stays identical.
+/** 保留密钥掩码与复制行为，翻译动作提示。 */
 export function VirtualKeyListItem({
 	name,
 	secret,
 	fallbackLabel,
 	onClick,
 	onRemove,
-	removeAriaLabel = "Remove virtual key",
+	removeAriaLabel,
 	removeDisabled,
 	className,
 	"data-testid": testId,
 }: VirtualKeyListItemProps) {
-	const { copy } = useCopyToClipboard({ successMessage: "Virtual key copied" });
+	const { t } = useTranslation("governance");
+	const { copy } = useCopyToClipboard({ successMessage: t("displayUi.keyCopied") });
 	return (
 		// oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- role, tabIndex and keys are set together whenever onClick exists; the linter cannot follow the conditional
 		<div
@@ -67,7 +70,7 @@ export function VirtualKeyListItem({
 							variant="ghost"
 							size="icon"
 							className="text-muted-foreground h-5 w-5 shrink-0"
-							aria-label="Copy virtual key"
+							aria-label={t("displayUi.copyKey")}
 							onClick={(event) => {
 								event.stopPropagation();
 								copy(secret);
@@ -83,7 +86,7 @@ export function VirtualKeyListItem({
 					variant="ghost"
 					size="icon"
 					className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-					aria-label={removeAriaLabel}
+					aria-label={removeAriaLabel ?? t("displayUi.removeKey")}
 					disabled={removeDisabled}
 					data-testid={testId}
 					onClick={(event) => {

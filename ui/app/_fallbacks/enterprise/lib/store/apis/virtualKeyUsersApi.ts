@@ -1,4 +1,5 @@
 import { User } from "@enterprise/lib/types/user";
+import i18n from "@/lib/i18n";
 
 export interface GetVirtualKeyUsersResponse {
 	users: User[];
@@ -25,7 +26,7 @@ export const useGetVirtualKeyUsersQuery = (
 // type-check and link. The UI never reaches them: the "Assign to User" option is
 // gated on the user picker registry, which OSS leaves unregistered.
 const unavailable = () => {
-	throw new Error("Virtual key user assignment is an enterprise feature");
+	throw new Error(i18n.t("virtualKeyUsers.enterpriseOnly", { ns: "enterprise" }));
 };
 
 export const useAttachVirtualKeyUsersMutation = (): [

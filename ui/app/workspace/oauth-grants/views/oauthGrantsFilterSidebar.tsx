@@ -16,6 +16,7 @@ import { useGetVirtualKeysQuery } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Fingerprint, KeyRound, LoaderCircle, PanelLeftClose, RotateCcw, Search, UserRound } from "lucide-react";
 import { type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 // Side-effect import: registers the enterprise user search hook (if this is
 // an enterprise build) before this module's first render. OSS has no user
 // directory, so nothing registers and getUserSearchQuery() stays undefined —
@@ -48,14 +49,6 @@ interface FilterOption {
 	icon?: React.ReactNode;
 }
 
-// Identity-mode icons match the glyphs used in BindingCell so the sidebar
-// reads as the same vocabulary as the rendered table column.
-const MODE_OPTIONS: FilterOption[] = [
-	{ value: "user", label: "User", icon: <UserRound className="size-3.5" /> },
-	{ value: "vk", label: "Virtual key", icon: <KeyRound className="size-3.5" /> },
-	{ value: "session", label: "Session", icon: <Fingerprint className="size-3.5" /> },
-];
-
 interface SidebarProps {
 	filters: OAuthGrantFilters;
 	onFiltersChange: (filters: OAuthGrantFilters) => void;
@@ -65,7 +58,14 @@ interface SidebarProps {
 // OAuthGrantsFilterSidebar – orchestrator
 // ---------------------------------------------------------------------------
 
+/** 按当前语言展示授权筛选项，不改变身份模式及查询范围。 */
 export function OAuthGrantsFilterSidebar({ filters, onFiltersChange }: SidebarProps) {
+	const { t } = useTranslation("mcp");
+	const modeOptions: FilterOption[] = [
+		{ value: "user", label: t("sessions.filter.user"), icon: <UserRound className="size-3.5" /> },
+		{ value: "vk", label: t("sessions.filter.virtualKeyOption"), icon: <KeyRound className="size-3.5" /> },
+		{ value: "session", label: t("sessions.filter.session"), icon: <Fingerprint className="size-3.5" /> },
+	];
 	const isMobile = useIsMobile();
 	const [collapsed, setCollapsed] = useState(false);
 
@@ -130,7 +130,7 @@ export function OAuthGrantsFilterSidebar({ filters, onFiltersChange }: SidebarPr
 	return (
 		<div className="bg-card fixed inset-y-2 left-2 z-40 flex h-auto w-[calc(100vw-1rem)] max-w-72 shrink-0 flex-col rounded-md border shadow-xl md:static md:h-full md:w-64 md:max-w-none md:rounded-md md:shadow-none">
 			<div className="flex h-11 items-center justify-between border-b pr-2 pl-5">
-				<span className="text-sm font-semibold">Filters</span>
+				<span className="text-sm font-semibold">{t("common.filters")}</span>
 				<div className="flex items-center gap-1">
 					{activeFilterCount > 0 && (
 						<Button
@@ -141,7 +141,7 @@ export function OAuthGrantsFilterSidebar({ filters, onFiltersChange }: SidebarPr
 							data-testid="oauthGrantsFilterSidebar-reset-button"
 						>
 							<RotateCcw className="size-3" />
-							Reset
+							{t("common.reset")}
 						</Button>
 					)}
 					<Button
@@ -149,8 +149,8 @@ export function OAuthGrantsFilterSidebar({ filters, onFiltersChange }: SidebarPr
 						size="icon"
 						className="size-7"
 						onClick={toggleCollapsed}
-						title="Hide filters"
-						aria-label="Hide filters"
+						title={t("common.hideFilters")}
+						aria-label={t("common.hideFilters")}
 						data-testid="oauthGrantsFilterSidebar-toggle-hide"
 					>
 						<PanelLeftClose className="size-4" />
@@ -161,8 +161,8 @@ export function OAuthGrantsFilterSidebar({ filters, onFiltersChange }: SidebarPr
 			<ScrollArea className="flex flex-1 overflow-y-auto p-2 pb-0" viewportClassName="no-table">
 				<div className="flex grow flex-col gap-1">
 					<CheckboxFilterSection
-						title="Identity"
-						options={MODE_OPTIONS}
+						title={t("oauthGrants.filter.identity")}
+						options={modeOptions}
 						selected={filters.mode}
 						defaultOpen
 						onChange={(mode) => onFiltersChange({ ...filters, mode })}
@@ -305,7 +305,7 @@ function SearchableCheckboxList({
 	items,
 	isSelected,
 	onToggle,
-	placeholder = "Search...",
+	placeholder,
 	inputRef,
 	testIdPrefix,
 	onSearch,
@@ -320,6 +320,7 @@ function SearchableCheckboxList({
 	onSearch?: (query: string) => void;
 	fetching?: boolean;
 }) {
+	const { t } = useTranslation("mcp");
 	const [query, setQuery] = useState("");
 	const normalized = query.trim().toLowerCase();
 	const filtered = normalized ? items.filter((item) => item.label.toLowerCase().includes(normalized)) : items;
@@ -342,7 +343,7 @@ function SearchableCheckboxList({
 					ref={inputRef}
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
-					placeholder={placeholder}
+					placeholder={placeholder ?? t("library.filter.searchPlaceholder")}
 					className="h-8 border-0 pl-8 text-xs"
 					data-testid={testIdPrefix ? `${testIdPrefix}-search` : undefined}
 				/>
@@ -356,7 +357,7 @@ function SearchableCheckboxList({
 					testId={testIdPrefix ? `${testIdPrefix}-checkbox-${item.key}` : undefined}
 				/>
 			))}
-			{filtered.length === 0 && <div className="text-muted-foreground flex h-9 items-center px-3 text-xs">No results</div>}
+			{filtered.length === 0 && <div className="text-muted-foreground flex h-9 items-center px-3 text-xs">{t("common.noResults")}</div>}
 		</>
 	);
 }
@@ -368,6 +369,7 @@ function SearchableCheckboxList({
 // in-flight search text. The list only fetches once the section is opened or
 // already has a selection, since most visits won't touch this filter.
 function VirtualKeyFilterSection({ filters, onFiltersChange }: SidebarProps) {
+	const { t } = useTranslation("mcp");
 	const hasActive = filters.virtual_key_id.length > 0;
 	const [opened, setOpened] = useState(hasActive);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -386,10 +388,10 @@ function VirtualKeyFilterSection({ filters, onFiltersChange }: SidebarProps) {
 	};
 
 	return (
-		<FilterSection title="Virtual Key" defaultOpen={hasActive} onOpenChange={setOpened} testId="oauth-grants-filter-vk-toggle">
+		<FilterSection title={t("oauthGrants.filter.virtualKey")} defaultOpen={hasActive} onOpenChange={setOpened} testId="oauth-grants-filter-vk-toggle">
 			<SearchableCheckboxList
 				inputRef={searchInputRef}
-				placeholder="Search virtual keys"
+				placeholder={t("oauthGrants.filter.searchVirtualKeys")}
 				items={virtualKeys.map((vk) => ({ key: vk.id, label: vk.name || vk.id }))}
 				isSelected={(key) => filters.virtual_key_id.includes(key)}
 				onToggle={toggle}
@@ -417,6 +419,7 @@ function useNoopUserSearchQuery() {
 // ui/lib/registries/userPicker.tsx), wrapping the same users API the MCP
 // sessions Users filter and the single-select UserPicker already use.
 function UsersFilterSection({ filters, onFiltersChange }: SidebarProps) {
+	const { t } = useTranslation("mcp");
 	const useUserSearchQuery = getUserSearchQuery();
 	const hasActive = filters.user_id.length > 0;
 	const [opened, setOpened] = useState(hasActive);
@@ -439,10 +442,10 @@ function UsersFilterSection({ filters, onFiltersChange }: SidebarProps) {
 	};
 
 	return (
-		<FilterSection title="Users" defaultOpen={hasActive} onOpenChange={setOpened} testId="oauth-grants-filter-users-toggle">
+		<FilterSection title={t("oauthGrants.filter.users")} defaultOpen={hasActive} onOpenChange={setOpened} testId="oauth-grants-filter-users-toggle">
 			<SearchableCheckboxList
 				inputRef={searchInputRef}
-				placeholder="Search by name or email"
+				placeholder={t("oauthGrants.filter.searchUsers")}
 				items={users.map((user) => ({ key: user.id, label: user.label }))}
 				isSelected={(key) => filters.user_id.includes(key)}
 				onToggle={toggle}

@@ -9,12 +9,61 @@ import {
 	type ControllerProps,
 	type FieldPath,
 	type FieldValues,
+	type FormProviderProps,
+	type FieldErrors,
+	type UseFormTrigger,
 } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 
-const Form = FormProvider;
+/** 切换语言时重新解析校验，仅回写已有本地校验错误路径，保留服务端错误与交互状态。 */
+export function useFormErrorLanguageSync<TFieldValues extends FieldValues>(errors: FieldErrors<TFieldValues>, trigger: UseFormTrigger<TFieldValues>) {
+	const { i18n } = useTranslation();
+	const locale = i18n.resolvedLanguage ?? i18n.language;
+	const previousLocale = React.useRef(locale);
+	const current = React.useRef({ errors, trigger });
+	current.current = { errors, trigger };
+
+	React.useEffect(() => {
+		if (previousLocale.current === locale) return;
+		previousLocale.current = locale;
+		const paths: FieldPath<TFieldValues>[] = [];
+		const collect = (value: unknown, path: string) => {
+			if (!value || typeof value !== "object") return;
+			if ("type" in value && typeof value.type === "string") {
+				if (path && !["manual", "server"].includes(value.type)) paths.push(path as FieldPath<TFieldValues>);
+				return;
+			}
+			if ("message" in value && typeof value.message === "string") return;
+			for (const [key, child] of Object.entries(value)) {
+				if (key !== "root" && key !== "ref") collect(child, path ? `${path}.${key}` : key);
+			}
+		};
+		collect(current.current.errors, "");
+		if (paths.length) void current.current.trigger(paths);
+	}, [locale]);
+}
+
+function FormErrorLanguageSync() {
+	const { trigger } = useFormContext();
+	const { errors } = useFormState();
+	useFormErrorLanguageSync(errors, trigger);
+	return null;
+}
+/** 为现有 FormProvider 保留完整合同并同步校验错误的显示语言。 */
+function Form<TFieldValues extends FieldValues, TContext = unknown, TTransformedValues = TFieldValues>({
+	children,
+	...props
+}: FormProviderProps<TFieldValues, TContext, TTransformedValues>) {
+	return (
+		<FormProvider {...props}>
+			<FormErrorLanguageSync />
+			{children}
+		</FormProvider>
+	);
+}
 
 type FormFieldContextValue<
 	TFieldValues extends FieldValues = FieldValues,

@@ -11,8 +11,11 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+/** 展示本地化授权结果，保持回调消息类型和来源校验不变。 */
 export default function MCPRegistryOAuthCallbackPage() {
+	const { t } = useTranslation("mcp");
 	const [closeAttempted, setCloseAttempted] = useState(false);
 
 	useEffect(() => {
@@ -24,7 +27,7 @@ export default function MCPRegistryOAuthCallbackPage() {
 			if (status === "success") {
 				window.opener.postMessage({ type: "oauth_success" }, window.location.origin);
 			} else {
-				window.opener.postMessage({ type: "oauth_failed", error: error ?? "OAuth flow failed" }, window.location.origin);
+				window.opener.postMessage({ type: "oauth_failed", error: error ?? t("registry.callback.flowFailed") }, window.location.origin);
 			}
 			setCloseAttempted(true);
 			window.close();
@@ -40,12 +43,12 @@ export default function MCPRegistryOAuthCallbackPage() {
 	return (
 		<div className="mx-auto flex min-h-[60vh] w-full max-w-xl items-center justify-center p-6">
 			<div className="bg-card w-full rounded-lg border p-8 text-center shadow-sm">
-				<h1 className="text-xl font-semibold">{status === "success" ? "Authorization complete" : "Authorization failed"}</h1>
+				<h1 className="text-xl font-semibold">{status === "success" ? t("registry.callback.complete") : t("registry.callback.failed")}</h1>
 				{error && <p className="text-destructive mt-2 text-sm">{error}</p>}
-				<p className="text-muted-foreground mt-4 text-sm">{closeAttempted ? "You can close this tab." : "This window can be closed."}</p>
+				<p className="text-muted-foreground mt-4 text-sm">{closeAttempted ? t("registry.callback.closeTab") : t("registry.callback.closeWindow")}</p>
 				<div className="mt-6">
 					<Button asChild variant="outline" data-testid="mcp-callback-back-button">
-						<Link to="/workspace/mcp-registry">Back to MCP registry</Link>
+						<Link to="/workspace/mcp-registry">{t("registry.callback.back")}</Link>
 					</Button>
 				</div>
 			</div>

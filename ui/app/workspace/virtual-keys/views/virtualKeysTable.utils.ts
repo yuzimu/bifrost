@@ -1,3 +1,5 @@
+import i18n from "@/lib/i18n";
+
 // Bulk rotation returns one previous_value_expires_at per key, each computed from
 // its own time.Now() on the server, so the deadlines in one response can differ.
 
@@ -17,19 +19,7 @@ export function latestGraceDeadline(virtualKeys: { previous_value_expires_at?: s
 	return latest;
 }
 
-/**
- * Renders the "Assigned To" label for a virtual key, or null when it is assigned
- * to nothing. A key is assigned to at most one of a team, a customer, a business
- * unit, or a user.
- *
- * A business unit is named from the business_unit relation the enterprise build
- * fills in, like a team or customer. Without it (OSS, or an unresolved owner) the
- * key is named only by its kind, which still beats a blank.
- *
- * Shared by the table cell and the CSV export so the two cannot drift: the export
- * used to omit the user branch entirely, which left the column blank for every
- * user-assigned key.
- */
+/** 统一表格与 CSV 的归属标签，保留业务单元名称及未解析时的类型。 */
 export function assignedToLabel(vk: {
 	team?: { name: string };
 	customer?: { name: string };
@@ -37,10 +27,13 @@ export function assignedToLabel(vk: {
 	business_unit?: { name: string };
 	assigned_user?: { name: string; email: string } | null;
 }): string | null {
-	if (vk.team) return `Team: ${vk.team.name}`;
-	if (vk.customer) return `Customer: ${vk.customer.name}`;
-	if (vk.business_unit_id) return vk.business_unit?.name ? `Business unit: ${vk.business_unit.name}` : "Business unit";
-	if (vk.assigned_user) return `User: ${vk.assigned_user.name || vk.assigned_user.email}`;
+	if (vk.team) return i18n.t("virtualKeys.teamNamed", { ns: "models", name: vk.team.name });
+	if (vk.customer) return i18n.t("virtualKeys.customerNamed", { ns: "models", name: vk.customer.name });
+	if (vk.business_unit_id)
+		return vk.business_unit?.name
+			? i18n.t("virtualKeys.businessUnitNamed", { ns: "models", name: vk.business_unit.name, defaultValue: "Business unit: {{name}}" })
+			: i18n.t("virtualKeys.businessUnit", { ns: "models" });
+	if (vk.assigned_user) return i18n.t("virtualKeys.userNamed", { ns: "models", name: vk.assigned_user.name || vk.assigned_user.email });
 	return null;
 }
 
@@ -63,6 +56,7 @@ export function csvAssignedToCell(vk: {
 	const label = assignedToLabel(vk);
 	if (label) return label;
 	// Team, customer and business unit ride on the row itself, so they are never the unresolved case.
-	if (!vk.team && !vk.customer && !vk.business_unit_id && vk.assigned_user === undefined) return "Unknown (not resolved)";
+	if (!vk.team && !vk.customer && !vk.business_unit_id && vk.assigned_user === undefined)
+		return i18n.t("virtualKeys.unknownNotResolved", { ns: "models" });
 	return "";
 }

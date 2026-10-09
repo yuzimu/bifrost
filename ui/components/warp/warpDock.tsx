@@ -3,12 +3,14 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import WarpPanel from "@/components/warp/warpPanel";
 import { useIsNarrowerThan } from "@/hooks/use-mobile";
 import { useWarp } from "@/lib/contexts/warpContext";
+import { useTranslation } from "react-i18next";
 
 // Docks Warp beside the content column so the page narrows instead of being covered.
 // 240px sidebar + 400px dock + a readable content column; below this Warp opens as a sheet.
 const WARP_DOCK_MIN_WIDTH = 1024;
 
 export default function WarpDock({ children }: { children: React.ReactNode }) {
+	const { t } = useTranslation("observability");
 	const warp = useWarp();
 	const isMobile = useIsNarrowerThan(WARP_DOCK_MIN_WIDTH);
 	const isOpen = !!warp?.isOpen;
@@ -24,7 +26,11 @@ export default function WarpDock({ children }: { children: React.ReactNode }) {
 
 				{isOpen && !isMobile && (
 					<>
-						<ResizableHandle aria-label="Resize Warp panel" className="bg-transparent md:-translate-x-1.5" data-testid="warp-dock-resize-handle" />
+						<ResizableHandle
+							aria-label={t("warpExtras.resize")}
+							className="bg-transparent md:-translate-x-1.5"
+							data-testid="warp-dock-resize-handle"
+						/>
 						<ResizablePanel
 							id="warp-panel"
 							defaultSize="400px"
@@ -47,7 +53,7 @@ export default function WarpDock({ children }: { children: React.ReactNode }) {
 					<SheetContent side="right" className="w-[calc(100%_-_16px)] p-0 sm:w-full sm:max-w-none" data-testid="warp-dock-sheet">
 						{/* Radix names the dialog from SheetTitle, not the panel's own heading. */}
 						<SheetTitle className="sr-only">Warp</SheetTitle>
-						<SheetDescription className="sr-only">Ask Warp questions about this deployment&apos;s logs, usage and spend.</SheetDescription>
+						<SheetDescription className="sr-only">{t("warpExtras.description")}</SheetDescription>
 						<WarpPanel />
 					</SheetContent>
 				</Sheet>

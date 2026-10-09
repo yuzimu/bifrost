@@ -1,5 +1,6 @@
 import { PROVIDER_SUPPORTED_REQUESTS } from "../constants/config";
 import { BaseProvider } from "../types/config";
+import i18n from "@/lib/i18n";
 
 export interface ValidationRule {
 	isValid: boolean;
@@ -61,21 +62,21 @@ export class Validator {
 	}
 
 	// Built-in validators
-	static required(value: any, message = "This field is required"): ValidationRule {
+	static required(value: any, message = i18n.t("schemaUi.required", { ns: "models" })): ValidationRule {
 		return {
 			isValid: value !== undefined && value !== null && value !== "" && value !== 0,
 			message,
 		};
 	}
 
-	static minValue(value: number, min: number, message = `Must be at least ${min}`): ValidationRule {
+	static minValue(value: number, min: number, message = i18n.t("schemaUi.minimum", { ns: "models", min })): ValidationRule {
 		return {
 			isValid: !isNaN(value) && value >= min,
 			message,
 		};
 	}
 
-	static maxValue(value: number, max: number, message = `Must be at most ${max}`): ValidationRule {
+	static maxValue(value: number, max: number, message = i18n.t("schemaUi.maximum", { ns: "models", max })): ValidationRule {
 		return {
 			isValid: !isNaN(value) && value <= max,
 			message,
@@ -89,50 +90,50 @@ export class Validator {
 		};
 	}
 
-	static email(value: string, message = "Must be a valid email"): ValidationRule {
+	static email(value: string, message = i18n.t("schemaUi.email", { ns: "models" })): ValidationRule {
 		return this.pattern(value, /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message);
 	}
 
-	static url(value: string, message = "Must be a valid URL"): ValidationRule {
+	static url(value: string, message = i18n.t("schemaUi.url", { ns: "models" })): ValidationRule {
 		return this.pattern(value, /^https?:\/\/.+/, message);
 	}
 
-	static minLength(value: string, min: number, message = `Must be at least ${min} characters`): ValidationRule {
+	static minLength(value: string, min: number, message = i18n.t("schemaUi.minCharacters", { ns: "models", min })): ValidationRule {
 		return {
 			isValid: (value || "").length >= min,
 			message,
 		};
 	}
 
-	static maxLength(value: string, max: number, message = `Must be at most ${max} characters`): ValidationRule {
+	static maxLength(value: string, max: number, message = i18n.t("schemaUi.maxCharacters", { ns: "models", max })): ValidationRule {
 		return {
 			isValid: (value || "").length <= max,
 			message,
 		};
 	}
 
-	static arrayMinLength<T>(array: T[], min: number, message = `Must have at least ${min} items`): ValidationRule {
+	static arrayMinLength<T>(array: T[], min: number, message = i18n.t("schemaUi.minItems", { ns: "models", min })): ValidationRule {
 		return {
 			isValid: array?.length >= min,
 			message,
 		};
 	}
 
-	static arrayMaxLength<T>(array: T[], max: number, message = `Must have at most ${max} items`): ValidationRule {
+	static arrayMaxLength<T>(array: T[], max: number, message = i18n.t("schemaUi.maxItems", { ns: "models", max })): ValidationRule {
 		return {
 			isValid: array?.length <= max,
 			message,
 		};
 	}
 
-	static arrayUnique<T>(array: T[], message = "Must have unique items"): ValidationRule {
+	static arrayUnique<T>(array: T[], message = i18n.t("schemaUi.uniqueItems", { ns: "models" })): ValidationRule {
 		return {
 			isValid: array?.length === new Set(array).size,
 			message,
 		};
 	}
 
-	static arraysEqual<T>(array1: T[], array2: T[], message = "Must be equal"): ValidationRule {
+	static arraysEqual<T>(array1: T[], array2: T[], message = i18n.t("schemaUi.equal", { ns: "models" })): ValidationRule {
 		return {
 			isValid: array1?.length === array2?.length && array1?.every((value, index) => value === array2[index]),
 			message,
@@ -193,12 +194,12 @@ export function isRedacted(value: string): boolean {
 }
 
 const PASSWORD_REQUIREMENTS = [
-	{ label: "at least 12 characters", test: (password: string) => password.length >= 12 },
-	{ label: "one uppercase letter", test: (password: string) => /[A-Z]/.test(password) },
-	{ label: "one lowercase letter", test: (password: string) => /[a-z]/.test(password) },
-	{ label: "one number", test: (password: string) => /\d/.test(password) },
-	{ label: "one special character", test: (password: string) => /[^A-Za-z0-9]/.test(password) },
-];
+	{ key: "minLength", test: (password: string) => password.length >= 12 },
+	{ key: "uppercase", test: (password: string) => /[A-Z]/.test(password) },
+	{ key: "lowercase", test: (password: string) => /[a-z]/.test(password) },
+	{ key: "number", test: (password: string) => /\d/.test(password) },
+	{ key: "special", test: (password: string) => /[^A-Za-z0-9]/.test(password) },
+] as const;
 
 /**
  * Returns the password-policy requirements that are not satisfied.
@@ -207,7 +208,7 @@ const PASSWORD_REQUIREMENTS = [
  */
 export function getPasswordPolicyFailures(password?: string, isUnchanged = false): string[] {
 	if (!password || isUnchanged) return [];
-	return PASSWORD_REQUIREMENTS.filter((requirement) => !requirement.test(password)).map((requirement) => requirement.label);
+	return PASSWORD_REQUIREMENTS.filter((requirement) => !requirement.test(password)).map((requirement) => requirement.key);
 }
 
 /**

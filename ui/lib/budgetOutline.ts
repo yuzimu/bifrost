@@ -4,6 +4,7 @@
 // consistent across every screen that renders a provider config.
 
 import { fiscalQuarterNote } from "./constants/governance";
+import type { TFunction } from "i18next";
 
 export interface BudgetLineLike {
 	max_limit?: number | null;
@@ -28,9 +29,11 @@ const SHORT_PERIOD: Record<string, string> = {
 	"1Y": "yr",
 };
 
-export function shortPeriod(duration?: string | null): string {
+/** 翻译紧凑周期后缀，未传翻译器时保留英文合同。 */
+export function shortPeriod(duration?: string | null, t?: TFunction): string {
 	if (!duration) return "";
-	return SHORT_PERIOD[duration] ?? duration;
+	const fallback = SHORT_PERIOD[duration] ?? duration;
+	return t ? t(`displayUi.shortPeriods.${duration}`, { ns: "governance", defaultValue: fallback }) : fallback;
 }
 
 // Ascending period order (minute → year) for displaying budget lines. Uses the
@@ -51,11 +54,12 @@ export function money(value: number | null | undefined): string {
 
 // "$50/wk · $150/mo" — every budget line joined, in ascending period order.
 // Returns `fallback` when empty.
-export function budgetLinesLabel(budgets: BudgetLineLike[] | undefined, fallback = "No budget"): string {
+/** 生成预算摘要；翻译显示周期，不修改预算与排序规则。 */
+export function budgetLinesLabel(budgets: BudgetLineLike[] | undefined, fallback = "No budget", t?: TFunction): string {
 	if (!budgets || budgets.length === 0) return fallback;
 	const label = [...budgets]
 		.sort((a, b) => periodRank(a.reset_duration) - periodRank(b.reset_duration))
-		.map((b) => `${money(b.max_limit)}/${shortPeriod(b.reset_duration)}`)
+		.map((b) => `${money(b.max_limit)}/${shortPeriod(b.reset_duration, t)}`)
 		.join(" · ");
 	// A group has at most one quarterly line (duplicate periods are blocked), so a
 	// single trailing fiscal-start note is unambiguous. Empty for a January start.

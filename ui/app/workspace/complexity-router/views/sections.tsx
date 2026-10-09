@@ -29,6 +29,7 @@ import { decisionProviderIconKey } from "@/lib/utils/decisionModelProviders";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, ChevronRight, Info, LoaderCircle, Pencil, RotateCcw, Scale, TriangleAlert, Waypoints } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
 	Controller,
 	useWatch,
@@ -67,9 +68,9 @@ const PHRASE_LIST_HEIGHT = 300;
 const DECISION_LIST_HEIGHT = 140;
 
 const DECISION_TIER_LABELS: Record<DecisionTier, string> = {
-	SIMPLE: "Simple",
-	MEDIUM: "Medium",
-	COMPLEX: "Complex",
+	SIMPLE: "routing.complexityUi.tierSimple",
+	MEDIUM: "routing.complexityUi.tierMedium",
+	COMPLEX: "routing.complexityUi.tierComplex",
 };
 
 function testIdPart(value: string) {
@@ -81,17 +82,15 @@ interface PhraseTierGridProps {
 	errors: FieldErrors<AnalyzerFormValues>["keywords"];
 }
 
-// PhraseTierGrid is the semantic classifier's work surface: one editable list
-// of reference phrases per tier.
+/** 保留各层参考短语编辑器，并在渲染时翻译标签与校验文案。 */
 export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
+	const { t } = useTranslation("models");
+	const tcpx = (key: string, opts?: Record<string, unknown>) => t(`routing.complexityUi.${key}`, opts);
 	return (
 		<div className="space-y-3">
 			<Alert variant="info" data-testid="complexity-router-phrase-defaults-callout">
 				<Info className="h-4 w-4" />
-				<AlertDescription>
-					The added reference phrases are examples to help you get started. We recommend auditing, refining and adding your own reference
-					phrases.
-				</AlertDescription>
+				<AlertDescription>{tcpx("phraseDefaultsCallout")}</AlertDescription>
 			</Alert>
 
 			{/* Root-level phrase issues such as cross-tier duplicates have no single
@@ -106,33 +105,35 @@ export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
 			    each other, and equal-width columns keep a phrase's tier obvious
 			    from its position. */}
 			<div className="grid items-stretch gap-3 md:grid-cols-3">
-				{TIER_PHRASE_LIST_DEFINITIONS.map(({ key, label, description }) => {
+				{TIER_PHRASE_LIST_DEFINITIONS.map(({ key }) => {
 					const fieldError = errors?.[key as KeywordListKey];
 					const errorId = `keywords-${key}-error`;
+					const labelKey = key === "simple_keywords" ? "tierSimple" : key === "medium_keywords" ? "tierMedium" : "tierComplex";
+					const label = tcpx(labelKey);
 					return (
 						<div key={key} className="bg-card relative flex flex-col overflow-hidden rounded-sm border">
 							<Controller
 								control={control}
 								name={`keywords.${key}` as const}
 								rules={{
-									validate: (value) => (value.length > 0 ? true : `${label} phrases cannot be empty`),
+									validate: (value) => (value.length > 0 ? true : tcpx("phrasesEmpty", { tier: label })),
 								}}
 								render={({ field }) => (
 									<div className="flex flex-1 flex-col space-y-2 p-4 pl-5">
 										<div className="flex items-center justify-between">
 											<span className="text-xs font-medium">{label}</span>
 											<span className="text-muted-foreground font-mono text-[11px] tabular-nums">
-												{field.value.length} {field.value.length === 1 ? "phrase" : "phrases"}
+												{tcpx("phraseCount", { count: field.value.length })}
 											</span>
 										</div>
-										<p className="text-muted-foreground grow text-xs leading-relaxed">{description}</p>
+										<p className="text-muted-foreground grow text-xs leading-relaxed">{tcpx(`${labelKey}Desc`)}</p>
 										<TagInput
 											data-testid={`complexity-router-keywords-${testIdPart(key)}-input`}
 											value={field.value}
 											onValueChange={field.onChange}
 											listHeight={PHRASE_LIST_HEIGHT}
 											submitOnComma={false}
-											placeholder="Type a reference phrase and press Enter"
+											placeholder={tcpx("phrasePlaceholder")}
 											aria-invalid={fieldError ? true : undefined}
 											aria-describedby={fieldError ? errorId : undefined}
 											className={cn(fieldError && "border-destructive")}
@@ -165,16 +166,15 @@ interface LLMPromptSectionProps {
 	onReset: () => void;
 }
 
-// LLMPromptSection edits the fallback classifier's system prompt. It needs
-// width and room to iterate, so it sits on the page below the phrase lists
-// rather than in the sheet with the fallback's other settings, and only shows
-// while the llm fallback is on, because that is the only time it runs.
+/** 翻译回退分类器编辑器的说明，不改动用户提示词。 */
 export function LLMPromptSection({ control, error, canUpdate, defaultPrompt, livePrompt, onEdit, onReset }: LLMPromptSectionProps) {
+	const { t } = useTranslation("models");
+	const tcpx = (key: string) => t(`routing.complexityUi.${key}`);
 	return (
 		<div className="space-y-3">
 			<SectionHeading
-				title="Fallback Classification Prompt"
-				description="Customize the classification model's system prompt; a default is provided when no phrase matches."
+				title={tcpx("fallbackPromptTitle")}
+				description={tcpx("fallbackPromptDescription")}
 				aside={
 					<Button
 						type="button"
@@ -185,7 +185,7 @@ export function LLMPromptSection({ control, error, canUpdate, defaultPrompt, liv
 						data-testid="complexity-router-llm-prompt-reset-button"
 					>
 						<RotateCcw className="h-3.5 w-3.5" />
-						Reset to default
+						{tcpx("resetToDefault")}
 					</Button>
 				}
 			/>
@@ -214,8 +214,7 @@ export function LLMPromptSection({ control, error, canUpdate, defaultPrompt, liv
 				<p className="text-destructive text-xs">{error.message}</p>
 			) : (
 				<p className="text-muted-foreground text-xs leading-relaxed">
-					Leave blank to use default guidance. Bifrost always appends a fixed response-format section (the tier names and the JSON answer
-					contract), so edits here refine what the tiers mean but cannot break routing.{" "}
+					{tcpx("fallbackPromptHelp")}{" "}
 					<span className="font-mono tabular-nums">
 						{livePrompt.length}/{MAX_LLM_PROMPT_CHARACTERS}
 					</span>
@@ -231,17 +230,14 @@ interface SessionRoutingCardProps {
 	canUpdate: boolean;
 }
 
-// SessionRoutingCard toggles session-aware routing, which works the same on
-// top of either classifier.
+/** 两类分类器共用会话路由开关，说明随界面语言切换。 */
 export function SessionRoutingCard({ control, errors, canUpdate }: SessionRoutingCardProps) {
+	const { t } = useTranslation("models");
 	return (
 		<div className="bg-card flex items-center justify-between gap-6 rounded-sm border p-4">
 			<div className="space-y-1">
-				<FieldLabel htmlFor="complexity-router-session-enabled">Session-aware routing</FieldLabel>
-				<p className="text-muted-foreground max-w-3xl text-xs leading-relaxed">
-					Keep each session at its highest complexity tier for 24 hours of inactivity. Harder turns can move up; easier turns stay put to
-					reduce model changes. Requests without a session ID route independently.
-				</p>
+				<FieldLabel htmlFor="complexity-router-session-enabled">{t("routing.complexityUi.sessionTitle")}</FieldLabel>
+				<p className="text-muted-foreground max-w-3xl text-xs leading-relaxed">{t("routing.complexityUi.sessionHelp")}</p>
 				{errors?.enabled && (
 					<p id="complexity-router-session-enabled-error" className="text-destructive text-xs">
 						{errors.enabled.message}
@@ -289,7 +285,9 @@ interface DecisionFieldsProps {
 // OpenRouter list Jev releases, a Cloudflare provider's URL fixes its Clef model,
 // and a self-hosted provider offers the models it lists, or the known Laya and
 // Nimble checkpoints when it lists none.
+/** 按提供商展示决策模型字段，仅翻译说明而不改变模型与协议值。 */
 export function DecisionFields({ control, register, setValue, errors, canUpdate, providers, providerKeyIds }: DecisionFieldsProps) {
+	const { t } = useTranslation("models");
 	const providerName = useWatch({ control, name: "decision.provider" });
 	const model = useWatch({ control, name: "decision.model" });
 	const provider = providers.find((candidate) => candidate.name === providerName);
@@ -310,11 +308,8 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 	return (
 		<div className="grid gap-4 sm:grid-cols-2" data-testid="complexity-router-decision-fields">
 			<div className="space-y-2">
-				<FieldLabel
-					htmlFor="decision-provider"
-					tooltip="Typesafe or OpenRouter for Jev, or a custom provider with base format Typesafe serving Laya, Nimble, or Clef."
-				>
-					Provider
+				<FieldLabel htmlFor="decision-provider" tooltip={t("decisionUi.providerHelp")}>
+					{t("decisionUi.provider")}
 				</FieldLabel>
 				<Controller
 					control={control}
@@ -339,9 +334,9 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 				/>
 				{!providers.some(isDecisionProvider) && (
 					<p className="text-muted-foreground text-xs" data-testid="complexity-router-decision-no-provider">
-						No provider serves decision models yet.{" "}
+						{t("decisionUi.noProvider")}{" "}
 						<Link to="/workspace/providers" className="text-primary underline-offset-2 hover:underline">
-							Add one
+							{t("decisionUi.addProvider")}
 						</Link>
 						.
 					</p>
@@ -349,8 +344,8 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 				{errors?.provider && <p className="text-destructive text-xs">{errors.provider.message}</p>}
 			</div>
 			<div className="space-y-2">
-				<FieldLabel htmlFor="decision-model" tooltip="The model the provider runs for each classification.">
-					Model
+				<FieldLabel htmlFor="decision-model" tooltip={t("decisionUi.modelHelp")}>
+					{t("decisionUi.model")}
 				</FieldLabel>
 				<Controller
 					control={control}
@@ -362,7 +357,7 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 							return (
 								<Select value={field.value || undefined} onValueChange={field.onChange} disabled={!canUpdate}>
 									<SelectTrigger className="w-full" id="decision-model" data-testid="complexity-router-decision-model-select">
-										<SelectValue placeholder="Select a model" />
+										<SelectValue placeholder={t("decisionUi.selectModel")} />
 									</SelectTrigger>
 									<SelectContent>
 										{OPENROUTER_DECISION_MODELS.map((name) => (
@@ -384,7 +379,7 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 									value={field.value ?? ""}
 									onChange={(next) => field.onChange(next)}
 									allowCustomModel
-									placeholder={providerName ? "Search or type a Jev model…" : "Select a provider first"}
+									placeholder={providerName ? t("decisionUi.searchJev") : t("routing.complexityUi.selectProviderFirst")}
 									disabled={!canUpdate || !providerName}
 								/>
 							);
@@ -415,7 +410,7 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 									value={field.value ?? ""}
 									onChange={(next) => field.onChange(next)}
 									allowCustomModel
-									placeholder="Search or type a model…"
+									placeholder={t("decisionUi.searchModel")}
 									disabled={!canUpdate}
 								/>
 							);
@@ -423,7 +418,7 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 						return (
 							<Select value={field.value || undefined} onValueChange={field.onChange} disabled={!canUpdate}>
 								<SelectTrigger className="w-full" id="decision-model" data-testid="complexity-router-decision-model-select">
-									<SelectValue placeholder="Select a model" />
+									<SelectValue placeholder={t("decisionUi.selectModel")} />
 								</SelectTrigger>
 								<SelectContent>
 									{selfHostedModelGroups(providerName).map((group) => (
@@ -441,26 +436,15 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 						);
 					}}
 				/>
-				{servesClef && <p className="text-muted-foreground text-xs">Set by this provider&rsquo;s Cloudflare URL.</p>}
+				{servesClef && <p className="text-muted-foreground text-xs">{t("decisionUi.clefUrl")}</p>}
 				{LAYA_MODELS.includes(model) && (
-					<p className="text-muted-foreground text-xs">
-						Laya reads 512 tokens per request ({model === "english" ? "use multilingual for 1,024" : "keep tier guidance short"}).
-					</p>
+					<p className="text-muted-foreground text-xs">{t(model === "english" ? "decisionUi.layaEnglish" : "decisionUi.layaGuidance")}</p>
 				)}
 				{errors?.model && <p className="text-destructive text-xs">{errors.model.message}</p>}
 			</div>
 			<div className="space-y-2">
-				<FieldLabel
-					htmlFor="decision-previous-message-count"
-					tooltip={
-						<>
-							User messages sent to the decision model in addition to the current request, oldest to newest. Widening this lets a short
-							follow-up like &ldquo;and make it faster&rdquo; inherit earlier intent, but sends more input tokens per request. Assistant
-							replies are never sent. Defaults to 1.
-						</>
-					}
-				>
-					Max messages to send
+				<FieldLabel htmlFor="decision-previous-message-count" tooltip={t("decisionUi.previousMessagesHelp")}>
+					{t("routing.complexityUi.maxMessagesSend")}
 				</FieldLabel>
 				<Input
 					id="decision-previous-message-count"
@@ -477,11 +461,8 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 				{errors?.previous_message_count && <p className="text-destructive text-xs">{errors.previous_message_count.message}</p>}
 			</div>
 			<div className="space-y-2">
-				<FieldLabel
-					htmlFor="decision-timeout"
-					tooltip="Maximum wait for the decision model's API call. If the limit is exceeded, we skip and fall back to the original request model. Typesafe Jev typically responds in about 600 - 800 ms."
-				>
-					Classification timeout (ms)
+				<FieldLabel htmlFor="decision-timeout" tooltip={t("decisionUi.timeoutHelp")}>
+					{t("routing.complexityUi.classificationTimeout")}
 				</FieldLabel>
 				<Controller
 					control={control}
@@ -512,9 +493,6 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 
 // The recommendation matches the semantic phrase callout, so both classifiers
 // open the same way. The line under it says where the cards' content goes.
-const DECISION_GUIDANCE_NOTE = "We recommend starting with these defaults, then refining them to match what each tier means for you.";
-const DECISION_GUIDANCE_USAGE = "Each tier's definition, signals and examples are sent to the decision model with every request.";
-
 type DecisionListField = "signals" | "examples";
 
 // Signals are traits to look for; examples are requests that have them. The
@@ -527,15 +505,15 @@ const DECISION_LIST_FIELDS: Array<{
 }> = [
 	{
 		field: "signals",
-		label: "Signals",
-		placeholder: "Type a signal and press Enter",
-		tooltip: "What makes a request belong in this tier: the knowledge, reasoning, or kind of work it needs.",
+		label: "decisionUi.signals",
+		placeholder: "decisionUi.signalPlaceholder",
+		tooltip: "decisionUi.signalsHelp",
 	},
 	{
 		field: "examples",
-		label: "Examples",
-		placeholder: "Type an example and press Enter",
-		tooltip: "Sample requests that belong in this tier, showing what the signals look like in practice. Write them as concrete tasks.",
+		label: "decisionUi.examples",
+		placeholder: "decisionUi.examplePlaceholder",
+		tooltip: "decisionUi.examplesHelp",
 	},
 ];
 
@@ -558,7 +536,10 @@ interface DecisionDefinitionFieldProps {
 // DecisionDefinitionField shows a tier's definition as plain text, like the
 // semantic cards' tier descriptions, and turns into a textarea only while it
 // is being edited. An invalid definition stays open so its error is visible.
+/** 翻译层级编辑控件，定义正文仍保留服务器与用户原始数据。 */
 function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onReset }: DecisionDefinitionFieldProps) {
+	const { t } = useTranslation("models");
+	const tierLabel = t(DECISION_TIER_LABELS[tier]);
 	const [editing, setEditing] = useState(false);
 	const open = editing || Boolean(error);
 	const id = `decision-${tier.toLowerCase()}-definition`;
@@ -570,7 +551,7 @@ function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onRe
 				<div className="flex flex-1 flex-col space-y-1.5">
 					<div className="flex h-6 items-center justify-between">
 						<label htmlFor={id} className="text-xs font-medium">
-							{DECISION_TIER_LABELS[tier]}
+							{tierLabel}
 						</label>
 						<div className="flex items-center gap-1">
 							{canUpdate && !open && (
@@ -581,7 +562,7 @@ function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onRe
 											variant="ghost"
 											size="icon"
 											className="size-6"
-											aria-label={`Edit ${tier.toLowerCase()} definition`}
+											aria-label={t("decisionUi.editDefinition", { tier: tierLabel })}
 											onClick={() => setEditing(true)}
 											data-testid={`complexity-router-decision-${tier.toLowerCase()}-definition-edit-button`}
 										>
@@ -589,8 +570,7 @@ function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onRe
 										</Button>
 									</TooltipTrigger>
 									<TooltipContent className="max-w-xs leading-relaxed">
-										Describe what makes a request {DECISION_TIER_LABELS[tier]}. The decision model uses this to decide which requests belong
-										in this tier.
+										{t("decisionUi.definitionHelp", { tier: tierLabel })}
 									</TooltipContent>
 								</Tooltip>
 							)}
@@ -602,7 +582,7 @@ function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onRe
 											variant="ghost"
 											size="icon"
 											className="size-6"
-											aria-label={`Reset ${tier.toLowerCase()} definition to default`}
+											aria-label={t("decisionUi.resetDefinitionAria", { tier: tierLabel })}
 											onClick={onReset}
 											disabled={!canUpdate}
 											data-testid={`complexity-router-decision-${tier.toLowerCase()}-definition-reset-button`}
@@ -610,7 +590,7 @@ function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onRe
 											<RotateCcw className="size-3" />
 										</Button>
 									</TooltipTrigger>
-									<TooltipContent className="max-w-xs leading-relaxed">Reset to the default definition</TooltipContent>
+									<TooltipContent className="max-w-xs leading-relaxed">{t("decisionUi.resetDefinition")}</TooltipContent>
 								</Tooltip>
 							)}
 						</div>
@@ -668,6 +648,7 @@ interface DecisionGuidanceSectionProps {
 // each tier's definition, signals, and examples. The question, decision and
 // context rules, and answer contract stay fixed server-side. It mirrors the phrase grid
 // and the llm prompt editor so the page keeps one visual language.
+/** 编辑决策层级指引并保留服务端固定问答协议与默认正文。 */
 export function DecisionGuidanceSection({
 	control,
 	setValue,
@@ -677,6 +658,7 @@ export function DecisionGuidanceSection({
 	defaultsLoading,
 	variant,
 }: DecisionGuidanceSectionProps) {
+	const { t } = useTranslation("models");
 	const criteria = useWatch({ control, name: "decision.criteria" });
 	const [fallbackOpen, setFallbackOpen] = useState(false);
 
@@ -713,9 +695,9 @@ export function DecisionGuidanceSection({
 		<>
 			<Alert variant="info" data-testid="complexity-router-decision-guidance-defaults-callout">
 				<Info className="h-4 w-4" />
-				<AlertDescription>{DECISION_GUIDANCE_NOTE}</AlertDescription>
+				<AlertDescription>{t("decisionUi.guidanceNote")}</AlertDescription>
 			</Alert>
-			<p className="text-muted-foreground text-xs leading-relaxed">{DECISION_GUIDANCE_USAGE}</p>
+			<p className="text-muted-foreground text-xs leading-relaxed">{t("decisionUi.guidanceUsage")}</p>
 			{defaults ? (
 				<div className="grid items-stretch gap-3 md:grid-cols-3">
 					{COMPLEXITY_TIER_VALUES.map((tier) => (
@@ -749,8 +731,8 @@ export function DecisionGuidanceSection({
 													{/* Fixed height so a row with a reset icon lines up with one without. */}
 													<div className="flex h-6 items-center justify-between">
 														<div className="flex items-center gap-1.5">
-															<span className="text-muted-foreground text-xs">{label}</span>
-															<InfoTip label={`About ${label.toLowerCase()}`}>{tooltip}</InfoTip>
+															<span className="text-muted-foreground text-xs">{t(label)}</span>
+															<InfoTip label={t("decisionUi.about", { label: t(label) })}>{t(tooltip)}</InfoTip>
 														</div>
 														<div className="flex items-center gap-1">
 															<span
@@ -765,7 +747,7 @@ export function DecisionGuidanceSection({
 																	variant="ghost"
 																	size="icon"
 																	className="size-6"
-																	aria-label={`Reset ${tier.toLowerCase()} ${listField} to default`}
+																	aria-label={t("decisionUi.resetList", { tier: t(DECISION_TIER_LABELS[tier]), label: t(label) })}
 																	onClick={() => resetList(tier, listField)}
 																	disabled={!canUpdate}
 																	data-testid={`complexity-router-decision-${tier.toLowerCase()}-${listField}-reset-button`}
@@ -781,10 +763,10 @@ export function DecisionGuidanceSection({
 														onValueChange={field.onChange}
 														listHeight={DECISION_LIST_HEIGHT}
 														submitOnComma={false}
-														placeholder={atLimit ? `Limit of ${MAX_DECISION_CRITERIA_ITEMS} reached` : placeholder}
+														placeholder={atLimit ? t("decisionUi.limitReached", { count: MAX_DECISION_CRITERIA_ITEMS }) : t(placeholder)}
 														readOnly={!canUpdate}
 														disabled={!canUpdate || atLimit}
-														aria-label={`${DECISION_TIER_LABELS[tier]} ${label.toLowerCase()}`}
+														aria-label={t("decisionUi.tierList", { tier: t(DECISION_TIER_LABELS[tier]), label: t(label) })}
 														aria-invalid={fieldError ? true : undefined}
 														aria-describedby={fieldError ? errorId : undefined}
 														className={cn(fieldError && "border-destructive")}
@@ -811,13 +793,12 @@ export function DecisionGuidanceSection({
 					{defaultsLoading ? (
 						<>
 							<LoaderCircle className="size-3.5 animate-spin" />
-							Loading the default guidance…
+							{t("decisionUi.loadingGuidance")}
 						</>
 					) : (
 						<>
 							<TriangleAlert className="size-3.5" />
-							This gateway did not return its default guidance, so it cannot be edited here. The decision model keeps using the saved or
-							shipped guidance.
+							{t("decisionUi.guidanceUnavailable")}
 						</>
 					)}
 				</div>
@@ -856,8 +837,8 @@ export function DecisionGuidanceSection({
 					>
 						<ChevronRight className={cn("text-muted-foreground mt-0.5 size-4 shrink-0 transition-transform", open && "rotate-90")} />
 						<span className="space-y-1">
-							<span className="block text-sm font-semibold">Fallback Tier Guidance</span>
-							<span className="text-muted-foreground block text-xs">Used by the decision model when no reference phrase matches.</span>
+							<span className="block text-sm font-semibold">{t("decisionUi.fallbackGuidance")}</span>
+							<span className="text-muted-foreground block text-xs">{t("decisionUi.fallbackGuidanceHelp")}</span>
 						</span>
 					</button>
 				</CollapsibleTrigger>
@@ -871,7 +852,7 @@ export function DecisionGuidanceSection({
 						data-testid="complexity-router-decision-guidance-reset-button"
 					>
 						<RotateCcw className="h-3.5 w-3.5" />
-						Reset all
+						{t("decisionUi.resetAll")}
 					</Button>
 				)}
 			</div>
@@ -880,38 +861,28 @@ export function DecisionGuidanceSection({
 	);
 }
 
-const DECISION_PROVIDER_PROBLEMS: Record<
-	Exclude<DecisionProviderState, "configured">,
-	(provider: string) => { message: string; action: string }
-> = {
-	missing: (provider) => ({
-		message: `The decision model runs through the ${provider} provider, and it is not set up yet.`,
-		action: `Set up ${provider}`,
-	}),
-	failing: (provider) => ({
-		message: `The ${provider} provider is failing its checks, so decision-model calls will fail. Check its key and settings.`,
-		action: `Review ${provider} provider`,
-	}),
-	"no-enabled-key": (provider) => ({
-		message: `The ${provider} provider has no enabled key, so decision-model calls will fail.`,
-		action: `Review ${provider} keys`,
-	}),
+const DECISION_PROVIDER_PROBLEMS: Record<Exclude<DecisionProviderState, "configured">, { message: string; action: string }> = {
+	missing: { message: "decisionUi.providerMissing", action: "decisionUi.setupProvider" },
+	failing: { message: "decisionUi.providerFailing", action: "decisionUi.reviewProvider" },
+	"no-enabled-key": { message: "decisionUi.providerNoKey", action: "decisionUi.reviewKeys" },
 };
 
 // DecisionProviderAlert explains why the decision model cannot run, and links
 // straight to its provider's page. That page opens a blank setup form when the
 // provider does not exist yet, so one click lands on the fix either way.
+/** 根据提供商状态显示本地化提示，并保留原有修复入口。 */
 export function DecisionProviderAlert({ state, provider }: { state: DecisionProviderState; provider: string }) {
+	const { t } = useTranslation("models");
 	if (state === "configured" || !provider) return null;
-	const problem = DECISION_PROVIDER_PROBLEMS[state](provider);
+	const problem = DECISION_PROVIDER_PROBLEMS[state];
 	return (
 		<Alert variant="warning" data-testid="complexity-router-decision-provider-alert">
 			<TriangleAlert className="h-4 w-4" />
 			<AlertDescription className="gap-2">
-				<span>{problem.message}</span>
+				<span>{t(problem.message, { provider })}</span>
 				<Button asChild variant="outline" size="sm" data-testid="complexity-router-decision-provider-link">
 					<Link to="/workspace/providers" search={{ provider }}>
-						{problem.action}
+						{t(problem.action, { provider })}
 						<ArrowRight className="size-3.5" />
 					</Link>
 				</Button>
@@ -929,24 +900,24 @@ const CLASSIFIER_OPTIONS: {
 }[] = [
 	{
 		value: "decision",
-		title: "Decision model",
-		description:
-			"A decision model judges the complexity of each request and picks the tier whose definition, signals, and examples fit it best. Use Typesafe Jev, or run Laya, Nimble, or Clef. No phrases to write or maintain.",
+		title: "routing.complexityUi.decisionClassifier",
+		description: "decisionUi.decisionDescription",
 	},
 	{
 		value: "semantic",
-		title: "Semantic",
-		description:
-			"Matches each request against reference phrases you write for each tier, through an embedding model you choose. You decide exactly what each tier means.",
+		title: "routing.complexityUi.semanticClassifier",
+		description: "decisionUi.semanticDescription",
 	},
 ];
 
 // ClassifierChoice is the one decision everything else depends on, so each
 // option is an explained card rather than an entry in a dropdown. Anything a
 // choice still needs is reported once, below the cards, after it is picked.
+/** 显示分类器选择文案，保留 decision 与 semantic 协议值。 */
 export function ClassifierChoice({ value, onChange }: { value: Classifier | undefined; onChange: (value: Classifier) => void }) {
+	const { t } = useTranslation("models");
 	return (
-		<div role="radiogroup" aria-label="Classifier" className="grid gap-3 sm:grid-cols-2">
+		<div role="radiogroup" aria-label={t("routing.complexityUi.classifierStep")} className="grid gap-3 sm:grid-cols-2">
 			{CLASSIFIER_OPTIONS.map((option) => {
 				const selected = option.value === value;
 				return (
@@ -968,10 +939,10 @@ export function ClassifierChoice({ value, onChange }: { value: Classifier | unde
 							) : (
 								<Waypoints className="text-muted-foreground size-4" />
 							)}
-							<span className="text-sm font-medium">{option.title}</span>
+							<span className="text-sm font-medium">{t(option.title)}</span>
 							{selected && <Check className="ml-auto size-4 text-green-600" />}
 						</div>
-						<p className="text-muted-foreground text-xs leading-relaxed">{option.description}</p>
+						<p className="text-muted-foreground text-xs leading-relaxed">{t(option.description)}</p>
 					</button>
 				);
 			})}
@@ -988,9 +959,11 @@ interface StepRailProps {
 // StepRail is the page's step nav. It takes the row style of the Edge inventory
 // nav, and is narrower still: two short labels need little width, and every
 // pixel it gives back goes to the phrase lists.
+/** 显示分类配置步骤，沿用原有可进入条件与当前步骤。 */
 export function StepRail({ steps, currentIndex, onSelect }: StepRailProps) {
+	const { t } = useTranslation("models");
 	return (
-		<nav className="flex w-full shrink-0 gap-1 overflow-x-auto md:block md:w-44" aria-label="Complexity Router steps">
+		<nav className="flex w-full shrink-0 gap-1 overflow-x-auto md:block md:w-44" aria-label={t("decisionUi.stepsAria")}>
 			{steps.map((step, index) => {
 				const current = index === currentIndex;
 				return (

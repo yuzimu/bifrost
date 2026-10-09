@@ -5,6 +5,7 @@
 
 import { RuleGroupType, RuleType } from "react-querybuilder";
 import { getOperatorCELSyntax } from "@/lib/config/celOperatorsRouting";
+import type { TFunction } from "i18next";
 
 /**
  * RE2-incompatible constructs (not supported by CEL/RE2).
@@ -25,26 +26,29 @@ const RE2_BACKREF = /\\[0-9]+/;
  * RE2 does not support lookarounds or backreferences. Returns null if valid,
  * error message if invalid or RE2-incompatible.
  */
-export function validateRegexPattern(pattern: string): string | null {
+/** 校验 RE2 兼容性，可注入翻译器且不改变默认英文结果。 */
+export function validateRegexPattern(pattern: string, t?: TFunction): string | null {
+	const text = (key: string, fallback: string, values?: Record<string, unknown>) =>
+		t ? t(`celUi.${key}`, { ns: "models", defaultValue: fallback, ...values }) : fallback;
 	if (!pattern || typeof pattern !== "string") {
 		return null; // Empty patterns are valid
 	}
 
 	// Reject RE2-unsupported constructs
 	if (pattern.includes(RE2_UNSUPPORTED.lookbehindPositive)) {
-		return "RE2 incompatible: positive lookbehind (?<=...) is not supported";
+		return text("positiveLookbehind", "RE2 incompatible: positive lookbehind (?<=...) is not supported");
 	}
 	if (pattern.includes(RE2_UNSUPPORTED.lookbehindNegative)) {
-		return "RE2 incompatible: negative lookbehind (?<!...) is not supported";
+		return text("negativeLookbehind", "RE2 incompatible: negative lookbehind (?<!...) is not supported");
 	}
 	if (pattern.includes(RE2_UNSUPPORTED.lookaheadPositive)) {
-		return "RE2 incompatible: positive lookahead (?=...) is not supported";
+		return text("positiveLookahead", "RE2 incompatible: positive lookahead (?=...) is not supported");
 	}
 	if (pattern.includes(RE2_UNSUPPORTED.lookaheadNegative)) {
-		return "RE2 incompatible: negative lookahead (?!...) is not supported";
+		return text("negativeLookahead", "RE2 incompatible: negative lookahead (?!...) is not supported");
 	}
 	if (RE2_BACKREF.test(pattern)) {
-		return "RE2 incompatible: numeric backreferences (e.g. \\1, \\2) are not supported";
+		return text("numericBackref", "RE2 incompatible: numeric backreferences (e.g. \\1, \\2) are not supported");
 	}
 
 	// Basic syntax check via JS RegExp (catches invalid escaping, etc.)
@@ -52,8 +56,8 @@ export function validateRegexPattern(pattern: string): string | null {
 		new RegExp(pattern);
 		return null; // Valid regex
 	} catch (error: unknown) {
-		const errorMessage = error instanceof Error ? error.message : "Invalid regex pattern";
-		return `Invalid regex: ${errorMessage}`;
+		const errorMessage = error instanceof Error ? error.message : text("invalidPattern", "Invalid regex pattern");
+		return text("invalidRegex", `Invalid regex: ${errorMessage}`, { error: errorMessage });
 	}
 }
 
@@ -294,7 +298,8 @@ export function convertRuleGroupToCEL(ruleGroup: RuleGroupType | undefined): str
  * Validate routing rules for regex pattern errors
  * Returns array of error messages, empty if valid
  */
-export function validateRoutingRules(ruleGroup: RuleGroupType | undefined): string[] {
+/** 递归校验路由正则，仅本地化错误文案。 */
+export function validateRoutingRules(ruleGroup: RuleGroupType | undefined, t?: TFunction): string[] {
 	const errors: string[] = [];
 
 	if (!ruleGroup || !ruleGroup.rules) {
@@ -310,9 +315,11 @@ export function validateRoutingRules(ruleGroup: RuleGroupType | undefined): stri
 		} else {
 			// Regular rule - check if it uses matches operator
 			if (rule.operator === "matches" && rule.value) {
-				const regexError = validateRegexPattern(String(rule.value));
+				const regexError = validateRegexPattern(String(rule.value), t);
 				if (regexError) {
-					errors.push(`Field "${rule.field}": ${regexError}`);
+					errors.push(
+						t ? t("celUi.fieldError", { ns: "models", field: rule.field, error: regexError }) : `Field "${rule.field}": ${regexError}`,
+					);
 				}
 			}
 		}
@@ -329,7 +336,8 @@ export function validateRoutingRules(ruleGroup: RuleGroupType | undefined): stri
  * Validate that rules using rate limits or budgets have a model or provider condition
  * Returns array of error messages, empty if valid
  */
-export function validateRateLimitAndBudgetRules(ruleGroup: RuleGroupType | undefined): string[] {
+/** 校验预算规则的提供商或模型条件，保留原有判定。 */
+export function validateRateLimitAndBudgetRules(ruleGroup: RuleGroupType | undefined, t?: TFunction): string[] {
 	const errors: string[] = [];
 
 	if (!ruleGroup || !ruleGroup.rules) {
@@ -363,7 +371,9 @@ export function validateRateLimitAndBudgetRules(ruleGroup: RuleGroupType | undef
 	if (ruleHasRateLimitOrBudget) {
 		const hasCondition = hasModelOrProviderCondition(ruleGroup);
 		if (!hasCondition) {
-			errors.push('Rules using rate limits or budget must have a "model" or "provider" condition');
+			errors.push(
+				t ? t("celUi.scopeRequired", { ns: "models" }) : 'Rules using rate limits or budget must have a "model" or "provider" condition',
+			);
 		}
 	}
 

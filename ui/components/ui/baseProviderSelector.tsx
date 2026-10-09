@@ -1,5 +1,6 @@
 import { ProviderSelector } from "@/components/ui/providerSelector";
 import { BaseProviderNames, type BaseProvider } from "@/lib/types/config";
+import { useTranslation } from "react-i18next";
 
 interface BaseProviderSelectorProps {
 	value: string;
@@ -29,7 +30,7 @@ export function BaseProviderSelector({
 	value,
 	onChange,
 	disabled = false,
-	placeholder = "Select base format",
+	placeholder,
 	className,
 	inputId,
 	id,
@@ -37,6 +38,7 @@ export function BaseProviderSelector({
 	"aria-invalid": ariaInvalid,
 	"data-testid": dataTestId,
 }: BaseProviderSelectorProps) {
+	const { t } = useTranslation("observability");
 	return (
 		<ProviderSelector
 			source="values"
@@ -44,8 +46,8 @@ export function BaseProviderSelector({
 			value={value}
 			onChange={(next: string) => onChange(next as BaseProvider)}
 			disabled={disabled}
-			placeholder={placeholder}
-			searchPlaceholder="Search formats..."
+			placeholder={placeholder ?? t("shared.selectBaseFormat")}
+			searchPlaceholder={t("shared.searchFormats")}
 			className={className}
 			inputId={inputId ?? id}
 			ariaDescribedBy={ariaDescribedBy}

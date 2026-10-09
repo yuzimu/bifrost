@@ -6,6 +6,8 @@ import { cleanJson, isJson } from "@/lib/utils/validation";
 import { Download } from "lucide-react";
 import AudioPlayer from "./audioPlayer";
 import CollapsibleBox from "./collapsibleBox";
+import i18n from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 
 interface LogChatMessageViewProps {
 	message: ChatMessage;
@@ -52,10 +54,11 @@ function downloadFileData(fileData: string, filename: string, fileType?: string)
 }
 
 export function LogChatFileBlockView({ block, className }: { block: ContentBlock; className?: string }) {
+	const { t } = useTranslation("observability");
 	const file = block.file;
 	if (!file) return null;
 
-	const title = file.filename || file.file_id || "Attached file";
+	const title = file.filename || file.file_id || t("detailExtras.attachedFile");
 	const size = formatFileDataSize(file.file_data);
 	const details = [file.file_type, size, file.file_id ? `ID: ${file.file_id}` : undefined].filter(Boolean);
 	const canDownload = !!file.file_data;
@@ -129,7 +132,7 @@ function ContentBlockView({ block }: { block: ContentBlock; index: number }) {
 	if (block.image_url) {
 		const src = block.image_url.url;
 		if (src) {
-			return <img src={src} alt="Attachment" className="max-w-full rounded border" />;
+			return <img src={src} alt={i18n.t("logs.detail.attachedImage", { ns: "observability" })} className="max-w-full rounded border" />;
 		}
 	}
 
@@ -165,6 +168,7 @@ function ContentBlockView({ block }: { block: ContentBlock; index: number }) {
 }
 
 export default function LogChatMessageView({ message, audioFormat }: LogChatMessageViewProps) {
+	const { t } = useTranslation("observability");
 	return (
 		<div className="flex w-full flex-col gap-2">
 			{/* Role header */}
@@ -292,7 +296,11 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 
 			{/* Handle annotations */}
 			{message.annotations && message.annotations.length > 0 && (
-				<CollapsibleBox title="Annotations" onCopy={() => JSON.stringify(message.annotations, null, 2)} collapsedHeight={100}>
+				<CollapsibleBox
+					title={t("detailExtras.annotations")}
+					onCopy={() => JSON.stringify(message.annotations, null, 2)}
+					collapsedHeight={100}
+				>
 					<CodeEditor
 						className="z-0 w-full"
 						shouldAdjustInitialHeight={true}
@@ -308,17 +316,17 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 
 			{/* Handle audio output */}
 			{message.audio && (
-				<CollapsibleBox title="Audio Output" collapsedHeight={150}>
+				<CollapsibleBox title={t("detailExtras.audioOutput")} collapsedHeight={150}>
 					<div className="space-y-4 px-6 py-4">
 						{message.audio.transcript && (
 							<div className="space-y-2">
-								<div className="text-muted-foreground text-xs font-medium">Transcript:</div>
+								<div className="text-muted-foreground text-xs font-medium">{t("detailExtras.transcript")}</div>
 								<div className="font-mono text-xs break-words whitespace-pre-wrap">{message.audio.transcript}</div>
 							</div>
 						)}
 						{message.audio.data && (
 							<div className="space-y-2">
-								<div className="text-muted-foreground text-xs font-medium">Audio:</div>
+								<div className="text-muted-foreground text-xs font-medium">{t("detailExtras.audio")}</div>
 								<AudioPlayer src={message.audio.data} format={audioFormat} />
 							</div>
 						)}
@@ -327,7 +335,7 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 								ID: {message.audio.id} | Expires:{" "}
 								{message.audio.expires_at && Number.isFinite(message.audio.expires_at)
 									? new Date(message.audio.expires_at * 1000).toLocaleString()
-									: "N/A"}
+									: i18n.t("labels.nA", { ns: "observability" })}
 							</div>
 						)}
 					</div>

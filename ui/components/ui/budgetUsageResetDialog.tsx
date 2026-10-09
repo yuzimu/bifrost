@@ -8,6 +8,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alertDialog";
+import { useTranslation } from "react-i18next";
 
 interface BudgetUsageResetDialogProps {
 	"data-testid"?: string;
@@ -19,17 +20,7 @@ interface BudgetUsageResetDialogProps {
 	ownerLabel: string;
 }
 
-/**
- * Asks whether to clear accumulated spend when a budget's configuration changes.
- *
- * Shared by every owner's edit sheet rather than reimplemented per sheet: the
- * wording is a promise about what the backend does, and four copies would drift
- * from each other and from the API.
- *
- * Note the reset clears usage only. The reset boundary is never moved - it is
- * guarded to advance forward only so that cluster nodes agree on which window is
- * current - so the window keeps its existing start and end either way.
- */
+/** 询问是否清零预算用量；两种选择均保持当前重置窗口不变。 */
 export default function BudgetUsageResetDialog({
 	"data-testid": testId,
 	open,
@@ -37,22 +28,20 @@ export default function BudgetUsageResetDialog({
 	onChoice,
 	ownerLabel,
 }: BudgetUsageResetDialogProps) {
+	const { t } = useTranslation("observability");
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
 			<AlertDialogContent data-testid={testId}>
 				<AlertDialogHeader>
-					<AlertDialogTitle>Reset budget usage?</AlertDialogTitle>
-					<AlertDialogDescription>
-						You changed a budget amount or reset frequency on this {ownerLabel}. Reset current usage to 0, or preserve the existing
-						counters. The reset window keeps its current start and end either way.
-					</AlertDialogDescription>
+					<AlertDialogTitle>{t("budgetControls.resetTitle")}</AlertDialogTitle>
+					<AlertDialogDescription>{t("budgetControls.resetDescription", { owner: ownerLabel })}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel onClick={() => onChoice(false)} data-testid={testId ? `${testId}-preserve-btn` : undefined}>
-						Preserve Usage
+						{t("budgetControls.preserveUsage")}
 					</AlertDialogCancel>
 					<AlertDialogAction onClick={() => onChoice(true)} data-testid={testId ? `${testId}-confirm-btn` : undefined}>
-						Reset Usage
+						{t("budgetControls.resetUsage")}
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>

@@ -1,4 +1,5 @@
 import { EmbeddingSupportedProviders } from "@/lib/constants/logs";
+import i18n from "@/lib/i18n";
 import type { ModelProvider } from "@/lib/types/config";
 import type { WarpConfig, WarpConfigInput } from "@/lib/types/warp";
 import { v4 as uuid } from "uuid";
@@ -21,13 +22,13 @@ export const supportsWarpEmbedding = (provider: ModelProvider): boolean => {
 
 export const validateWarpEmbedding = (fields: WarpEmbeddingFields, enabled: boolean, vectorStoreConnected: boolean): string | null => {
 	if (!enabled) return null;
-	if (!vectorStoreConnected) return "Connect a vector store before enabling Warp.";
-	if (!fields.embeddingProvider) return "Choose an embedding provider.";
-	if (!fields.embeddingModel.trim()) return "Choose an embedding model.";
-	if (fields.embeddingDimension <= 0) return "Embedding dimension must be positive.";
-	if (!fields.namespace.trim()) return "Vector store namespace is required.";
-	if (fields.threshold <= 0 || fields.threshold > 1) return "Similarity threshold must be greater than 0 and at most 1.";
-	if (fields.searchLimit < 1 || fields.searchLimit > 25) return "Search limit must be between 1 and 25.";
+	if (!vectorStoreConnected) return i18n.t("warp.validation.vectorStore", { ns: "config" });
+	if (!fields.embeddingProvider) return i18n.t("warp.validation.embeddingProvider", { ns: "config" });
+	if (!fields.embeddingModel.trim()) return i18n.t("warp.validation.embeddingModel", { ns: "config" });
+	if (fields.embeddingDimension <= 0) return i18n.t("warp.validation.dimension", { ns: "config" });
+	if (!fields.namespace.trim()) return i18n.t("warp.validation.namespace", { ns: "config" });
+	if (fields.threshold <= 0 || fields.threshold > 1) return i18n.t("warp.validation.threshold", { ns: "config" });
+	if (fields.searchLimit < 1 || fields.searchLimit > 25) return i18n.t("warp.validation.searchLimit", { ns: "config" });
 	return null;
 };
 
@@ -110,25 +111,19 @@ export const warpModelsPayload = (
 export const warpModelRowsChanged = (rows: WarpModelValues[], config: WarpModelFields): boolean =>
 	JSON.stringify(warpModelsPayload(rows)) !== JSON.stringify(warpModelsPayload(storedWarpModels(config)));
 
-/**
- * One message per row, null where the row is fine. Mirrors validateAdditionalModels on the server.
- *
- * The default may be left blank while Warp is off, since the form can be filled
- * in over several sittings. An additional row is never a draft of anything: it
- * is either a complete choice or it should not be in the list.
- */
+/** 按服务端模型行规则校验，逐行返回当前语言的错误或 null。 */
 export const validateWarpModelRows = (rows: WarpModelValues[], enabled: boolean): (string | null)[] => {
 	const seen = new Set<string>();
 	return rows.map((row, index) => {
 		const provider = row.provider.trim();
 		const model = row.model.trim();
 		if (!provider || !model) {
-			if (index === 0) return enabled ? "Choose a provider and model to enable Warp." : null;
-			return "Choose a provider and model, or remove this model.";
+			if (index === 0) return enabled ? i18n.t("warp.chooseProviderModel", { ns: "config" }) : null;
+			return i18n.t("warp.chooseOrRemoveModel", { ns: "config" });
 		}
 		// The pair is how a question names its model, so a repeat would be ambiguous between two keys.
 		const pair = `${provider}\u0000${model}`;
-		if (seen.has(pair)) return "This provider and model is already listed.";
+		if (seen.has(pair)) return i18n.t("warp.duplicateModel", { ns: "config" });
 		seen.add(pair);
 		return null;
 	});

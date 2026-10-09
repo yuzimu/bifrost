@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 const MAX_ATTRIBUTION_LINES = 1;
 
 // AttributionCell resolves an attribution value using a plural-first fallback:
@@ -5,6 +7,7 @@ const MAX_ATTRIBUTION_LINES = 1;
 // (array) source is used, values render one per line, capped at
 // MAX_ATTRIBUTION_LINES with a "+N more" indicator for the remainder.
 export function AttributionCell({ names, name, ids, id }: { names?: string[]; name?: string | null; ids?: string[]; id?: string | null }) {
+	const { t } = useTranslation("observability");
 	let values: string[] = [];
 	if (Array.isArray(names) && names.filter(Boolean).length > 0) {
 		values = names.filter(Boolean);
@@ -30,7 +33,7 @@ export function AttributionCell({ names, name, ids, id }: { names?: string[]; na
 					{value}
 				</span>
 			))}
-			{remaining > 0 && <span className="text-muted-foreground">+{remaining} more</span>}
+			{remaining > 0 && <span className="text-muted-foreground">{t("labels.more", { count: remaining })}</span>}
 		</div>
 	);
 }

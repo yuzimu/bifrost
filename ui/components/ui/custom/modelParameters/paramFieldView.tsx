@@ -18,6 +18,7 @@ interface Props {
 	forceHideFields?: string[];
 }
 
+/** 按字段类型渲染传入 schema，不推断文案来源或翻译自定义字段。 */
 export default function ParameterFieldView(props: Props) {
 	const { field, parentField, config, onInvalid } = props;
 

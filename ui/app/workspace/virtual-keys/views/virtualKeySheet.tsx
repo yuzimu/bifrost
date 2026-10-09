@@ -72,15 +72,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Lock, RotateCcw, Users } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 // Side-effect import: registers the enterprise user picker so "Assign to User"
 // becomes available. Resolves to an empty module on OSS builds.
 import "@enterprise/lib/registrations/userPicker";
 // Same pattern for the business unit owner option.
 import "@enterprise/lib/registrations/businessUnitPicker";
 import { useForm } from "react-hook-form";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
+import i18n, { getLocale } from "@/lib/i18n";
+import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 
 interface VirtualKeySheetProps {
 	virtualKey?: VirtualKey | null;
@@ -95,8 +98,12 @@ interface VirtualKeySheetProps {
 // Provider configuration schema
 const providerConfigSchema = z.object({
 	id: z.number().optional(),
-	provider: z.string().min(1, "Provider is required"),
-	weight: z.number().min(0, "Weight must be at least 0").max(1, "Weight must be at most 1").optional(),
+	provider: z.string().min(1, { error: () => i18n.t("virtualKeys.providerRequired", { ns: "models" }) }),
+	weight: z
+		.number()
+		.min(0, { error: () => i18n.t("virtualKeys.weightMin", { ns: "models" }) })
+		.max(1, { error: () => i18n.t("virtualKeys.weightMax", { ns: "models" }) })
+		.optional(),
 	allowed_models: z.array(z.string()).optional(),
 	blacklisted_models: z.array(z.string()).optional(),
 	key_ids: z.array(z.string()).optional(), // Keys associated with this provider config
@@ -126,7 +133,10 @@ const providerConfigSchema = z.object({
 	model_budgets: z
 		.array(
 			z.object({
-				model_name: z.string().trim().min(1, "Model name is required"),
+				model_name: z
+					.string()
+					.trim()
+					.min(1, { error: () => i18n.t("virtualKeys.modelNameRequired", { ns: "models" }) }),
 				budgets: z
 					.array(
 						z.object({
@@ -152,14 +162,14 @@ const providerConfigSchema = z.object({
 
 const mcpConfigSchema = z.object({
 	id: z.number().optional(),
-	mcp_client_name: z.string().min(1, "MCP client name is required"),
+	mcp_client_name: z.string().min(1, { error: () => i18n.t("virtualKeys.mcpClientNameRequired", { ns: "models" }) }),
 	tools_to_execute: z.array(z.string()).optional(),
 });
 
 // Main form schema
 const formSchema = z
 	.object({
-		name: z.string().min(1, "Virtual key name is required"),
+		name: z.string().min(1, { error: () => i18n.t("virtualKeys.nameRequired", { ns: "models" }) }),
 		description: z.string().optional(),
 		providerConfigs: z.array(providerConfigSchema).optional(),
 		// When true, all providers are allowed; providerConfigs remain optional per-provider overrides.
@@ -218,7 +228,7 @@ const formSchema = z
 			return true;
 		},
 		{
-			message: "Please select a valid team, business unit, customer, or user when assignment type is chosen",
+			error: () => i18n.t("virtualKeys.assignmentInvalid", { ns: "models" }),
 			path: ["entityType"], // This will show the error on the entityType field
 		},
 	);
@@ -246,10 +256,10 @@ const toDatetimeLocal = (d: Date) =>
 const presetFromNow = (offsetMs: number) => toDatetimeLocal(new Date(Date.now() + offsetMs));
 
 const EXPIRY_PRESETS = [
-	{ label: "30 min", ms: 30 * 60_000 },
-	{ label: "1 hour", ms: 60 * 60_000 },
-	{ label: "24 hours", ms: 24 * 60 * 60_000 },
-	{ label: "7 days", ms: 7 * 24 * 60 * 60_000 },
+	{ key: "preset30min" as const, testId: "30-min", ms: 30 * 60_000 },
+	{ key: "preset1hour" as const, testId: "1-hour", ms: 60 * 60_000 },
+	{ key: "preset24hours" as const, testId: "24-hours", ms: 24 * 60 * 60_000 },
+	{ key: "preset7days" as const, testId: "7-days", ms: 7 * 24 * 60 * 60_000 },
 ] as const;
 
 interface ExpiryFieldProps {
@@ -262,16 +272,25 @@ interface ExpiryFieldProps {
 	deleteExpiredByDefault: boolean;
 }
 
+// 编辑有效期及到期删除设置，清空有效期时恢复工作区删除默认值。
 function ExpiryPickerField({ value, onChange, deleteAfterExpire, onDeleteAfterExpireChange, deleteExpiredByDefault }: ExpiryFieldProps) {
+	const { t, i18n } = useTranslation("models");
 	// Preset timestamps are computed from Date.now() at click time, so the picked
 	// preset can't be derived back from the value; track it for highlighting.
 	const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
 	return (
 		<FormItem>
-			<FormLabel>Expiry</FormLabel>
+			<FormLabel>{t("virtualKeys.expiry")}</FormLabel>
 			<p className="text-muted-foreground text-xs">
-				{value ? `This key expires ${formatDistanceToNow(new Date(value), { addSuffix: true })}.` : "This key never expires."}
+				{value
+					? t("virtualKeys.expiresIn", {
+							when: formatDistanceToNow(new Date(value), {
+								addSuffix: true,
+								locale: dateFnsLocale(i18n.language),
+							}),
+						})
+					: t("virtualKeys.neverExpires")}
 			</p>
 			<div className="flex flex-wrap gap-1.5">
 				<Button
@@ -285,21 +304,21 @@ function ExpiryPickerField({ value, onChange, deleteAfterExpire, onDeleteAfterEx
 						onDeleteAfterExpireChange(deleteExpiredByDefault);
 					}}
 				>
-					Never
+					{t("virtualKeys.never")}
 				</Button>
-				{EXPIRY_PRESETS.map(({ label, ms }) => (
+				{EXPIRY_PRESETS.map(({ key, testId, ms }) => (
 					<Button
-						key={label}
+						key={key}
 						type="button"
-						variant={value && selectedPreset === label ? "default" : "outline"}
+						variant={value && selectedPreset === key ? "default" : "outline"}
 						size="sm"
-						data-testid={`vk-expiry-preset-${label.replace(/\s+/g, "-")}`}
+						data-testid={`vk-expiry-preset-${testId}`}
 						onClick={() => {
-							setSelectedPreset(label);
+							setSelectedPreset(key);
 							onChange(presetFromNow(ms));
 						}}
 					>
-						{label}
+						{t(`virtualKeys.${key}`)}
 					</Button>
 				))}
 				<DateTimePicker
@@ -317,13 +336,15 @@ function ExpiryPickerField({ value, onChange, deleteAfterExpire, onDeleteAfterEx
 				<div className="flex items-center justify-between gap-4 pt-1">
 					<div className="grid gap-0.5 leading-none">
 						<Label htmlFor="vk-delete-after-expire" className="text-sm font-normal">
-							Delete after expire
+							{t("virtualKeys.deleteAfterExpiry")}
 						</Label>
 						<p className="text-muted-foreground text-xs">
-							The key is removed automatically within about a day of expiring.{" "}
+							{t("virtualKeys.deleteAfterExpiryHelp")}{" "}
 							{deleteAfterExpire === deleteExpiredByDefault
-								? `Follows the workspace default (${deleteExpiredByDefault ? "on" : "off"}), set under Settings → Security.`
-								: "Overrides the workspace default for this key."}
+								? t("virtualKeys.followsWorkspaceDefault", {
+										state: t(deleteExpiredByDefault ? "virtualKeys.defaultOn" : "virtualKeys.defaultOff"),
+									})
+								: t("virtualKeys.overridesWorkspaceDefault")}
 						</p>
 					</div>
 					<Switch
@@ -354,12 +375,6 @@ function contentLoggingValue(choice: ContentLoggingChoice): boolean | null {
 	return null;
 }
 
-const contentLoggingOptions: { value: ContentLoggingChoice; label: string }[] = [
-	{ value: "inherit", label: "Inherit gateway setting" },
-	{ value: "disabled", label: "Off for this key" },
-	{ value: "enabled", label: "On for this key" },
-];
-
 // A key owned by a profile-holding team, customer or business unit is governed by that profile: the
 // server discards the key's own providers, budgets, rate limits and MCP access. The editors for
 // those are hidden, so drop whatever they still hold rather than send values that are thrown away.
@@ -380,7 +395,18 @@ function withoutKeyGovernance<T extends CreateVirtualKeyRequest | UpdateVirtualK
 	return rest as T;
 }
 
+/** 展示本地化密钥设置与治理提示，保留所属关系、授权及提交规则。 */
 export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCancel }: VirtualKeySheetProps) {
+	const { t } = useTranslation("models");
+	const { t: tc } = useTranslation("common");
+	const contentLoggingOptions = useMemo(
+		() => [
+			{ value: "inherit" as const, label: t("virtualKeys.contentLoggingInherit") },
+			{ value: "disabled" as const, label: t("virtualKeys.contentLoggingOff") },
+			{ value: "enabled" as const, label: t("virtualKeys.contentLoggingOn") },
+		],
+		[t],
+	);
 	const [isOpen, setIsOpen] = useState(true);
 	const navigate = useNavigate();
 	const isEditing = !!virtualKey;
@@ -516,7 +542,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	const persistedOverrideBudgets = [
 		...(virtualKey?.budgets ?? []).map((budget) => ({
 			budget,
-			label: "Virtual key",
+			label: t("virtualKeys.sentenceVirtualKey"),
 		})),
 		...(virtualKey?.provider_configs ?? []).flatMap((config) =>
 			(config.budgets ?? []).map((budget) => ({
@@ -629,16 +655,16 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	// Handle keys loading error
 	useEffect(() => {
 		if (keysError) {
-			toast.error(`Failed to load available keys: ${getErrorMessage(keysError)}`);
+			toast.error(t("virtualKeys.failedLoadKeys", { message: getErrorMessage(keysError) }));
 		}
-	}, [keysError]);
+	}, [keysError, t]);
 
 	// Handle providers loading error
 	useEffect(() => {
 		if (providersError) {
-			toast.error(`Failed to load available providers: ${getErrorMessage(providersError)}`);
+			toast.error(t("virtualKeys.failedLoadProviders", { message: getErrorMessage(providersError) }));
 		}
-	}, [providersError]);
+	}, [providersError, t]);
 
 	// Clear the ids that don't belong to the selected entity type
 	useEffect(() => {
@@ -711,7 +737,11 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 			: watchedEntityType === "customer" && watchedCustomerId
 				? { entityType: "customer" as const, entityId: watchedCustomerId, label: "customer" }
 				: watchedEntityType === "business_unit" && watchedBusinessUnitId
-					? { entityType: "business_unit" as const, entityId: watchedBusinessUnitId, label: "business unit" }
+					? {
+							entityType: "business_unit" as const,
+							entityId: watchedBusinessUnitId,
+							label: "business unit",
+						}
 					: undefined;
 	const {
 		data: ownerProfileData,
@@ -744,8 +774,12 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	const ownerProfileNotice =
 		ownerProfile && owner ? (
 			<p data-testid="vk-owner-profile-notice">
-				Governed by <span className="font-medium">{ownerProfile.name}</span>, the access profile of this {owner.label}. Its budgets, rate
-				limits and providers apply to this key.
+				<Trans
+					t={t}
+					i18nKey="virtualKeys.governedByOwner"
+					values={{ profile: ownerProfile.name, owner: owner.label }}
+					components={{ profile: <span className="font-medium" /> }}
+				/>
 			</p>
 		) : null;
 
@@ -774,7 +808,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	const handleAddMCPClient = (mcpClientName: string) => {
 		const existingConfig = mcpConfigs.find((config) => config.mcp_client_name === mcpClientName);
 		if (existingConfig) {
-			toast.error("This MCP client is already configured");
+			toast.error(t("virtualKeys.mcpAlreadyConfigured"));
 			return;
 		}
 
@@ -834,7 +868,12 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	// values when a limit is set, {} to clear an existing rate limit (removal), or undefined.
 	const normalizeRateLimit = (
 		rl:
-			| { token_max_limit?: number; token_reset_duration?: string; request_max_limit?: number; request_reset_duration?: string }
+			| {
+					token_max_limit?: number;
+					token_reset_duration?: string;
+					request_max_limit?: number;
+					request_reset_duration?: string;
+			  }
 			| undefined,
 		hadExisting: boolean,
 	) => {
@@ -899,7 +938,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	};
 
 	const formatBudgetAmount = (value: number) =>
-		new Intl.NumberFormat("en-US", {
+		new Intl.NumberFormat(getLocale(), {
 			style: "currency",
 			currency: "USD",
 			maximumFractionDigits: 2,
@@ -934,7 +973,12 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 				if (configChanged && usage >= budget.max_limit) {
 					return {
 						kind: "over-limit" as const,
-						message: `${scopeLabel} ${budget.reset_duration} budget has ${formatBudgetAmount(usage)} usage, which meets or exceeds the new ${formatBudgetAmount(budget.max_limit)} limit.`,
+						message: t("virtualKeys.budgetOverLimit", {
+							scope: scopeLabel,
+							duration: budget.reset_duration,
+							usage: formatBudgetAmount(usage),
+							limit: formatBudgetAmount(budget.max_limit),
+						}),
 					};
 				}
 				// Moving the fiscal quarter moves the reset boundary under a live budget.
@@ -944,7 +988,10 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 				if (budget.reset_duration.endsWith("Q") && quarterStartOf(existing) !== quarterStartOf(budget) && usage > 0) {
 					return {
 						kind: "quarter-shift" as const,
-						message: `${scopeLabel} quarterly budget has ${formatBudgetAmount(usage)} of usage. Changing the fiscal quarter moves the reset date and carries that spend into the new quarter.`,
+						message: t("virtualKeys.budgetQuarterShift", {
+							scope: scopeLabel,
+							usage: formatBudgetAmount(usage),
+						}),
 					};
 				}
 				reconciled.push({ ...budget, current_usage: usage });
@@ -967,7 +1014,13 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 			if (inheritedUsage >= budget.max_limit) {
 				return {
 					kind: "over-limit" as const,
-					message: `${scopeLabel} ${budget.reset_duration} budget will inherit ${formatBudgetAmount(inheritedUsage)} from the ${closestShorter?.reset_duration} budget, which meets or exceeds the new ${formatBudgetAmount(budget.max_limit)} limit.`,
+					message: t("virtualKeys.budgetInheritOverLimit", {
+						scope: scopeLabel,
+						duration: budget.reset_duration,
+						usage: formatBudgetAmount(inheritedUsage),
+						fromDuration: closestShorter?.reset_duration,
+						limit: formatBudgetAmount(budget.max_limit),
+					}),
 				};
 			}
 			reconciled.push({ ...budget, current_usage: inheritedUsage });
@@ -981,7 +1034,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 			return null;
 		}
 
-		const vkWarning = findBudgetUsageWarning(data.budgets, virtualKey.budgets, "Virtual key");
+		const vkWarning = findBudgetUsageWarning(data.budgets, virtualKey.budgets, t("virtualKeys.sentenceVirtualKey"));
 		if (vkWarning) {
 			return vkWarning;
 		}
@@ -993,7 +1046,11 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 		for (const config of data.providerConfigs || []) {
 			const existingConfig = existingProviderConfigs.get(String(config.id ?? config.provider));
 			const providerLabel = ProviderLabels[config.provider as ProviderName] ?? config.provider;
-			const warning = findBudgetUsageWarning(config.budgets, existingConfig?.budgets, `${providerLabel} provider`);
+			const warning = findBudgetUsageWarning(
+				config.budgets,
+				existingConfig?.budgets,
+				t("virtualKeys.providerScope", { provider: providerLabel }),
+			);
 			if (warning) {
 				return warning;
 			}
@@ -1050,7 +1107,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 	const handleRotateVirtualKey = async () => {
 		if (!virtualKey) return;
 		if (!hasUpdateAccess) {
-			toast.error("You don't have permission to perform this action");
+			toast.error(t("virtualKeys.noPermission"));
 			return;
 		}
 		try {
@@ -1058,8 +1115,10 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 			const graceUntil = result.virtual_key?.previous_value_expires_at;
 			toast.success(
 				graceUntil
-					? `Virtual key rotated successfully. The previous key remains valid until ${new Date(graceUntil).toLocaleString()}.`
-					: "Virtual key rotated successfully",
+					? t("virtualKeys.rotatedWithGrace", {
+							when: new Date(graceUntil).toLocaleString(getLocale()),
+						})
+					: t("virtualKeys.rotatedSuccess"),
 			);
 			setShowRotateWarning(false);
 			onSave();
@@ -1070,7 +1129,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 
 	const submitVirtualKeyForm = async (data: FormData, resetBudgetUsage = false) => {
 		if (!canSubmit) {
-			toast.error("You don't have permission to perform this action");
+			toast.error(t("virtualKeys.noPermission"));
 			return;
 		}
 		try {
@@ -1086,7 +1145,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 						disable_content_logging: contentLoggingValue(data.contentLogging),
 					},
 				}).unwrap();
-				toast.success("Virtual key updated");
+				toast.success(t("virtualKeys.updatedShort"));
 				onSave();
 				return;
 			}
@@ -1157,8 +1216,14 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 
 				// Add budgets if enabled
 				const validBudgets = (data.budgets || []).filter(
-					(b): b is { id?: string; max_limit: number; reset_duration: string; reset_config?: { quarter_start_month?: number } } =>
-						b.max_limit !== undefined,
+					(
+						b,
+					): b is {
+						id?: string;
+						max_limit: number;
+						reset_duration: string;
+						reset_config?: { quarter_start_month?: number };
+					} => b.max_limit !== undefined,
 				);
 				const hadBudget = virtualKey.budgets && virtualKey.budgets.length > 0;
 				if (validBudgets.length > 0) {
@@ -1226,7 +1291,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 				if (!isGovernedByOwnerProfile) {
 					await reconcileVmcpAssignments(virtualKey.id);
 				}
-				toast.success("Virtual key updated successfully");
+				toast.success(t("virtualKeys.updatedSuccess"));
 			} else {
 				// Create new virtual key
 				const createDeleteAfterExpireValue = createDeleteAfterExpire(data.deleteAfterExpire, clientDeleteDefault);
@@ -1257,8 +1322,14 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 
 				// Add budgets if enabled
 				const validBudgets = (data.budgets || []).filter(
-					(b): b is { id?: string; max_limit: number; reset_duration: string; reset_config?: { quarter_start_month?: number } } =>
-						b.max_limit !== undefined,
+					(
+						b,
+					): b is {
+						id?: string;
+						max_limit: number;
+						reset_duration: string;
+						reset_config?: { quarter_start_month?: number };
+					} => b.max_limit !== undefined,
 				);
 				if (validBudgets.length > 0) {
 					createData.budgets = validBudgets;
@@ -1286,7 +1357,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 							data: { user_ids: [targetUserId], preserve_usage: false },
 						}).unwrap();
 					} catch (error) {
-						toast.error("Virtual key created, but assigning it to the user failed", {
+						toast.error(t("virtualKeys.createdButUserFailed"), {
 							description: getErrorMessage(error),
 						});
 						onSave();
@@ -1296,11 +1367,13 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 				try {
 					if (!isGovernedByOwnerProfile) await reconcileVmcpAssignments(created.virtual_key.id);
 				} catch (error) {
-					toast.error("Virtual key created, but assigning Virtual MCPs failed", { description: getErrorMessage(error) });
+					toast.error(t("virtualKeys.createdButVmcpFailed"), {
+						description: getErrorMessage(error),
+					});
 					onSave();
 					return;
 				}
-				toast.success("Virtual key created successfully");
+				toast.success(t("virtualKeys.createdSuccess"));
 			}
 
 			onSave();
@@ -1343,12 +1416,8 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 				onEscapeKeyDown={() => handleClose()}
 			>
 				<SheetHeader className="flex flex-col items-start px-0 py-4" headerClassName="mb-0 sticky -top-4 bg-card z-10 px-4 md:px-8">
-					<SheetTitle className="flex items-center gap-2">{isEditing ? virtualKey?.name : "Create Virtual Key"}</SheetTitle>
-					<SheetDescription>
-						{isEditing
-							? "Update the virtual key configuration and permissions."
-							: "Create a new virtual key with specific permissions, budgets, and rate limits."}
-					</SheetDescription>
+					<SheetTitle className="flex items-center gap-2">{isEditing ? virtualKey?.name : t("virtualKeys.create")}</SheetTitle>
+					<SheetDescription>{isEditing ? t("virtualKeys.editDescriptionLong") : t("virtualKeys.createDescriptionLong")}</SheetDescription>
 				</SheetHeader>
 
 				<Form {...form}>
@@ -1358,12 +1427,9 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 								<Alert variant="warning">
 									<AlertTriangle className="h-4 w-4" />
 									<AlertDescription className="flex items-center justify-between gap-4">
-										<span>
-											Couldn&apos;t check whether an access profile governs the keys you create. You can still create one — if a profile
-											does govern it, the profile&apos;s providers, budgets, rate limits and MCP access replace what you set here.
-										</span>
+										<span>{t("virtualKeys.creationPolicyUnresolved")}</span>
 										<Button type="button" size="sm" variant="outline" onClick={() => refetchVkCreationPolicy()}>
-											Retry
+											{t("virtualKeys.retry")}
 										</Button>
 									</AlertDescription>
 								</Alert>
@@ -1373,8 +1439,9 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 									<AlertTriangle className="h-4 w-4" />
 									<AlertDescription className="flex w-full items-center justify-between gap-3">
 										<span>
-											Couldn&apos;t check whether this {owner?.label ?? "owner"}&apos;s access profile governs the key, so saving is held
-											back - the profile decides which providers, budgets and rate limits apply.
+											{t("virtualKeys.ownerProfileError", {
+												owner: owner?.label ?? t("virtualKeys.ownerFallback"),
+											})}
 										</span>
 										<Button
 											type="button"
@@ -1383,7 +1450,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 											onClick={() => void refetchOwnerProfile()}
 											data-testid="vk-owner-profile-retry"
 										>
-											Retry
+											{t("virtualKeys.retry")}
 										</Button>
 									</AlertDescription>
 								</Alert>
@@ -1393,26 +1460,11 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 									<Alert variant="info">
 										<Lock className="h-4 w-4" />
 										<AlertDescription>
-											{ownerProfileNotice ? (
-												ownerProfileNotice
-											) : isEditing ? (
-												<>
-													This virtual key belongs to an access profile. What it can reach, and what it can spend, are the profile&apos;s:
-													the key itself carries only a name and a description.
-												</>
-											) : (
-												<p>
-													This virtual key will be managed by your access profile
-													{vkCreationPolicy?.profile_name ? (
-														<>
-															{" "}
-															<span className="font-medium">{vkCreationPolicy.profile_name}</span>
-														</>
-													) : null}
-													. Set a name and description; providers, budgets, rate limits, and MCP access are applied from the profile on
-													creation.
-												</p>
-											)}
+											{ownerProfileNotice
+												? ownerProfileNotice
+												: isEditing
+													? t("virtualKeys.managedEditHelp")
+													: t("virtualKeys.managedCreateHelp")}
 										</AlertDescription>
 									</Alert>
 									{isEditing && isManagedByProfile && <ManagedVirtualKeyActions managingProfile={managingProfile} />}
@@ -1423,11 +1475,12 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 								<Alert variant="info">
 									<Users className="h-4 w-4" />
 									<AlertDescription>
-										Creating this virtual key under {lockedOwnerLabel} <span className="font-medium">{lockedOwnerName}</span>. The{" "}
-										{lockedOwnerLabel} assignment is pre-set;{" "}
-										{isGovernedByOwnerProfile
-											? `this ${lockedOwnerLabel}'s access profile governs the providers, budgets, rate limits and MCP access of every key it owns.`
-											: "all other fields are editable."}
+										<Trans
+											i18nKey={isGovernedByOwnerProfile ? "virtualKeys.ownerLockedGovernedHelp" : "virtualKeys.ownerLockedHelp"}
+											ns="models"
+											values={{ kind: lockedOwnerLabel, name: lockedOwnerName }}
+											components={{ name: <span className="font-medium" /> }}
+										/>
 									</AlertDescription>
 								</Alert>
 							)}
@@ -1439,9 +1492,9 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 									name="name"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Name *</FormLabel>
+											<FormLabel>{t("virtualKeys.nameStar")}</FormLabel>
 											<FormControl>
-												<Input placeholder="e.g., Production API Key" data-testid="vk-name-input" {...field} />
+												<Input placeholder={t("virtualKeys.namePlaceholder")} data-testid="vk-name-input" {...field} />
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -1453,9 +1506,14 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 									name="description"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Description</FormLabel>
+											<FormLabel>{t("virtualKeys.description")}</FormLabel>
 											<FormControl>
-												<Textarea placeholder="This key is used for..." data-testid="vk-description-input" {...field} rows={3} />
+												<Textarea
+													placeholder={t("virtualKeys.descriptionPlaceholder")}
+													data-testid="vk-description-input"
+													{...field}
+													rows={3}
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -1468,7 +1526,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 									name="contentLogging"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Content logging</FormLabel>
+											<FormLabel>{t("virtualKeys.contentLogging")}</FormLabel>
 											{/* FormControl hands the trigger the label's id and aria attributes; hideClear because the
 											choice is an enum with no empty state. */}
 											<FormControl>
@@ -1482,11 +1540,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 													optionTestId={(value) => `vk-content-logging-option-${value}`}
 												/>
 											</FormControl>
-											<p className="text-muted-foreground text-xs">
-												Whether request and response content is stored in logs for this key&apos;s traffic. &quot;Off&quot; also strips
-												content from OpenTelemetry export. &quot;On&quot; overrides a gateway-wide off for the log store only. The
-												per-request header still applies when per-request overrides are allowed.
-											</p>
+											<p className="text-muted-foreground text-xs">{t("virtualKeys.contentLoggingHelp")}</p>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -1500,7 +1554,12 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 											name="isActive"
 											render={({ field }) => (
 												<FormItem>
-													<Toggle label="Is this key active?" val={field.value} setVal={field.onChange} data-testid="vk-is-active-toggle" />
+													<Toggle
+														label={t("virtualKeys.isActive")}
+														val={field.value}
+														setVal={field.onChange}
+														data-testid="vk-is-active-toggle"
+													/>
 												</FormItem>
 											)}
 										/>
@@ -1587,7 +1646,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 											<div className="space-y-4">
 												<MultiBudgetLines
 													data-testid="vk-budget-lines"
-													label="Budget Configuration"
+													label={t("virtualKeys.budgetConfiguration")}
 													lines={form.watch("budgets") ?? []}
 													onChange={(lines) => {
 														form.setValue("budgets", lines, { shouldDirty: true });
@@ -1599,22 +1658,25 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 												{isEditing && !isManagedByProfile && persistedOverrideBudgets.length > 0 ? (
 													<div className="space-y-3 rounded-sm border p-4" data-testid="vk-budget-overrides-section">
 														<div>
-															<h4 className="text-sm font-medium">Budget Overrides</h4>
-															<p className="text-muted-foreground text-xs">
-																Add temporary capacity without changing the configured base budgets above.
-															</p>
+															<h4 className="text-sm font-medium">{t("virtualKeys.budgetOverrides")}</h4>
+															<p className="text-muted-foreground text-xs">{t("virtualKeys.budgetOverridesHelp")}</p>
 														</div>
 														<div className="divide-y">
 															{persistedOverrideBudgets.map(({ budget, label }) => (
 																<div key={budget.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
 																	<div className="min-w-0">
 																		<p className="truncate text-sm font-medium">
-																			{label} · resets every {parseResetPeriod(budget.reset_duration)}
+																			{label} ·{" "}
+																			{t("virtualKeys.resetsEvery", {
+																				period: parseResetPeriod(budget.reset_duration),
+																			})}
 																		</p>
 																		<p className="text-muted-foreground text-xs">
-																			Base {formatCurrency(budget.max_limit)}
+																			{t("virtualKeys.baseAmount", {
+																				amount: formatCurrency(budget.max_limit),
+																			})}
 																			{hasActiveBudgetOverride(budget)
-																				? ` · effective ${formatCurrency(getEffectiveBudgetLimit(budget))}`
+																				? ` · ${t("virtualKeys.effectiveAmount", { amount: formatCurrency(getEffectiveBudgetLimit(budget)) })}`
 																				: ""}
 																		</p>
 																	</div>
@@ -1634,7 +1696,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 											{/* Rate Limiting Configuration */}
 											<div className="space-y-4">
 												<div className="flex items-center justify-between gap-2">
-													<Label className="text-sm font-medium">Rate Limiting Configuration</Label>
+													<Label className="text-sm font-medium">{t("virtualKeys.rateLimitingConfiguration")}</Label>
 													{isEditing && (virtualKey?.rate_limit || watchedTokenMaxLimit || watchedRequestMaxLimit) && (
 														<Button
 															type="button"
@@ -1644,7 +1706,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 															data-testid="vk-rate-limit-reset-button"
 														>
 															<RotateCcw className="h-4 w-4" />
-															Reset
+															{t("providers.reset")}
 														</Button>
 													)}
 												</div>
@@ -1657,7 +1719,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 															<NumberAndSelect
 																id="tokenMaxLimit"
 																labelClassName="font-normal"
-																label="Maximum Tokens"
+																label={t("modelLimits.maximumTokens")}
 																value={field.value}
 																selectValue={form.watch("tokenResetDuration") || "1h"}
 																onChangeNumber={(value) => {
@@ -1683,7 +1745,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 															<NumberAndSelect
 																id="requestMaxLimit"
 																labelClassName="font-normal"
-																label="Maximum Requests"
+																label={t("modelLimits.maximumRequests")}
 																value={field.value}
 																selectValue={form.watch("requestResetDuration") || "1h"}
 																onChangeNumber={(value) => {
@@ -1706,11 +1768,10 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 												<div className="flex items-center justify-between gap-4 rounded-md border px-3 py-2">
 													<div className="space-y-0.5">
 														<Label htmlFor="vk-budget-calendar-aligned-toggle" className="text-sm font-normal">
-															Align to calendar cycle
+															{t("virtualKeys.alignCalendar")}
 														</Label>
 														<p id="vk-budget-calendar-aligned-description" className="text-muted-foreground text-xs">
-															Reset budgets and rate limits at the start of each period (e.g. 1st of month) instead of rolling from creation
-															date. Quarterly budgets always align to fiscal quarter starts. Applies to durations of a day or longer.
+															{t("virtualKeys.alignCalendarHelp")}
 														</p>
 													</div>
 													<Switch
@@ -1727,16 +1788,17 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 											<AlertDialog open={showCalendarAlignWarning} onOpenChange={setShowCalendarAlignWarning}>
 												<AlertDialogContent>
 													<AlertDialogHeader>
-														<AlertDialogTitle>Reset budget and rate-limit usage?</AlertDialogTitle>
+														<AlertDialogTitle>{t("virtualKeys.resetUsageTitle")}</AlertDialogTitle>
 														<AlertDialogDescription>
-															Enabling calendar alignment will reset budget usage to <span className="font-semibold">$0.00</span> and
-															token/request rate-limit counters to <span className="font-semibold">0</span> for this virtual key, then snap
-															each reset date to the start of its current period (e.g. start of day, week, month, or year). The usage reset
-															cannot be undone, but calendar alignment can be turned off later. This will take effect when you save.
+															<Trans
+																i18nKey="virtualKeys.resetUsageDescription"
+																ns="models"
+																components={{ strong: <span className="font-semibold" /> }}
+															/>
 														</AlertDialogDescription>
 													</AlertDialogHeader>
 													<AlertDialogFooter>
-														<AlertDialogCancel data-testid="vk-calendar-align-cancel-btn">Cancel</AlertDialogCancel>
+														<AlertDialogCancel data-testid="vk-calendar-align-cancel-btn">{tc("cancel")}</AlertDialogCancel>
 														<AlertDialogAction
 															data-testid="vk-calendar-align-enable-btn"
 															onClick={() => {
@@ -1746,7 +1808,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 																setShowCalendarAlignWarning(false);
 															}}
 														>
-															Enable Calendar Alignment
+															{t("virtualKeys.enableCalendarAlignment")}
 														</AlertDialogAction>
 													</AlertDialogFooter>
 												</AlertDialogContent>
@@ -1765,15 +1827,12 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 									>
 										<AlertDialogContent>
 											<AlertDialogHeader>
-												<AlertDialogTitle>Reassign to a different team?</AlertDialogTitle>
-												<AlertDialogDescription>
-													This key is currently assigned to another team. Reassigning it will move budget tracking to this team; future
-													requests through this key will count against this team’s budget, not the previous one.
-												</AlertDialogDescription>
+												<AlertDialogTitle>{t("virtualKeys.reassignTeamTitle")}</AlertDialogTitle>
+												<AlertDialogDescription>{t("virtualKeys.reassignTeamDescription")}</AlertDialogDescription>
 											</AlertDialogHeader>
 											<AlertDialogFooter>
 												<AlertDialogCancel data-testid="virtual-key-reassign-cancel" onClick={() => setPendingTeamId(null)}>
-													Cancel
+													{tc("cancel")}
 												</AlertDialogCancel>
 												<AlertDialogAction
 													data-testid="virtual-key-reassign-confirm"
@@ -1788,7 +1847,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 														setShowReassignTeamWarning(false);
 													}}
 												>
-													Reassign
+													{t("virtualKeys.reassign")}
 												</AlertDialogAction>
 											</AlertDialogFooter>
 										</AlertDialogContent>
@@ -1797,7 +1856,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 
 									{/* Entity Assignment */}
 									<div className="space-y-4">
-										<Label className="text-sm font-medium">Entity Assignment</Label>
+										<Label className="text-sm font-medium">{t("virtualKeys.entityAssignment")}</Label>
 
 										<div className="grid grid-cols-1 items-start gap-2 md:grid-cols-2">
 											<FormField
@@ -1805,23 +1864,28 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 												name="entityType"
 												render={({ field }) => (
 													<FormItem>
-														<FormLabel className="font-normal">Assignment Type</FormLabel>
+														<FormLabel className="font-normal">{t("virtualKeys.assignmentType")}</FormLabel>
 														<ComboboxSelect
 															options={[
-																{ value: "none", label: "No Assignment" },
-																{ value: "team", label: "Assign to Team" },
+																{ value: "none", label: t("virtualKeys.noAssignment") },
+																{ value: "team", label: t("virtualKeys.assignToTeam") },
 																{
 																	value: "customer",
-																	label: "Assign to Customer",
+																	label: t("virtualKeys.assignToCustomer"),
 																},
 																// Enterprise-only, like the user option below; kept visible when the VK is
 																// already owned by a business unit so the current state is never mislabelled.
 																...(BusinessUnitPicker || field.value === "business_unit"
-																	? [{ value: "business_unit", label: "Assign to Business Unit" }]
+																	? [
+																			{
+																				value: "business_unit",
+																				label: t("virtualKeys.assignToBusinessUnit"),
+																			},
+																		]
 																	: []),
 																// Enterprise-only; also kept visible when the VK is already
 																// user-assigned so the current state is never mislabelled.
-																...(UserPicker || field.value === "user" ? [{ value: "user", label: "Assign to User" }] : []),
+																...(UserPicker || field.value === "user" ? [{ value: "user", label: t("virtualKeys.assignToUser") }] : []),
 															]}
 															value={field.value}
 															onValueChange={(value) => {
@@ -1852,7 +1916,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 													name="teamId"
 													render={({ field }) => (
 														<FormItem>
-															<FormLabel className="font-normal">Select Team</FormLabel>
+															<FormLabel className="font-normal">{t("virtualKeys.selectTeam")}</FormLabel>
 															<TeamSelector
 																value={field.value || ""}
 																onChange={(newVal) => {
@@ -1892,7 +1956,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 													name="customerId"
 													render={({ field }) => (
 														<FormItem>
-															<FormLabel className="font-normal">Select Customer</FormLabel>
+															<FormLabel className="font-normal">{t("virtualKeys.selectCustomer")}</FormLabel>
 															<CustomerSelector
 																value={field.value || ""}
 																disabled={isOwnerLocked}
@@ -1925,7 +1989,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 													name="businessUnitId"
 													render={({ field }) => (
 														<FormItem>
-															<FormLabel className="font-normal">Select Business Unit</FormLabel>
+															<FormLabel className="font-normal">{t("virtualKeys.selectBusinessUnit")}</FormLabel>
 															<BusinessUnitPicker
 																value={field.value || ""}
 																disabled={isOwnerLocked}
@@ -1949,7 +2013,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 													name="userId"
 													render={({ field }) => (
 														<FormItem>
-															<FormLabel className="font-normal">Select User</FormLabel>
+															<FormLabel className="font-normal">{t("virtualKeys.selectUser")}</FormLabel>
 															<UserPicker
 																value={field.value || ""}
 																onChange={(val) => {
@@ -1975,11 +2039,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 											)}
 										</div>
 										{form.watch("entityType") === "user" && (
-											<p className="text-muted-foreground text-xs">
-												A virtual key can be assigned to only one user. If that user has an access profile, the key is adopted into it: it
-												keeps working, but its providers, budgets, rate limits and MCP access are discarded and replaced by the
-												profile&apos;s. This cannot be undone: a key inside a profile can be deleted, never released.
-											</p>
+											<p className="text-muted-foreground text-xs">{t("virtualKeys.userAssignmentHelp")}</p>
 										)}
 									</div>
 								</div>
@@ -1988,18 +2048,13 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 						<AlertDialog open={showRotateWarning} onOpenChange={setShowRotateWarning}>
 							<AlertDialogContent>
 								<AlertDialogHeader>
-									<AlertDialogTitle>Rotate virtual key?</AlertDialogTitle>
-									<AlertDialogDescription>
-										This will replace the secret value for &quot;
-										{virtualKey?.name}&quot;. The key ID, budgets, rate limits, provider permissions, MCP access, and assignments stay the
-										same. The previous key value stops working immediately unless a rotation cooldown is configured, in which case it
-										remains valid until the cooldown ends.
-									</AlertDialogDescription>
+									<AlertDialogTitle>{t("virtualKeys.rotateTitle")}</AlertDialogTitle>
+									<AlertDialogDescription>{t("virtualKeys.rotateDescription", { name: virtualKey?.name })}</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
-									<AlertDialogCancel data-testid="vk-rotate-cancel-btn">Cancel</AlertDialogCancel>
+									<AlertDialogCancel data-testid="vk-rotate-cancel-btn">{tc("cancel")}</AlertDialogCancel>
 									<AlertDialogAction onClick={handleRotateVirtualKey} disabled={isRotating} data-testid="vk-rotate-confirm-btn">
-										{isRotating ? "Rotating..." : "Rotate Key"}
+										{isRotating ? t("virtualKeys.rotating") : t("virtualKeys.rotateKey")}
 									</AlertDialogAction>
 								</AlertDialogFooter>
 							</AlertDialogContent>
@@ -2009,23 +2064,25 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 								<AlertDialogHeader>
 									<AlertDialogTitle>
 										{pendingBudgetUsageWarning?.kind === "over-limit"
-											? "Preserve over-limit usage?"
+											? t("virtualKeys.preserveOverLimit")
 											: pendingBudgetUsageWarning?.kind === "quarter-shift"
-												? "Carry usage into the new quarter?"
-												: "Reset budget usage?"}
+												? t("virtualKeys.carryQuarter")
+												: t("virtualKeys.resetBudgetUsage")}
 									</AlertDialogTitle>
 									<AlertDialogDescription>
 										{pendingBudgetUsageWarning
-											? `${pendingBudgetUsageWarning.message} You can preserve usage anyway, or reset usage to 0.`
-											: "You changed a budget amount, reset frequency, or calendar alignment. Reset current budget usage to 0, or preserve the existing usage counters."}
+											? t("virtualKeys.budgetWarningFollowup", {
+													message: pendingBudgetUsageWarning.message,
+												})
+											: t("virtualKeys.budgetResetDefault")}
 									</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
 									<AlertDialogCancel onClick={() => handleBudgetResetChoice(false)} data-testid="vk-budget-reset-preserve-btn">
-										{pendingBudgetUsageWarning ? "Preserve Anyway" : "Preserve Usage"}
+										{pendingBudgetUsageWarning ? t("virtualKeys.preserveAnyway") : t("virtualKeys.preserveUsage")}
 									</AlertDialogCancel>
 									<AlertDialogAction onClick={() => handleBudgetResetChoice(true)} data-testid="vk-budget-reset-confirm-btn">
-										Reset Usage
+										{t("virtualKeys.resetUsage")}
 									</AlertDialogAction>
 								</AlertDialogFooter>
 							</AlertDialogContent>
@@ -2047,14 +2104,14 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 										data-testid="vk-rotate-btn"
 									>
 										<RotateCcw className="h-4 w-4" />
-										{isRotating ? "Rotating..." : "Rotate Key"}
+										{isRotating ? t("virtualKeys.rotating") : t("virtualKeys.rotateKey")}
 									</Button>
 								) : (
 									<span />
 								)}
 								<div className="flex justify-end gap-2">
 									<Button type="button" variant="outline" onClick={handleClose} data-testid="vk-cancel-btn">
-										Cancel
+										{tc("cancel")}
 									</Button>
 									<TooltipProvider>
 										<Tooltip>
@@ -2065,7 +2122,7 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 														disabled={isLoading || !(form.formState.isDirty || vmcpDirty) || !canSubmit || isOwnerProfileUnknown}
 														data-testid="vk-save-btn"
 													>
-														{isLoading ? "Saving..." : isEditing ? "Update" : "Create"}
+														{isLoading ? t("virtualKeys.saving") : isEditing ? t("virtualKeys.update") : t("virtualKeys.createAction")}
 													</Button>
 												</span>
 											</TooltipTrigger>
@@ -2073,15 +2130,15 @@ export default function VirtualKeySheet({ virtualKey, defaultOwner, onSave, onCa
 												<TooltipContent>
 													<p>
 														{!canSubmit
-															? "You don't have permission to perform this action"
+															? t("virtualKeys.noPermission")
 															: isLoading
-																? "Saving..."
+																? t("virtualKeys.saving")
 																: ownerProfileFailed
-																	? "Couldn't check whether this owner's access profile governs the key"
+																	? t("virtualKeys.ownerProfileCheckFailed")
 																	: isOwnerProfileUnknown
-																		? "Checking whether this owner's access profile governs the key..."
+																		? t("virtualKeys.ownerProfileChecking")
 																		: !(form.formState.isDirty || vmcpDirty)
-																			? "No changes made"
+																			? t("providers.noChanges")
 																			: ""}
 													</p>
 												</TooltipContent>

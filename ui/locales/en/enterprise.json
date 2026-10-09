@@ -1,0 +1,142 @@
+{
+	"routingOperators": {
+		"=": "equals",
+		"!=": "does not equal",
+		">": "greater than",
+		"<": "less than",
+		">=": "greater than or equal",
+		"<=": "less than or equal",
+		"in": "is in list",
+		"notIn": "is not in list",
+		"contains": "contains",
+		"beginsWith": "begins with",
+		"endsWith": "ends with",
+		"matches": "matches (regex)",
+		"null": "does not exist",
+		"notNull": "exists"
+	},
+	"routingDisplay": {
+		"ttftStreaming": "{{ms}} ms (streaming)"
+	},
+	"apiKeys": {
+		"inferenceAuthDisabled": "Authentication is currently <strong>disabled for inference API calls</strong>. You can make inference requests without authentication. Dashboard and admin API calls still require Basic auth with your admin credentials encoded in the standard <credentials>username:password</credentials> format with base64 encoding.",
+		"basicAuth": "Use Basic auth with your admin credentials when making API calls to Bifrost. Encode your credentials in the standard <credentials>username:password</credentials> format with base64 encoding.",
+		"copyExample": "Copy API request example"
+	},
+	"orgChart": {
+		"unlockTitle": "Unlock the org chart",
+		"unlockDescription": "See budgets, spend, models and tools across business units, teams and users in one tree. This feature is part of the Bifrost enterprise license."
+	},
+	"promptDeployments": {
+		"title": "Deployments"
+	},
+	"edge": {
+		"unknownOs": "Unknown OS"
+	},
+	"virtualKeyUsers": {
+		"enterpriseOnly": "Virtual key user assignment is an enterprise feature"
+	},
+	"customer": {
+		"title": "Customer Details",
+		"entity": "Customer",
+		"description": "Usage details for this customer.",
+		"info": "Info",
+		"name": "Name",
+		"budgets": "Budgets",
+		"noBudgets": "No budgets configured",
+		"rateLimits": "Rate Limits",
+		"noRateLimits": "No rate limits configured",
+		"tokens": "Tokens",
+		"requests": "Requests",
+		"fiscalYearStart": " · FY starts {{month}}",
+		"resetDuration": {
+			"1m": "Every Minute",
+			"5m": "Every 5 Minutes",
+			"15m": "Every 15 Minutes",
+			"30m": "Every 30 Minutes",
+			"1h": "Hourly",
+			"6h": "Every 6 Hours",
+			"1d": "Daily",
+			"1w": "Weekly",
+			"1M": "Monthly",
+			"1Q": "Quarterly"
+		}
+	},
+	"consent": {
+		"recognizeCallback": "Continue only if you recognize this application and its callback destination:",
+		"signInToContinue": "Sign in to continue",
+		"signInRequired": "This authorization needs a signed-in Bifrost account. Taking you to sign in; you'll come straight back here.",
+		"signInToBifrost": "Sign in to Bifrost"
+	},
+	"docs": {
+		"headline": "Power Up Your Bifrost Stack",
+		"fullDocumentation": "View Full Documentation",
+		"quickStartGuide": "Quick Start Guide",
+		"readMore": "Read More",
+		"popular": "Popular",
+		"comprehensive": "Comprehensive",
+		"sections": {
+			"quickStart": {
+				"title": "Quick Start",
+				"description": "Get Bifrost running in under 30 seconds",
+				"httpTransport": "HTTP Transport Setup",
+				"goPackage": "Go Package Usage",
+				"docker": "Docker Guide"
+			},
+			"architecture": {
+				"title": "Architecture",
+				"description": "Deep dive into Bifrost's design and performance",
+				"overview": "System Overview",
+				"requestFlow": "Request Flow",
+				"concurrency": "Concurrency Model",
+				"decisions": "Design Decisions"
+			},
+			"usage": {
+				"title": "Usage Guides",
+				"description": "Complete API reference and configuration guides",
+				"providers": "Providers Setup",
+				"keys": "Key Management",
+				"errors": "Error Handling",
+				"memory": "Memory & Networking"
+			},
+			"contributing": {
+				"title": "Contributing",
+				"description": "Help improve Bifrost for everyone",
+				"guide": "Contributing Guide",
+				"providers": "Adding Providers",
+				"plugins": "Plugin Development",
+				"conventions": "Code Conventions"
+			},
+			"integrations": {
+				"title": "Integration Examples",
+				"description": "Practical examples and testing code",
+				"openai": "OpenAI Integration",
+				"anthropic": "Anthropic Integration",
+				"genai": "GenAI Integration",
+				"migration": "Migration Guides"
+			},
+			"benchmarks": {
+				"title": "Benchmarks",
+				"description": "Performance metrics and guides",
+				"results": "5K RPS Test Results",
+				"metrics": "Performance Metrics",
+				"tuning": "Configuration Tuning",
+				"hardware": "Hardware Comparisons"
+			}
+		},
+		"featured": {
+			"mcp": {
+				"title": "MCP Documentation",
+				"description": "Comprehensive guide to Model Context Protocol integration",
+				"content": "Learn how to build sophisticated AI agents with MCP support, tool calling, and external integrations.",
+				"button": "View MCP Guide"
+			},
+			"governance": {
+				"title": "Governance Plugin",
+				"description": "Complete access control, budgets, and rate limiting guide",
+				"content": "Master Virtual Keys, hierarchical budgets, rate limiting, and usage tracking for secure AI infrastructure.",
+				"button": "View Governance Guide"
+			}
+		}
+	}
+}

@@ -1,11 +1,14 @@
 import { usePromptContext } from "@/components/prompts/context";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import PromptDeploymentView from "./promptDeploymentView";
 
 export type SettingsSidebarSection = "parameters" | "deployments";
 
+/** 按当前语言展示部署分区，并保留提示词选择与展开状态。 */
 export function PromptDeploymentsAccordionItem({ activeSection }: { activeSection: SettingsSidebarSection | undefined }) {
+	const { t } = useTranslation("enterprise");
 	const { selectedPromptId } = usePromptContext();
 	if (!selectedPromptId) {
 		return null;
@@ -25,7 +28,7 @@ export function PromptDeploymentsAccordionItem({ activeSection }: { activeSectio
 				data-testid="prompt-deployments-trigger"
 				className="text-muted-foreground w-full min-w-0 shrink-0 py-3 pr-1 text-xs font-medium uppercase hover:no-underline [&[data-state=open]>svg]:rotate-180"
 			>
-				<span className="min-w-0 flex-1 text-left font-semibold">Deployments</span>
+				<span className="min-w-0 flex-1 text-left font-semibold">{t("promptDeployments.title")}</span>
 			</AccordionTrigger>
 			<AccordionContent
 				containerClassName="data-[state=open]:flex data-[state=open]:min-h-0 data-[state=open]:flex-1 data-[state=open]:flex-col"

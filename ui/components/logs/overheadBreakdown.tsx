@@ -3,6 +3,8 @@ import type { OverheadBucket } from "@/lib/types/logs";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 // formatMicros renders a microsecond overhead value, promoting to ms once it is
 // large enough that microseconds would just be noise.
@@ -198,9 +200,9 @@ function pluginDisplayName(id: string): string {
 		.join(" ");
 }
 
-function overheadMemberLabel(name: string): string {
+function overheadMemberLabel(name: string, t: TFunction<"observability">): string {
 	const friendly = OVERHEAD_LABELS[name];
-	if (friendly) return friendly;
+	if (friendly) return t(`overhead.members.${name.replace(/\./g, "_")}`);
 	if (name.startsWith("plugin.")) return pluginDisplayName(name.slice("plugin.".length));
 	if (name.startsWith("middleware.")) return name.slice("middleware.".length);
 	return name;
@@ -208,7 +210,7 @@ function overheadMemberLabel(name: string): string {
 
 // buildOverheadCategories groups the raw buckets into the top-level categories,
 // ordered largest-first so the bar and legend read like the numbers.
-function buildOverheadCategories(buckets: OverheadBucket[]): OverheadCategory[] {
+function buildOverheadCategories(buckets: OverheadBucket[], t: TFunction<"observability">): OverheadCategory[] {
 	const grouped = new Map<string, OverheadBucket[]>();
 	for (const b of buckets) {
 		const key = overheadCategoryKey(b);
@@ -231,7 +233,7 @@ function buildOverheadCategories(buckets: OverheadBucket[]): OverheadCategory[] 
 		members.sort((a, b) => b.duration_us - a.duration_us);
 		cats.push({
 			key,
-			label: OVERHEAD_CATEGORY_META[key]?.label ?? key,
+			label: OVERHEAD_CATEGORY_META[key] ? t(`overhead.categories.${key}`) : key,
 			colorClass: OVERHEAD_CATEGORY_META[key]?.colorClass ?? "bg-muted-foreground/50",
 			totalUs: members.reduce((acc, m) => acc + m.duration_us, 0),
 			members,
@@ -246,11 +248,13 @@ function buildOverheadCategories(buckets: OverheadBucket[]): OverheadCategory[] 
 // the residual goroutine-hop latency between phases, so the segments sum to the full
 // overhead number. "View details" expands every category into its individual members
 // so a specific phase or plugin can be inspected.
+/** 本地化开销分类与说明，原始 span 和插件标识及聚合顺序保持不变。 */
 export function OverheadBreakdown({ buckets, overheadMs }: { buckets: OverheadBucket[]; overheadMs?: number }) {
+	const { t } = useTranslation("observability");
 	const [showDetails, setShowDetails] = useState(false);
 	if (!buckets || buckets.length === 0) return null;
 
-	const categories = buildOverheadCategories(buckets);
+	const categories = buildOverheadCategories(buckets, t);
 	const sumUs = buckets.reduce((acc, b) => acc + b.duration_us, 0);
 	const overheadUs = overheadMs != null && !isNaN(overheadMs) ? overheadMs * 1000 : undefined;
 
@@ -265,7 +269,7 @@ export function OverheadBreakdown({ buckets, overheadMs }: { buckets: OverheadBu
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center justify-between gap-2">
-				<BlockHeader title="Overhead Breakdown" />
+				<BlockHeader title={t("logs.detail.overheadBreakdown")} />
 				<div className="font-mono text-xs tabular-nums">{formatMicros(overheadUs ?? sumUs)}</div>
 			</div>
 
@@ -296,7 +300,7 @@ export function OverheadBreakdown({ buckets, overheadMs }: { buckets: OverheadBu
 					onClick={() => setShowDetails((v) => !v)}
 					className="text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono text-[11px] transition"
 				>
-					View details
+					{t("logs.detail.viewDetails")}
 					<ChevronDown className={cn("h-3 w-3 transition-transform", showDetails ? "rotate-180" : "rotate-0")} />
 				</button>
 			) : null}
@@ -315,7 +319,7 @@ export function OverheadBreakdown({ buckets, overheadMs }: { buckets: OverheadBu
 								{c.members.map((m) => (
 									<div key={m.name} className="flex items-center justify-between gap-3 font-mono text-[11px]">
 										<span className="truncate" title={m.name}>
-											{overheadMemberLabel(m.name)}
+											{overheadMemberLabel(m.name, t)}
 										</span>
 										<span className="text-muted-foreground shrink-0 tabular-nums">{formatMicros(m.duration_us)}</span>
 									</div>
@@ -328,8 +332,7 @@ export function OverheadBreakdown({ buckets, overheadMs }: { buckets: OverheadBu
 
 			{overCounted ? (
 				<div className="text-muted-foreground text-[11px]">
-					Measured spans ({formatMicros(sumUs)}) exceed the computed overhead ({formatMicros(overheadUs!)}); the upstream accumulator may be
-					over-counting.
+					{t("overhead.overCounted", { measured: formatMicros(sumUs), computed: formatMicros(overheadUs!) })}
 				</div>
 			) : null}
 		</div>

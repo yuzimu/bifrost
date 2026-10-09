@@ -10,6 +10,7 @@ import {
 	UpdateProviderRequest,
 } from "@/lib/types/config";
 import { DefaultNetworkConfig, DefaultPerformanceConfig } from "@/lib/constants/config";
+import i18n from "@/lib/i18n";
 import { SecretVar } from "@/lib/types/schemas";
 import { toSecretVarFormValue } from "@/lib/utils/secretVarForm";
 import { isRedacted } from "@/lib/utils/validation";
@@ -29,6 +30,14 @@ export type DatabricksApiFormat = NonNullable<DatabricksKeyConfig["api_format"]>
 const MODEL_SERVING_PATH = "/serving-endpoints";
 const AI_GATEWAY_PATH = "/ai-gateway";
 const MIGRATING_SUFFIX = "-migrating";
+
+export type MigrationTranslator = (key: string, values?: Record<string, string | number>) => string;
+
+const defaultTranslation: MigrationTranslator = i18n.getFixedT("en", "models");
+const createMessage =
+	(t: MigrationTranslator): MigrationTranslator =>
+	(key, values) =>
+		t(`providers.databricksMigration.messages.${key}`, values);
 
 // ---------------------------------------------------------------------------
 // Detection
@@ -63,18 +72,16 @@ export interface DerivedWorkspace {
 	warnings: string[];
 }
 
-/**
- * Splits a custom provider base URL into the workspace origin the first-party provider wants
- * and the inference surface implied by its path.
- */
-export const deriveDatabricksWorkspace = (baseUrl: string | undefined): DerivedWorkspace => {
+/** 推导工作区与推理接口，警告保持字符串，未指定翻译时使用英文。 */
+export const deriveDatabricksWorkspace = (baseUrl: string | undefined, t: MigrationTranslator = defaultTranslation): DerivedWorkspace => {
+	const message = createMessage(t);
 	const warnings: string[] = [];
 	const url = parseUrl(baseUrl);
 	if (!url) {
 		return { workspaceUrl: "", apiFormat: "auto", warnings };
 	}
 	if (url.protocol === "http:") {
-		warnings.push(`Base URL used http://; the workspace URL will use https:// (${url.host}).`);
+		warnings.push(message("httpsWarning", { host: url.host }));
 	}
 	const workspaceUrl = `https://${url.host}`;
 	const path = url.pathname.replace(/\/+$/, "");
@@ -84,7 +91,7 @@ export const deriveDatabricksWorkspace = (baseUrl: string | undefined): DerivedW
 	} else if (path === AI_GATEWAY_PATH || path.startsWith(`${AI_GATEWAY_PATH}/`)) {
 		apiFormat = "ai_gateway";
 	} else if (path !== "") {
-		warnings.push(`Unrecognized base URL path "${path}"; inference surface set to auto-detect.`);
+		warnings.push(message("unknownPath", { path }));
 	}
 	return { workspaceUrl, apiFormat, warnings };
 };
@@ -193,16 +200,23 @@ const stripAuthorizationHeader = (headers: Record<string, string> | undefined): 
 	return Object.keys(rest).length > 0 ? rest : undefined;
 };
 
-const portableSecret = (secret: SecretVar | undefined, label: string, warnings: string[]): SecretVar | undefined => {
+/** 只复制可再次提交的密钥引用，掩码字面量以字符串警告报告。 */
+const portableSecret = (
+	secret: SecretVar | undefined,
+	label: string,
+	warnings: string[],
+	message: MigrationTranslator,
+): SecretVar | undefined => {
 	if (!secret || !isSecretVarSet(secret)) return undefined;
 	if (isMaskedLiteral(secret)) {
-		warnings.push(`${label} is stored as a literal secret and cannot be copied; re-enter it on the Databricks provider after migrating.`);
+		warnings.push(message("literalSecret", { label }));
 		return undefined;
 	}
 	return secret;
 };
 
-const buildProviderSettings = (source: ModelProvider, warnings: string[]): UpdateProviderRequest => {
+/** 复制可迁移设置，并保留成本归属等源供应商行为。 */
+const buildProviderSettings = (source: ModelProvider, warnings: string[], message: MigrationTranslator): UpdateProviderRequest => {
 	const net = source.network_config;
 	const network_config: NetworkConfig = {
 		default_request_timeout_in_seconds: net?.default_request_timeout_in_seconds ?? DefaultNetworkConfig.default_request_timeout_in_seconds,
@@ -223,20 +237,20 @@ const buildProviderSettings = (source: ModelProvider, warnings: string[]): Updat
 			network_config.http2_ping_interval_in_seconds = net.http2_ping_interval_in_seconds;
 		if (net.beta_header_overrides !== undefined) network_config.beta_header_overrides = net.beta_header_overrides;
 		if (net.allow_private_network !== undefined) network_config.allow_private_network = net.allow_private_network;
-		const caCert = portableSecret(net.ca_cert_pem, "The provider CA certificate", warnings);
+		const caCert = portableSecret(net.ca_cert_pem, message("providerCertificate"), warnings, message);
 		if (caCert) network_config.ca_cert_pem = caCert;
 	}
 
 	let proxy_config: ProxyConfig | undefined;
 	if (source.proxy_config && source.proxy_config.type && source.proxy_config.type !== "none") {
 		proxy_config = { type: source.proxy_config.type };
-		const url = portableSecret(source.proxy_config.url, "The proxy URL", warnings);
+		const url = portableSecret(source.proxy_config.url, message("proxyUrl"), warnings, message);
 		if (url) proxy_config.url = url;
-		const username = portableSecret(source.proxy_config.username, "The proxy username", warnings);
+		const username = portableSecret(source.proxy_config.username, message("proxyUsername"), warnings, message);
 		if (username) proxy_config.username = username;
-		const password = portableSecret(source.proxy_config.password, "The proxy password", warnings);
+		const password = portableSecret(source.proxy_config.password, message("proxyPassword"), warnings, message);
 		if (password) proxy_config.password = password;
-		const caCert = portableSecret(source.proxy_config.ca_cert_pem, "The proxy CA certificate", warnings);
+		const caCert = portableSecret(source.proxy_config.ca_cert_pem, message("proxyCertificate"), warnings, message);
 		if (caCert) proxy_config.ca_cert_pem = caCert;
 	}
 
@@ -258,20 +272,19 @@ const hasRestrictedRequests = (source: ModelProvider): boolean => {
 	return Object.values(allowed as unknown as Record<string, boolean | undefined>).some((v) => v === false);
 };
 
-/**
- * Builds the migration plan from the custom provider, its (redacted) keys and, when the
- * first-party provider already exists, that provider and its keys.
- */
+/** 根据源供应商、密钥和目标快照构建计划，翻译不改变公开字符串合同。 */
 export const buildDatabricksMigrationPlan = (
 	source: ModelProvider,
 	sourceKeys: ModelProviderKey[],
 	existingTarget?: ExistingTarget,
+	t: MigrationTranslator = defaultTranslation,
 ): MigrationPlan => {
+	const message = createMessage(t);
 	const warnings: string[] = [];
-	const derived = deriveDatabricksWorkspace(source.network_config?.base_url);
+	const derived = deriveDatabricksWorkspace(source.network_config?.base_url, t);
 	warnings.push(...derived.warnings);
 	if (!derived.workspaceUrl) {
-		warnings.push("The base URL could not be parsed; enter the workspace URL below.");
+		warnings.push(message("invalidBaseUrl"));
 	}
 
 	const isKeyless = Boolean(source.custom_provider_config?.is_key_less) || sourceKeys.length === 0;
@@ -288,7 +301,7 @@ export const buildDatabricksMigrationPlan = (
 		if (!takenNames.has(name)) return name;
 		const suffixed = `${name}${MIGRATING_SUFFIX}`;
 		if (permanent) {
-			warnings.push(`A key named "${name}" already exists on the Databricks provider; the migrated key will be created as "${suffixed}".`);
+			warnings.push(message("keyNameClash", { name, suffixed }));
 		}
 		return suffixed;
 	};
@@ -298,9 +311,9 @@ export const buildDatabricksMigrationPlan = (
 		const clashesWithTarget = existingTarget?.keys.some((k) => k.name === name) ?? false;
 		const createName = pickCreateName(name, clashesWithTarget);
 		if (auth.problem === "missing") {
-			warnings.push("No Authorization header was found on the custom provider; enter the personal access token below.");
+			warnings.push(message("missingAuth"));
 		} else if (auth.problem === "not_bearer") {
-			warnings.push("The Authorization header is not a Bearer token; enter the personal access token below.");
+			warnings.push(message("notBearer"));
 		}
 		keys.push({
 			tempId: "header",
@@ -316,7 +329,7 @@ export const buildDatabricksMigrationPlan = (
 		});
 	} else {
 		if (auth.token) {
-			warnings.push("The custom provider also has an Authorization header; it will be dropped because the provider keys take precedence.");
+			warnings.push(message("authDropped"));
 		}
 		for (const key of sourceKeys) {
 			const clashesWithTarget = existingTarget?.keys.some((k) => k.name === key.name) ?? false;
@@ -339,24 +352,22 @@ export const buildDatabricksMigrationPlan = (
 	}
 
 	if (hasRestrictedRequests(source)) {
-		warnings.push("Allowed request restrictions are specific to custom providers and will not be carried over.");
+		warnings.push(message("restrictionsDropped"));
 	}
 	if (Object.keys(source.custom_provider_config?.request_path_overrides ?? {}).length > 0) {
-		warnings.push("Request path overrides are specific to custom providers and will not be carried over.");
+		warnings.push(message("pathsDropped"));
 	}
 	if (source.config_hash) {
-		warnings.push("This provider is synced from config.json. Remove it there as well, or it may be re-added on the next restart.");
+		warnings.push(message("configFileWarning"));
 	}
 	if (targetExists) {
-		warnings.push("A Databricks provider is already configured. Its settings will be kept and the migrated keys will be added to it.");
+		warnings.push(message("existingTarget"));
 	}
 	if (nameClash) {
-		warnings.push(
-			'The custom provider is named "databricks", so it has to be deleted before the official provider can be created. If a later step fails, it will be restored from a snapshot; key secrets that are stored as literals cannot be restored and would need to be re-entered.',
-		);
+		warnings.push(message("nameClash"));
 	}
 
-	const providerSettings = buildProviderSettings(source, warnings);
+	const providerSettings = buildProviderSettings(source, warnings, message);
 
 	return {
 		source: {
@@ -444,12 +455,6 @@ export const getErrorStatus = (err: unknown): number | undefined => {
 	return undefined;
 };
 
-const errorText = (err: unknown): string => {
-	if (err instanceof Error) return err.message;
-	if (typeof err === "string") return err;
-	return "Unknown error";
-};
-
 const STEP_IDS = {
 	snapshot: "snapshot",
 	deleteSource: "delete-source",
@@ -461,41 +466,43 @@ const STEP_IDS = {
 	refreshModels: "refresh-models",
 } as const;
 
-export const buildMigrationSteps = (plan: MigrationPlan): MigrationStep[] => {
+/** 生成当前语言的迁移步骤文案，不改变步骤标识和执行顺序。 */
+export const buildMigrationSteps = (plan: MigrationPlan, t: MigrationTranslator = defaultTranslation): MigrationStep[] => {
+	const message = createMessage(t);
 	const label = plan.source.name;
 	const keyCount = plan.keys.length;
-	const keysLabel = `Create ${keyCount} key${keyCount === 1 ? "" : "s"} on the Databricks provider`;
+	const keysLabel = message("createKeys", { count: keyCount });
 	if (plan.nameClash) {
 		return [
 			{
 				id: STEP_IDS.snapshot,
-				label: `Snapshot custom provider "${label}"`,
+				label: message("snapshotProvider", { name: label }),
 				status: "pending",
 			},
 			{
 				id: STEP_IDS.deleteSource,
-				label: `Delete custom provider "${label}"`,
+				label: message("deleteProvider", { name: label }),
 				status: "pending",
 			},
 			{
 				id: STEP_IDS.createProvider,
-				label: "Create the Databricks provider",
+				label: message("createProvider"),
 				status: "pending",
 			},
 			{
 				id: STEP_IDS.applySettings,
-				label: "Apply network and performance settings",
+				label: message("applySettings"),
 				status: "pending",
 			},
 			{ id: STEP_IDS.createKeys, label: keysLabel, status: "pending" },
 			{
 				id: STEP_IDS.verify,
-				label: "Verify the Databricks provider",
+				label: message("verifyProvider"),
 				status: "pending",
 			},
 			{
 				id: STEP_IDS.refreshModels,
-				label: "Refresh models",
+				label: message("refreshModels"),
 				status: "pending",
 			},
 		];
@@ -503,36 +510,36 @@ export const buildMigrationSteps = (plan: MigrationPlan): MigrationStep[] => {
 	const steps: MigrationStep[] = [
 		{
 			id: STEP_IDS.createProvider,
-			label: "Create the Databricks provider",
+			label: message("createProvider"),
 			status: "pending",
 		},
 		{
 			id: STEP_IDS.applySettings,
-			label: "Apply network and performance settings",
+			label: message("applySettings"),
 			status: "pending",
 		},
 		{ id: STEP_IDS.createKeys, label: keysLabel, status: "pending" },
 		{
 			id: STEP_IDS.verify,
-			label: "Verify the Databricks provider",
+			label: message("verifyProvider"),
 			status: "pending",
 		},
 		{
 			id: STEP_IDS.deleteSource,
-			label: `Delete custom provider "${label}"`,
+			label: message("deleteProvider", { name: label }),
 			status: "pending",
 		},
 	];
 	if (plan.keys.some((k) => k.createName !== k.name)) {
 		steps.push({
 			id: STEP_IDS.renameKeys,
-			label: "Restore original key names",
+			label: message("renameKeys"),
 			status: "pending",
 		});
 	}
 	steps.push({
 		id: STEP_IDS.refreshModels,
-		label: "Refresh models",
+		label: message("refreshModels"),
 		status: "pending",
 	});
 	return steps;
@@ -540,17 +547,21 @@ export const buildMigrationSteps = (plan: MigrationPlan): MigrationStep[] => {
 
 class MigrationAbort extends Error {}
 
-/**
- * Runs the migration. The normal path only deletes the custom provider once the new one is
- * created and verified; the name-clash path deletes first and restores from a snapshot on
- * failure. Every rollback call is best-effort and reported in the failed step's detail.
- */
+/** 执行迁移与原有回滚流程，进度、结果和错误均保留字符串合同。 */
 export const runDatabricksMigration = async (
 	plan: MigrationPlan,
 	api: MigrationApi,
 	onProgress: (steps: MigrationStep[]) => void,
+	t: MigrationTranslator = defaultTranslation,
 ): Promise<MigrationResult> => {
-	const steps = buildMigrationSteps(plan);
+	const message = createMessage(t);
+	/** 保留上游错误原文，仅翻译未知错误。 */
+	const errorText = (err: unknown): string => {
+		if (err instanceof Error) return err.message;
+		if (typeof err === "string") return err;
+		return message("unknownError");
+	};
+	const steps = buildMigrationSteps(plan, t);
 	const emit = () => onProgress(steps.map((s) => ({ ...s })));
 	const step = (id: string) => steps.find((s) => s.id === id)!;
 	const start = (id: string) => {
@@ -585,25 +596,25 @@ export const runDatabricksMigration = async (
 	const attempt = async (what: string, fn: () => Promise<unknown>) => {
 		try {
 			await fn();
-			rollbackNotes.push(`${what}: ok`);
+			rollbackNotes.push(message("rollbackOk", { what }));
 		} catch (err) {
-			rollbackNotes.push(`${what}: failed (${errorText(err)})`);
+			rollbackNotes.push(message("rollbackFailed", { what, error: errorText(err) }));
 		}
 	};
 
 	const rollbackTarget = async () => {
 		for (const key of createdKeys) {
-			await attempt(`Removed key "${key.name}"`, () => api.deleteProviderKey(target, key.id));
+			await attempt(message("removedKey", { name: key.name }), () => api.deleteProviderKey(target, key.id));
 		}
 		if (createdProvider) {
-			await attempt("Removed the Databricks provider", () => api.deleteProvider(target));
+			await attempt(message("removedProvider"), () => api.deleteProvider(target));
 		}
 	};
 
 	const restoreSnapshot = async () => {
 		if (!sourceDeleted) return;
 		const { provider, keys } = plan.snapshot;
-		await attempt(`Restored custom provider "${provider.name}"`, () =>
+		await attempt(message("restoredProvider", { name: provider.name }), () =>
 			api.createProvider({
 				provider: provider.name,
 				network_config: provider.network_config,
@@ -623,10 +634,10 @@ export const runDatabricksMigration = async (
 			const fromSource = key.value && isSecretVarSet(key.value) && !isMaskedLiteral(key.value) ? key.value : undefined;
 			const value = fromPlan ?? fromSource;
 			if (!value) {
-				rollbackNotes.push(`Key "${key.name}" could not be restored: its secret is masked. Re-create it manually.`);
+				rollbackNotes.push(message("restoreMaskedKey", { name: key.name }));
 				continue;
 			}
-			await attempt(`Restored key "${key.name}"`, () => api.createProviderKey(provider.name, { ...key, id: "", value }));
+			await attempt(message("restoredKey", { name: key.name }), () => api.createProviderKey(provider.name, { ...key, id: "", value }));
 		}
 	};
 
@@ -640,7 +651,7 @@ export const runDatabricksMigration = async (
 	try {
 		if (plan.nameClash) {
 			start(STEP_IDS.snapshot);
-			done(STEP_IDS.snapshot, `${plan.snapshot.keys.length} key(s) captured`);
+			done(STEP_IDS.snapshot, message("capturedKeys", { count: plan.snapshot.keys.length }));
 
 			start(STEP_IDS.deleteSource);
 			try {
@@ -655,7 +666,7 @@ export const runDatabricksMigration = async (
 		// Create provider
 		start(STEP_IDS.createProvider);
 		if (plan.targetExists && !plan.nameClash) {
-			skip(STEP_IDS.createProvider, "Already configured");
+			skip(STEP_IDS.createProvider, message("alreadyConfigured"));
 		} else {
 			try {
 				await api.createProvider({
@@ -666,7 +677,7 @@ export const runDatabricksMigration = async (
 				done(STEP_IDS.createProvider);
 			} catch (err) {
 				if (getErrorStatus(err) === 409 && !plan.nameClash) {
-					skip(STEP_IDS.createProvider, "Already configured");
+					skip(STEP_IDS.createProvider, message("alreadyConfigured"));
 				} else {
 					await abort(STEP_IDS.createProvider, err, restoreSnapshot);
 				}
@@ -676,7 +687,7 @@ export const runDatabricksMigration = async (
 		// Apply settings
 		start(STEP_IDS.applySettings);
 		if (!createdProvider) {
-			skip(STEP_IDS.applySettings, "Existing Databricks settings kept");
+			skip(STEP_IDS.applySettings, message("settingsKept"));
 		} else {
 			try {
 				await api.updateProvider(target, plan.providerSettings);
@@ -696,10 +707,14 @@ export const runDatabricksMigration = async (
 				const created = await api.createProviderKey(target, toDatabricksKeyPayload(plan, planned));
 				createdKeys.push(created);
 			} catch (err) {
-				await abort(STEP_IDS.createKeys, new Error(`Failed to create key "${planned.createName}": ${errorText(err)}`), async () => {
-					await rollbackTarget();
-					await restoreSnapshot();
-				});
+				await abort(
+					STEP_IDS.createKeys,
+					new Error(message("createKeyFailed", { name: planned.createName, error: errorText(err) })),
+					async () => {
+						await rollbackTarget();
+						await restoreSnapshot();
+					},
+				);
 			}
 		}
 		done(STEP_IDS.createKeys);
@@ -709,14 +724,14 @@ export const runDatabricksMigration = async (
 		try {
 			const provider = await api.getProvider(target);
 			if (provider.provider_status !== "active") {
-				throw new Error(`Provider status is "${provider.provider_status}"`);
+				throw new Error(message("providerStatus", { status: provider.provider_status }));
 			}
 			const keys = await api.getProviderKeys(target);
 			const missing = createdKeys.filter((created) => !keys.some((k) => k.id === created.id));
 			if (missing.length > 0) {
-				throw new Error(`${missing.length} migrated key(s) are missing on the provider`);
+				throw new Error(message("missingKeys", { count: missing.length }));
 			}
-			done(STEP_IDS.verify, `Provider active with ${keys.length} key(s)`);
+			done(STEP_IDS.verify, message("providerActive", { count: keys.length }));
 		} catch (err) {
 			await abort(STEP_IDS.verify, err, async () => {
 				await rollbackTarget();
@@ -735,15 +750,15 @@ export const runDatabricksMigration = async (
 				done(STEP_IDS.deleteSource);
 			} catch (err) {
 				partial = true;
-				partialNotes.push(`Could not delete custom provider "${plan.source.name}": ${errorText(err)}. Delete it manually.`);
-				fail(STEP_IDS.deleteSource, `${errorText(err)}. The Databricks provider was kept; delete "${plan.source.name}" manually.`);
+				partialNotes.push(message("deleteSourceFailed", { name: plan.source.name, error: errorText(err) }));
+				fail(STEP_IDS.deleteSource, message("targetKept", { name: plan.source.name, error: errorText(err) }));
 			}
 
 			const renames = plan.keys.filter((k) => k.createName !== k.name);
 			if (renames.length > 0) {
 				start(STEP_IDS.renameKeys);
 				if (!sourceDeleted) {
-					skip(STEP_IDS.renameKeys, "Custom provider still exists; key names keep the -migrating suffix");
+					skip(STEP_IDS.renameKeys, message("temporaryNamesKept"));
 				} else {
 					const failures: string[] = [];
 					for (const planned of renames) {
@@ -755,13 +770,13 @@ export const runDatabricksMigration = async (
 								name: planned.name,
 							});
 						} catch (err) {
-							failures.push(`"${planned.createName}" (${errorText(err)})`);
+							failures.push(message("renameFailure", { name: planned.createName, error: errorText(err) }));
 						}
 					}
 					if (failures.length > 0) {
 						partial = true;
-						partialNotes.push(`Some keys kept their temporary name: ${failures.join(", ")}.`);
-						fail(STEP_IDS.renameKeys, `Could not rename: ${failures.join(", ")}`);
+						partialNotes.push(message("temporaryNames", { failures: failures.join(", ") }));
+						fail(STEP_IDS.renameKeys, message("renameFailed", { failures: failures.join(", ") }));
 					} else {
 						done(STEP_IDS.renameKeys);
 					}
@@ -774,15 +789,18 @@ export const runDatabricksMigration = async (
 			await api.refreshModels(target);
 			done(STEP_IDS.refreshModels);
 		} catch (err) {
-			done(STEP_IDS.refreshModels, getErrorStatus(err) === 409 ? "A refresh is already running" : `Skipped: ${errorText(err)}`);
+			done(
+				STEP_IDS.refreshModels,
+				getErrorStatus(err) === 409 ? message("refreshRunning") : message("refreshSkipped", { error: errorText(err) }),
+			);
 		}
 
 		return {
 			ok: true,
 			partial,
 			message: partial
-				? `Databricks provider created with ${createdKeys.length} key(s), but cleanup did not fully complete. ${partialNotes.join(" ")}`
-				: `Migrated "${plan.source.name}" to the Databricks provider with ${createdKeys.length} key(s).`,
+				? message("partialSuccess", { count: createdKeys.length, notes: partialNotes.join(" ") })
+				: message("success", { name: plan.source.name, count: createdKeys.length }),
 		};
 	} catch (err) {
 		if (err instanceof MigrationAbort) {

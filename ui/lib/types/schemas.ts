@@ -1,47 +1,60 @@
 import { KnownProvidersNames } from "@/lib/constants/logs";
 import { isRedacted } from "@/lib/utils/validation";
 import { z } from "zod";
+import i18n from "@/lib/i18n";
+import type { TFunction } from "i18next";
+
+/** 在校验时读取当前语言，避免模块加载时冻结错误文案。 */
+export const schemaMessage = (key: string, defaultValue: string, values?: Record<string, unknown>) =>
+	i18n.t(`schemaUi.${key}`, { ns: "models", defaultValue, ...values });
+
+/** 共享配置校验在执行时取文案，不改变各 schema 的输入输出。 */
+const configSchemaMessage = (key: string) => i18n.t(`validation.${key}`, { ns: "config" });
 
 // Global error map - turns Zod's default messages into readable, human-friendly ones.
 // Individual schemas can still override by passing their own message.
 z.config({
+	/** 已知字段沿用定制消息，其余中文错误交给 Zod 内置 locale 格式化。 */
 	customError: (issue) => {
 		if (issue.code === "invalid_type") {
 			// Field is missing / undefined
 			if (issue.input === undefined || issue.input === null) {
-				return "This field is required";
+				return schemaMessage("required", "This field is required");
 			}
 			const expected = issue.expected;
 			const received = typeof issue.input;
-			if (expected === "number") return "Must be a valid number";
-			if (expected === "string") return "Must be a valid text value";
-			if (expected === "boolean") return "Must be true or false";
-			return `Expected ${expected}, received ${received}`;
+			if (expected === "number") return schemaMessage("number", "Must be a valid number");
+			if (expected === "string") return schemaMessage("text", "Must be a valid text value");
+			if (expected === "boolean") return schemaMessage("boolean", "Must be true or false");
+			return schemaMessage("type", "Expected {{expected}}, received {{received}}", { expected, received });
 		}
 		if (issue.code === "too_small") {
 			if (issue.origin === "string" && issue.minimum === 1) {
-				return "This field is required";
+				return schemaMessage("required", "This field is required");
 			}
 			if (issue.origin === "number") {
-				return `Must be at least ${issue.minimum}`;
+				return schemaMessage("minimum", "Must be at least {{min}}", { min: issue.minimum });
 			}
 			if (issue.origin === "array" && issue.minimum === 1) {
-				return "At least one item is required";
+				return schemaMessage("oneItem", "At least one item is required");
 			}
 		}
 		if (issue.code === "too_big") {
 			if (issue.origin === "number") {
-				return `Must be at most ${issue.maximum}`;
+				return schemaMessage("maximum", "Must be at most {{max}}", { max: issue.maximum });
 			}
 			if (issue.origin === "string") {
-				return `Must be at most ${issue.maximum} characters`;
+				return schemaMessage("maxCharacters", "Must be at most {{max}} characters", { max: issue.maximum });
 			}
 		}
 		if (issue.code === "invalid_format") {
-			if (issue.format === "url") return "Must be a valid URL";
-			if (issue.format === "email") return "Must be a valid email";
+			if (issue.format === "url") return schemaMessage("url", "Must be a valid URL");
+			if (issue.format === "email") return schemaMessage("email", "Must be a valid email");
 		}
-		return undefined; // fall back to Zod default
+		if ((i18n.resolvedLanguage ?? i18n.language) === "zh-CN") {
+			return z.locales.zhCN().localeError(issue);
+		}
+		return undefined;
 	},
 });
 
@@ -51,7 +64,7 @@ z.config({
 export const knownProviderSchema = z.enum(KnownProvidersNames as unknown as [string, ...string[]]);
 
 // Custom provider name schema (branded type simulation)
-export const customProviderNameSchema = z.string().min(1, "Custom provider name is required");
+export const customProviderNameSchema = z.string().min(1, { error: () => configSchemaMessage("customProviderName") });
 
 // Model provider name schema (union of known and custom providers)
 export const modelProviderNameSchema = z.union([knownProviderSchema, customProviderNameSchema]);
@@ -85,7 +98,7 @@ export const azureKeyConfigSchema = z
 		scopes: z.array(z.string()).optional(),
 	})
 	.refine((data) => isSecretVarSet(data.endpoint), {
-		message: "Endpoint is required",
+		error: () => configSchemaMessage("endpoint"),
 		path: ["endpoint"],
 	})
 	.refine(
@@ -103,7 +116,7 @@ export const azureKeyConfigSchema = z
 			return hasClientId && hasClientSecret && hasTenantId;
 		},
 		{
-			message: "Client ID, Client Secret, and Tenant ID are all required for Entra ID authentication",
+			error: () => configSchemaMessage("entraCredentials"),
 			path: ["client_id"],
 		},
 	);
@@ -115,9 +128,9 @@ export const vertexAWSWorkloadIdentitySchema = z.object({
 	service_account_email: secretVarSchema.optional(),
 	token_lifetime_seconds: z
 		.number()
-		.int("Token lifetime must be a whole number of seconds")
-		.min(600, "Token lifetime must be at least 600 seconds")
-		.max(43200, "Token lifetime must be at most 43200 seconds")
+		.int({ error: () => configSchemaMessage("tokenLifetimeWhole") })
+		.min(600, { error: () => configSchemaMessage("tokenLifetimeMin") })
+		.max(43200, { error: () => configSchemaMessage("tokenLifetimeMax") })
 		.optional(),
 	aws_region: secretVarSchema.optional(),
 	aws_role_arn: secretVarSchema.optional(),
@@ -135,11 +148,11 @@ export const vertexKeyConfigSchema = z
 		aws_workload_identity: vertexAWSWorkloadIdentitySchema.optional(),
 	})
 	.refine((data) => isSecretVarSet(data.project_id), {
-		message: "Project ID is required",
+		error: () => configSchemaMessage("projectId"),
 		path: ["project_id"],
 	})
 	.refine((data) => isSecretVarSet(data.region), {
-		message: "Region is required",
+		error: () => configSchemaMessage("region"),
 		path: ["region"],
 	})
 	.refine(
@@ -151,7 +164,7 @@ export const vertexKeyConfigSchema = z
 			return true;
 		},
 		{
-			message: "Auth Credentials is required for service account JSON authentication",
+			error: () => configSchemaMessage("serviceAccountCredentials"),
 			path: ["auth_credentials"],
 		},
 	)
@@ -165,7 +178,7 @@ export const vertexKeyConfigSchema = z
 			return true;
 		},
 		{
-			message: "Workload Identity Pool provider audience is required",
+			error: () => configSchemaMessage("workloadAudience"),
 			path: ["aws_workload_identity", "audience"],
 		},
 	)
@@ -178,14 +191,14 @@ export const vertexKeyConfigSchema = z
 			return true;
 		},
 		{
-			message: "Remove the auth credentials JSON when using AWS workload identity",
+			error: () => configSchemaMessage("workloadCredentialsConflict"),
 			path: ["auth_credentials"],
 		},
 	);
 
 // S3 bucket configuration for Bedrock batch operations
 export const s3BucketConfigSchema = z.object({
-	bucket_name: z.string().min(1, "Bucket name is required"),
+	bucket_name: z.string().min(1, { error: () => configSchemaMessage("bucketName") }),
 	prefix: z.string().optional(),
 	is_default: z.boolean().optional(),
 });
@@ -226,7 +239,7 @@ export const bedrockKeyConfigSchema = z
 			return isSecretVarSet(data.region);
 		},
 		{
-			message: "Region is required",
+			error: () => configSchemaMessage("region"),
 			path: ["region"],
 		},
 	)
@@ -243,7 +256,7 @@ export const bedrockKeyConfigSchema = z
 			return hasAccessKey && hasSecretKey;
 		},
 		{
-			message: "Both Access Key and Secret Key are required for explicit credentials",
+			error: () => configSchemaMessage("explicitCredentials"),
 			path: ["access_key"],
 		},
 	);
@@ -263,7 +276,7 @@ export const bedrockMantleKeyConfigSchema = z
 		endpoints: bedrockEndpointsSchema.optional(),
 	})
 	.refine((data) => isSecretVarSet(data.region), {
-		message: "Region is required",
+		error: () => configSchemaMessage("region"),
 		path: ["region"],
 	})
 	.refine(
@@ -280,7 +293,7 @@ export const bedrockMantleKeyConfigSchema = z
 			return hasAccessKey && hasSecretKey;
 		},
 		{
-			message: "Both Access Key and Secret Key are required for explicit credentials",
+			error: () => configSchemaMessage("explicitCredentials"),
 			path: ["access_key"],
 		},
 	);
@@ -289,10 +302,13 @@ export const bedrockMantleKeyConfigSchema = z
 export const vllmKeyConfigSchema = z
 	.object({
 		url: secretVarSchema.optional(),
-		model_name: z.string().trim().min(1, "Model name is required"),
+		model_name: z
+			.string()
+			.trim()
+			.min(1, { error: () => configSchemaMessage("modelName") }),
 	})
 	.refine((data) => isSecretVarSet(data.url), {
-		message: "Server URL is required",
+		error: () => configSchemaMessage("serverUrl"),
 		path: ["url"],
 	});
 
@@ -377,17 +393,33 @@ export const githubCopilotKeyConfigSchema = z
 
 		for (const field of ["app_id", "installation_id", "repository_id", "private_key"] as const) {
 			if (!isSecretVarSet(data[field])) {
-				ctx.addIssue({ code: "custom", path: [field], message: "Required when using GitHub App credentials" });
+				ctx.addIssue({
+					code: "custom",
+					path: [field],
+					message: schemaMessage("githubRequired", "Required when using GitHub App credentials"),
+				});
 			}
 		}
 		if (!isLiteralDigits(data.installation_id)) {
-			ctx.addIssue({ code: "custom", path: ["installation_id"], message: "Installation ID must be numeric" });
+			ctx.addIssue({
+				code: "custom",
+				path: ["installation_id"],
+				message: schemaMessage("installationNumeric", "Installation ID must be numeric"),
+			});
 		}
 		if (!isLiteralDigits(data.repository_id)) {
-			ctx.addIssue({ code: "custom", path: ["repository_id"], message: "Repository ID must be numeric" });
+			ctx.addIssue({
+				code: "custom",
+				path: ["repository_id"],
+				message: schemaMessage("repositoryNumeric", "Repository ID must be numeric"),
+			});
 		}
 		if (!isLiteralPEM(data.private_key)) {
-			ctx.addIssue({ code: "custom", path: ["private_key"], message: "Private key must be a PKCS#1 or PKCS#8 PEM block" });
+			ctx.addIssue({
+				code: "custom",
+				path: ["private_key"],
+				message: schemaMessage("privateKeyPem", "Private key must be a PKCS#1 or PKCS#8 PEM block"),
+			});
 		}
 	});
 
@@ -397,7 +429,7 @@ export const ollamaKeyConfigSchema = z
 		url: secretVarSchema.optional(),
 	})
 	.refine((data) => isSecretVarSet(data.url), {
-		message: "Server URL is required",
+		error: () => configSchemaMessage("serverUrl"),
 		path: ["url"],
 	});
 
@@ -407,7 +439,7 @@ export const sglKeyConfigSchema = z
 		url: secretVarSchema.optional(),
 	})
 	.refine((data) => isSecretVarSet(data.url), {
-		message: "Server URL is required",
+		error: () => configSchemaMessage("serverUrl"),
 		path: ["url"],
 	});
 
@@ -423,18 +455,18 @@ export const databricksKeyConfigSchema = z
 		_auth_type: z.enum(["pat", "oauth_m2m"]).optional(),
 	})
 	.refine((data) => isSecretVarSet(data.workspace_url), {
-		message: "Workspace URL is required",
+		error: () => configSchemaMessage("workspaceUrl"),
 		path: ["workspace_url"],
 	})
 	// The OAuth M2M tab hides the token field, so a key saved from it needs the whole service
 	// principal or it has no credentials at all. Mirrors the Azure Entra ID rule.
 	.refine((data) => data._auth_type !== "oauth_m2m" || (isSecretVarSet(data.client_id) && isSecretVarSet(data.client_secret)), {
-		message: "Client ID and Client Secret are both required for OAuth M2M authentication",
+		error: () => configSchemaMessage("oauthM2mCredentials"),
 		path: ["client_id"],
 	})
 	// A service principal only authenticates as a pair; half of one is always a misconfiguration.
 	.refine((data) => isSecretVarSet(data.client_id) === isSecretVarSet(data.client_secret), {
-		message: "Client ID and Client Secret must be set together",
+		error: () => configSchemaMessage("clientCredentialsTogether"),
 		path: ["client_secret"],
 	});
 
@@ -457,7 +489,10 @@ export const modelFamilySchema = z.enum([
 // provider sub-configs flattened to top-level optional fields (matches Go's
 // embedded-pointer-struct JSON output).
 const aliasConfigObjectSchema = z.object({
-	model_id: z.string().trim().min(1, "Model ID is required"),
+	model_id: z
+		.string()
+		.trim()
+		.min(1, { error: () => configSchemaMessage("modelId") }),
 	model_name: z.string().trim().optional(),
 	model_family: modelFamilySchema.optional(),
 	description: z.string().optional(),
@@ -490,8 +525,8 @@ export const aliasConfigSchema = z.preprocess(
 // Model provider key schema
 export const modelProviderKeySchema = z
 	.object({
-		id: z.string().min(1, "Id is required"),
-		name: z.string().min(1, "Name is required"),
+		id: z.string().min(1, { error: () => configSchemaMessage("id") }),
+		name: z.string().min(1, { error: () => configSchemaMessage("name") }),
 		value: secretVarSchema.optional(),
 		models: z.array(z.string()).optional().default(["*"]),
 		blacklisted_models: z.array(z.string()).default([]).optional(),
@@ -506,13 +541,18 @@ export const modelProviderKeySchema = z
 				if (!Number.isFinite(num)) {
 					ctx.addIssue({
 						code: "custom",
-						message: "Weight must be a valid number between 0 and 1",
+						message: configSchemaMessage("weightNumber"),
 					});
 					return z.NEVER;
 				}
 				return num;
 			})
-			.pipe(z.number().min(0, "Weight must be equal to or greater than 0").max(1, "Weight must be equal to or less than 1")),
+			.pipe(
+				z
+					.number()
+					.min(0, { error: () => configSchemaMessage("weightMin") })
+					.max(1, { error: () => configSchemaMessage("weightMax") }),
+			),
 		aliases: z.record(z.string(), aliasConfigSchema).optional(),
 		azure_key_config: azureKeyConfigSchema.optional(),
 		vertex_key_config: vertexKeyConfigSchema.optional(),
@@ -592,7 +632,7 @@ export const modelProviderKeySchema = z
 			return isSecretVarSet(data.value);
 		},
 		{
-			message: "API Key is required",
+			error: () => configSchemaMessage("apiKey"),
 			path: ["value"],
 		},
 	);
@@ -600,46 +640,49 @@ export const modelProviderKeySchema = z
 // Network config schema
 export const networkConfigSchema = z
 	.object({
-		base_url: z.union([z.string().url("Must be a valid URL"), z.string().length(0)]).optional(),
+		base_url: z.union([z.string().url({ error: () => configSchemaMessage("url") }), z.string().length(0)]).optional(),
 		extra_headers: z.record(z.string(), z.string()).optional(),
 		default_request_timeout_in_seconds: z
 			.number()
-			.min(1, "Timeout must be greater than 0 seconds")
-			.max(3600, "Timeout must be less than 3600 seconds"),
-		max_retries: z.number().min(0, "Max retries must be greater than 0").max(10, "Max retries must be less than 10"),
+			.min(1, { error: () => configSchemaMessage("timeoutMin") })
+			.max(3600, { error: () => configSchemaMessage("timeoutMax") }),
+		max_retries: z
+			.number()
+			.min(0, { error: () => configSchemaMessage("retriesMin") })
+			.max(10, { error: () => configSchemaMessage("retriesMax") }),
 		retry_backoff_initial: z.number().min(100),
 		retry_backoff_max: z.number().min(100),
 		insecure_skip_verify: z.boolean().optional(),
 		ca_cert_pem: secretVarSchema.optional(),
 		stream_idle_timeout_in_seconds: z
 			.number()
-			.int("Stream idle timeout must be a whole number of seconds")
-			.min(5, "Stream idle timeout must be at least 5 seconds")
-			.max(3600, "Stream idle timeout must be at most 3600 seconds i.e. 60 minutes")
+			.int({ error: () => configSchemaMessage("streamTimeoutWhole") })
+			.min(5, { error: () => configSchemaMessage("streamTimeoutMin") })
+			.max(3600, { error: () => configSchemaMessage("streamTimeoutMax") })
 			.optional(),
 		keep_alive_timeout_in_seconds: z
 			.number()
-			.int("Keep-alive timeout must be a whole number of seconds")
-			.min(1, "Keep-alive timeout must be at least 1 second")
-			.max(3600, "Keep-alive timeout must be at most 3600 seconds i.e. 60 minutes")
+			.int({ error: () => configSchemaMessage("keepAliveWhole") })
+			.min(1, { error: () => configSchemaMessage("keepAliveMin") })
+			.max(3600, { error: () => configSchemaMessage("keepAliveMax") })
 			.optional(),
 		max_conns_per_host: z
 			.number()
-			.int("Max connections must be a whole number")
-			.min(1, "Max connections must be at least 1")
-			.max(10000, "Max connections must be at most 10000")
+			.int({ error: () => configSchemaMessage("connectionsWhole") })
+			.min(1, { error: () => configSchemaMessage("connectionsMin") })
+			.max(10000, { error: () => configSchemaMessage("connectionsMax") })
 			.optional(),
 		enforce_http2: z.boolean().optional(),
 		http2_ping_interval_in_seconds: z
 			.number()
-			.int("HTTP/2 ping interval must be a whole number of seconds")
-			.min(0, "HTTP/2 ping interval must be at least 0 seconds")
-			.max(3600, "HTTP/2 ping interval must be at most 3600 seconds i.e. 60 minutes")
+			.int({ error: () => configSchemaMessage("http2PingWhole") })
+			.min(0, { error: () => configSchemaMessage("http2PingMin") })
+			.max(3600, { error: () => configSchemaMessage("http2PingMax") })
 			.optional(),
 		allow_private_network: z.boolean().optional(),
 	})
 	.refine((d) => d.retry_backoff_initial <= d.retry_backoff_max, {
-		message: "retry_backoff_initial must be <= retry_backoff_max",
+		error: () => configSchemaMessage("backoffFieldsOrder"),
 		path: ["retry_backoff_initial"],
 	});
 
@@ -650,68 +693,74 @@ export const networkFormConfigSchema = z
 			.union([
 				z
 					.string()
-					.url("Must be a valid URL")
+					.url({ error: () => configSchemaMessage("url") })
 					.refine((url) => url.startsWith("https://") || url.startsWith("http://"), {
-						message: "Must be a valid HTTP or HTTPS URL",
+						error: () => configSchemaMessage("httpUrl"),
 					}),
 				z.string().length(0),
 			])
 			.optional(),
 		extra_headers: z.record(z.string(), z.string()).optional(),
 		default_request_timeout_in_seconds: z.coerce
-			.number("Timeout must be a number")
-			.min(1, "Timeout must be greater than 0 seconds")
-			.max(172800, "Timeout must be less than 172800 seconds i.e. 48 hours"),
+			.number({ error: () => configSchemaMessage("timeoutNumber") })
+			.min(1, { error: () => configSchemaMessage("timeoutMin") })
+			.max(172800, { error: () => configSchemaMessage("timeoutFormMax") }),
 		max_retries: z.coerce
-			.number("Max retries must be a number")
-			.min(0, "Max retries must be greater than 0")
-			.max(10, "Max retries must be less than 10"),
+			.number({ error: () => configSchemaMessage("retriesNumber") })
+			.min(0, { error: () => configSchemaMessage("retriesMin") })
+			.max(10, { error: () => configSchemaMessage("retriesMax") }),
 		retry_backoff_initial: z.coerce
-			.number("Retry backoff initial must be a number")
-			.min(100, "Retry backoff initial must be at least 100ms")
-			.max(1000000, "Retry backoff initial must be at most 1000000ms"),
+			.number({ error: () => configSchemaMessage("backoffInitialNumber") })
+			.min(100, { error: () => configSchemaMessage("backoffInitialMin") })
+			.max(1000000, { error: () => configSchemaMessage("backoffInitialMax") }),
 		retry_backoff_max: z.coerce
-			.number("Retry backoff max must be a number")
-			.min(100, "Retry backoff max must be at least 100ms")
-			.max(1000000, "Retry backoff max must be at most 1000000ms"),
+			.number({ error: () => configSchemaMessage("backoffMaxNumber") })
+			.min(100, { error: () => configSchemaMessage("backoffMaxMin") })
+			.max(1000000, { error: () => configSchemaMessage("backoffMaxMax") }),
 		insecure_skip_verify: z.boolean().optional(),
 		ca_cert_pem: secretVarSchema.optional(),
 		stream_idle_timeout_in_seconds: z.coerce
-			.number("Stream idle timeout must be a number")
-			.int("Stream idle timeout must be a whole number of seconds")
-			.min(5, "Stream idle timeout must be at least 5 seconds")
-			.max(3600, "Stream idle timeout must be at most 3600 seconds i.e. 60 minutes")
+			.number({ error: () => configSchemaMessage("streamTimeoutNumber") })
+			.int({ error: () => configSchemaMessage("streamTimeoutWhole") })
+			.min(5, { error: () => configSchemaMessage("streamTimeoutMin") })
+			.max(3600, { error: () => configSchemaMessage("streamTimeoutMax") })
 			.optional(),
 		keep_alive_timeout_in_seconds: z.coerce
-			.number("Keep-alive timeout must be a number")
-			.int("Keep-alive timeout must be a whole number of seconds")
-			.min(1, "Keep-alive timeout must be at least 1 second")
-			.max(3600, "Keep-alive timeout must be at most 3600 seconds i.e. 60 minutes")
+			.number({ error: () => configSchemaMessage("keepAliveNumber") })
+			.int({ error: () => configSchemaMessage("keepAliveWhole") })
+			.min(1, { error: () => configSchemaMessage("keepAliveMin") })
+			.max(3600, { error: () => configSchemaMessage("keepAliveMax") })
 			.optional(),
 		max_conns_per_host: z.coerce
-			.number("Max connections must be a number")
-			.int("Max connections must be a whole number")
-			.min(1, "Max connections must be at least 1")
-			.max(10000, "Max connections must be at most 10000")
+			.number({ error: () => configSchemaMessage("connectionsNumber") })
+			.int({ error: () => configSchemaMessage("connectionsWhole") })
+			.min(1, { error: () => configSchemaMessage("connectionsMin") })
+			.max(10000, { error: () => configSchemaMessage("connectionsMax") })
 			.optional(),
 		enforce_http2: z.boolean().optional(),
 		http2_ping_interval_in_seconds: z.coerce
-			.number("HTTP/2 ping interval must be a number")
-			.int("HTTP/2 ping interval must be a whole number of seconds")
-			.min(0, "HTTP/2 ping interval must be at least 0 seconds")
-			.max(3600, "HTTP/2 ping interval must be at most 3600 seconds i.e. 60 minutes")
+			.number({ error: () => configSchemaMessage("http2PingNumber") })
+			.int({ error: () => configSchemaMessage("http2PingWhole") })
+			.min(0, { error: () => configSchemaMessage("http2PingMin") })
+			.max(3600, { error: () => configSchemaMessage("http2PingMax") })
 			.optional(),
 		allow_private_network: z.boolean().optional(),
 	})
 	.refine((d) => d.retry_backoff_initial <= d.retry_backoff_max, {
-		message: "Initial backoff must be less than or equal to max backoff",
+		error: () => configSchemaMessage("backoffOrder"),
 		path: ["retry_backoff_initial"],
 	});
 
 // Concurrency and buffer size schema
 export const concurrencyAndBufferSizeSchema = z.object({
-	concurrency: z.number().min(1, "Concurrency must be greater than 0").max(100, "Concurrency must be less than or equal to 100"),
-	buffer_size: z.number().min(1, "Buffer size must be greater than 0").max(1000, "Buffer size must be less than or equal to 1000"),
+	concurrency: z
+		.number()
+		.min(1, { error: () => configSchemaMessage("concurrencyMin") })
+		.max(100, { error: () => configSchemaMessage("concurrencyMax") }),
+	buffer_size: z
+		.number()
+		.min(1, { error: () => configSchemaMessage("bufferMin") })
+		.max(1000, { error: () => configSchemaMessage("bufferMax") }),
 });
 
 // Proxy type schema
@@ -733,7 +782,7 @@ export const proxyConfigSchema = z
 			data.url?.type === "vault" ||
 			(data.url?.value && data.url.value.trim().length > 0),
 		{
-			message: "Proxy URL is required when using HTTP or SOCKS5 proxy",
+			error: () => configSchemaMessage("proxyUrlRequired"),
 			path: ["url"],
 		},
 	)
@@ -753,7 +802,7 @@ export const proxyConfigSchema = z
 			return true;
 		},
 		{
-			message: "Must be a valid URL (e.g., http://proxy.example.com:8080)",
+			error: () => configSchemaMessage("proxyUrl"),
 			path: ["url"],
 		},
 	);
@@ -782,7 +831,7 @@ export const proxyFormConfigSchema = z
 			return true;
 		},
 		{
-			message: "Proxy URL is required when using HTTP or SOCKS5 proxy",
+			error: () => configSchemaMessage("proxyUrlRequired"),
 			path: ["url"],
 		},
 	)
@@ -803,7 +852,7 @@ export const proxyFormConfigSchema = z
 			return true;
 		},
 		{
-			message: "Must be a valid URL (e.g., http://proxy.example.com:8080)",
+			error: () => configSchemaMessage("proxyUrl"),
 			path: ["url"],
 		},
 	);
@@ -823,7 +872,7 @@ export const cacheControlInjectionPointSchema = z
 		index: z.number().int().optional(),
 	})
 	.refine((p) => p.role !== undefined || p.index !== undefined, {
-		message: "Set a role, an index, or both - a point with neither matches nothing",
+		error: () => configSchemaMessage("cacheInjectionPoint"),
 	});
 
 export const promptCacheFormSchema = z.object({
@@ -893,7 +942,7 @@ export const customProviderConfigSchema = z
 			return true;
 		},
 		{
-			message: "Is keyless is not allowed for Bedrock",
+			error: () => configSchemaMessage("bedrockKeyless"),
 			path: ["is_key_less"],
 		},
 	);
@@ -901,7 +950,7 @@ export const customProviderConfigSchema = z
 // Form-specific custom provider config schema
 export const formCustomProviderConfigSchema = z
 	.object({
-		base_provider_type: z.string().min(1, "Base provider type is required"),
+		base_provider_type: z.string().min(1, { error: () => configSchemaMessage("baseProviderType") }),
 		is_key_less: z.boolean().optional(),
 		does_not_send_done_marker: z.boolean().optional(),
 		wait_for_usage: z.boolean().optional(),
@@ -916,14 +965,14 @@ export const formCustomProviderConfigSchema = z
 			return true;
 		},
 		{
-			message: "Is keyless is not allowed for Bedrock",
+			error: () => configSchemaMessage("bedrockKeyless"),
 			path: ["is_key_less"],
 		},
 	);
 
 // Full model provider config schema
 export const modelProviderConfigSchema = z.object({
-	keys: z.array(modelProviderKeySchema).min(1, "At least one key is required"),
+	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
 	network_config: networkConfigSchema.optional(),
 	concurrency_and_buffer_size: concurrencyAndBufferSizeSchema.optional(),
 	proxy_config: proxyConfigSchema.optional(),
@@ -941,7 +990,7 @@ export const modelProviderSchema = modelProviderConfigSchema.extend({
 
 // Form-specific model provider config schema
 export const formModelProviderConfigSchema = z.object({
-	keys: z.array(modelProviderKeySchema).min(1, "At least one key is required"),
+	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
 	network_config: networkConfigSchema.optional(),
 	concurrency_and_buffer_size: concurrencyAndBufferSizeSchema.optional(),
 	proxy_config: proxyConfigSchema.optional(),
@@ -954,13 +1003,13 @@ export const formModelProviderConfigSchema = z.object({
 
 // Flexible model provider schema for form data - allows any string for name
 export const formModelProviderSchema = formModelProviderConfigSchema.extend({
-	name: z.string().min(1, "Provider name is required"),
+	name: z.string().min(1, { error: () => configSchemaMessage("providerName") }),
 });
 
 // Add provider request schema
 export const addProviderRequestSchema = z.object({
 	provider: modelProviderNameSchema,
-	keys: z.array(modelProviderKeySchema).min(1, "At least one key is required"),
+	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
 	network_config: networkConfigSchema.optional(),
 	concurrency_and_buffer_size: concurrencyAndBufferSizeSchema.optional(),
 	proxy_config: proxyConfigSchema.optional(),
@@ -975,7 +1024,7 @@ export const addProviderRequestSchema = z.object({
 
 // Update provider request schema
 export const updateProviderRequestSchema = z.object({
-	keys: z.array(modelProviderKeySchema).min(1, "At least one key is required"),
+	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
 	network_config: networkConfigSchema,
 	concurrency_and_buffer_size: concurrencyAndBufferSizeSchema,
 	proxy_config: proxyConfigSchema,
@@ -1013,8 +1062,11 @@ const providerBackedCacheConfigSchema = baseCacheConfigSchema
 	.extend({
 		provider: modelProviderNameSchema,
 		keys: z.array(modelProviderKeySchema).optional(),
-		embedding_model: z.string().min(1, "Embedding model is required"),
-		dimension: z.number().int().min(2, "Dimension must be greater than 1 for provider-backed semantic cache"),
+		embedding_model: z.string().min(1, { error: () => configSchemaMessage("embeddingModel") }),
+		dimension: z
+			.number()
+			.int()
+			.min(2, { error: () => configSchemaMessage("cacheDimension") }),
 	})
 	.strict();
 
@@ -1049,7 +1101,7 @@ export const coreConfigSchema = z.object({
 			max_value_bytes: z
 				.number()
 				.int()
-				.refine((v) => v === 0 || v >= 1024, { message: "max_value_bytes must be 0 or at least 1024" })
+				.refine((v) => v === 0 || v >= 1024, { error: () => configSchemaMessage("codeModeValueBytes") })
 				.optional(),
 			max_nesting_depth: z.number().int().min(0).max(1000).optional(),
 		})
@@ -1087,16 +1139,16 @@ export const performanceFormSchema = z.object({
 	concurrency_and_buffer_size: z
 		.object({
 			concurrency: z
-				.number({ error: "Concurrency must be a number" })
-				.min(1, "Concurrency must be greater than 0")
-				.max(100000, "Concurrency must be less than 100000"),
+				.number({ error: () => configSchemaMessage("concurrencyNumber") })
+				.min(1, { error: () => configSchemaMessage("concurrencyMin") })
+				.max(100000, { error: () => configSchemaMessage("concurrencyFormMax") }),
 			buffer_size: z
-				.number({ error: "Buffer size must be a number" })
-				.min(1, "Buffer size must be greater than 0")
-				.max(100000, "Buffer size must be less than 100000"),
+				.number({ error: () => configSchemaMessage("bufferNumber") })
+				.min(1, { error: () => configSchemaMessage("bufferMin") })
+				.max(100000, { error: () => configSchemaMessage("bufferFormMax") }),
 		})
 		.refine((data) => data.concurrency <= data.buffer_size, {
-			message: "Concurrency must be less than or equal to buffer size",
+			error: () => configSchemaMessage("concurrencyBuffer"),
 			path: ["concurrency"],
 		}),
 });
@@ -1135,7 +1187,7 @@ export const otelConfigSchema = z
 		collector_url: secretVarSchema.default({ value: "" }),
 		trace_type: z
 			.enum(["genai_extension", "vercel", "open_inference"], {
-				message: "Please select a trace type",
+				error: () => schemaMessage("traceType", "Please select a trace type"),
 			})
 			.default("genai_extension"),
 		// Common headers go to both endpoints; per-signal headers override on collision.
@@ -1144,7 +1196,7 @@ export const otelConfigSchema = z
 		metrics_headers: z.record(z.string(), secretVarSchema).optional(),
 		protocol: z
 			.enum(["http", "grpc"], {
-				message: "Please select a protocol",
+				error: () => schemaMessage("protocol", "Please select a protocol"),
 			})
 			.default("http"),
 		// TLS configuration
@@ -1181,7 +1233,7 @@ export const otelConfigSchema = z
 					ctx.addIssue({
 						code: "custom",
 						path,
-						message: "Must be a valid HTTP or HTTPS URL",
+						message: schemaMessage("httpUrl", "Must be a valid HTTP or HTTPS URL"),
 					});
 					return false;
 				}
@@ -1190,7 +1242,7 @@ export const otelConfigSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path,
-					message: "Must be a valid HTTP or HTTPS URL",
+					message: schemaMessage("httpUrl", "Must be a valid HTTP or HTTPS URL"),
 				});
 				return false;
 			}
@@ -1203,7 +1255,7 @@ export const otelConfigSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path,
-					message: `Must be in the format <host>:<port> for gRPC (e.g. ${example})`,
+					message: schemaMessage("grpcAddress", "Must be in the format <host>:<port> for gRPC (e.g. {{example}})", { example }),
 				});
 				return false;
 			}
@@ -1212,7 +1264,7 @@ export const otelConfigSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path,
-					message: "Port must be between 1 and 65535",
+					message: schemaMessage("portRange", "Port must be between 1 and 65535"),
 				});
 				return false;
 			}
@@ -1225,7 +1277,7 @@ export const otelConfigSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path: ["collector_url"],
-					message: "Collector address is required",
+					message: schemaMessage("collectorRequired", "Collector address is required"),
 				});
 			}
 
@@ -1245,7 +1297,7 @@ export const otelConfigSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path: ["metrics_endpoint"],
-					message: "Metrics endpoint is required when metrics push is enabled",
+					message: schemaMessage("metricsRequired", "Metrics endpoint is required when metrics push is enabled"),
 				});
 			} else if (metricsEndpoint && (data.metrics_endpoint?.type === "plain_text" || !data.metrics_endpoint?.type) && protocol === "http") {
 				validateHttpUrl(metricsEndpoint, ["metrics_endpoint"]);
@@ -1259,7 +1311,7 @@ export const otelConfigSchema = z
 // it carries one or more export profiles, each independently enable-able.
 export const otelFormSchema = z.object({
 	enabled: z.boolean().default(true),
-	profiles: z.array(otelConfigSchema).min(1, "At least one profile is required"),
+	profiles: z.array(otelConfigSchema).min(1, { error: () => configSchemaMessage("oneProfile") }),
 });
 
 // Maxim Configuration Schema
@@ -1282,13 +1334,13 @@ export const maximFormSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path: ["maxim_config", "api_key"],
-					message: "API key is required",
+					message: configSchemaMessage("apiKey"),
 				});
 			} else if (!apiKey.startsWith("sk_mx_")) {
 				ctx.addIssue({
 					code: "custom",
 					path: ["maxim_config", "api_key"],
-					message: "API key must start with 'sk_mx_'",
+					message: configSchemaMessage("maximKeyPrefix"),
 				});
 			}
 		}
@@ -1314,14 +1366,14 @@ export const prometheusConfigSchema = z
 					ctx.addIssue({
 						code: "custom",
 						path: ["push_gateway_url"],
-						message: "Must be a valid HTTP or HTTPS URL",
+						message: configSchemaMessage("httpUrl"),
 					});
 				}
 			} catch {
 				ctx.addIssue({
 					code: "custom",
 					path: ["push_gateway_url"],
-					message: "Must be a valid URL (e.g., http://pushgateway:9091)",
+					message: configSchemaMessage("pushGatewayUrl"),
 				});
 			}
 		}
@@ -1333,14 +1385,14 @@ export const prometheusConfigSchema = z
 			ctx.addIssue({
 				code: "custom",
 				path: ["basic_auth_password"],
-				message: "Password is required when username is provided",
+				message: configSchemaMessage("passwordWithUsername"),
 			});
 		}
 		if (hasPassword && !hasUsername) {
 			ctx.addIssue({
 				code: "custom",
 				path: ["basic_auth_username"],
-				message: "Username is required when password is provided",
+				message: configSchemaMessage("usernameWithPassword"),
 			});
 		}
 	});
@@ -1361,7 +1413,7 @@ export const prometheusFormSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path: ["prometheus_config", "push_gateway_url"],
-					message: "Push Gateway URL is required when the push gateway is enabled",
+					message: configSchemaMessage("pushGatewayUrlRequired"),
 				});
 			}
 		}
@@ -1377,19 +1429,24 @@ export const mcpClientUpdateSchema = z
 		disabled: z.boolean().optional(),
 		name: z
 			.string()
-			.min(1, "Name is required")
+			.min(1, { error: () => configSchemaMessage("name") })
 			.refine((val) => !val.includes("-"), {
-				message: "Client name cannot contain hyphens",
+				error: () => configSchemaMessage("clientNameHyphens"),
 			})
 			.refine((val) => !val.includes(" "), {
-				message: "Client name cannot contain spaces",
+				error: () => configSchemaMessage("clientNameSpaces"),
 			})
 			.refine((val) => !/^[0-9]/.test(val), {
-				message: "Client name cannot start with a number",
+				error: () => configSchemaMessage("clientNameNumber"),
 			}),
 		headers: z.record(z.string(), secretVarSchema).optional().nullable(),
 		per_user_header_keys: z
-			.array(z.string().trim().min(1, "Header name cannot be empty"))
+			.array(
+				z
+					.string()
+					.trim()
+					.min(1, { error: () => configSchemaMessage("headerName") }),
+			)
 			.optional()
 			.refine(
 				(headers) => {
@@ -1397,7 +1454,7 @@ export const mcpClientUpdateSchema = z
 					const normalized = headers.map((h) => h.trim().toLowerCase());
 					return normalized.length === new Set(normalized).size;
 				},
-				{ message: "Duplicate header names are not allowed" },
+				{ error: () => configSchemaMessage("duplicateHeaders") },
 			),
 		tools_to_execute: z
 			.array(z.string())
@@ -1408,14 +1465,14 @@ export const mcpClientUpdateSchema = z
 					const hasWildcard = tools.includes("*");
 					return !hasWildcard || tools.length === 1;
 				},
-				{ message: "Wildcard '*' cannot be combined with other tool names" },
+				{ error: () => configSchemaMessage("wildcardTools") },
 			)
 			.refine(
 				(tools) => {
 					if (!tools) return true;
 					return tools.length === new Set(tools).size;
 				},
-				{ message: "Duplicate tool names are not allowed" },
+				{ error: () => configSchemaMessage("duplicateTools") },
 			),
 		tools_to_auto_execute: z
 			.array(z.string())
@@ -1426,17 +1483,20 @@ export const mcpClientUpdateSchema = z
 					const hasWildcard = tools.includes("*");
 					return !hasWildcard || tools.length === 1;
 				},
-				{ message: "Wildcard '*' cannot be combined with other tool names" },
+				{ error: () => configSchemaMessage("wildcardTools") },
 			)
 			.refine(
 				(tools) => {
 					if (!tools) return true;
 					return tools.length === new Set(tools).size;
 				},
-				{ message: "Duplicate tool names are not allowed" },
+				{ error: () => configSchemaMessage("duplicateTools") },
 			),
-		tool_pricing: z.record(z.string(), z.number().min(0, "Cost must be non-negative")).optional(),
-		tool_sync_interval: z.number().min(0, "Tool sync interval must be 0 or a positive number of minutes").optional(), // 0 = use global, >0 = custom interval in minutes
+		tool_pricing: z.record(z.string(), z.number().min(0, { error: () => configSchemaMessage("toolCost") })).optional(),
+		tool_sync_interval: z
+			.number()
+			.min(0, { error: () => configSchemaMessage("toolSyncInterval") })
+			.optional(), // 0 = use global, >0 = custom interval in minutes
 		tool_execution_timeout: z.number().int().min(0).optional(), // 0 = use global, >0 = per-server timeout in seconds
 		max_instructions_length: z.number().int().min(0).optional(), // 0 = use global, >0 = per-server instruction byte cap
 		allowed_extra_headers: z
@@ -1448,7 +1508,7 @@ export const mcpClientUpdateSchema = z
 					const hasWildcard = headers.includes("*");
 					return !hasWildcard || headers.length === 1;
 				},
-				{ message: "Wildcard '*' cannot be combined with specific header names" },
+				{ error: () => configSchemaMessage("wildcardHeaders") },
 			),
 		oauth_config: z
 			.object({
@@ -1457,22 +1517,25 @@ export const mcpClientUpdateSchema = z
 				authorize_url: z
 					.string()
 					.optional()
-					.refine((val) => !val || /^https?:\/\/.+$/.test(val), { message: "Authorize URL must start with http:// or https://" }),
+					.refine((val) => !val || /^https?:\/\/.+$/.test(val), { error: () => configSchemaMessage("authorizeUrl") }),
 				token_url: z
 					.string()
 					.optional()
-					.refine((val) => !val || /^https?:\/\/.+$/.test(val), { message: "Token URL must start with http:// or https://" }),
+					.refine((val) => !val || /^https?:\/\/.+$/.test(val), { error: () => configSchemaMessage("tokenUrl") }),
 				registration_url: z
 					.string()
 					.optional()
-					.refine((val) => !val || /^https?:\/\/.+$/.test(val), { message: "Registration URL must start with http:// or https://" }),
+					.refine((val) => !val || /^https?:\/\/.+$/.test(val), { error: () => configSchemaMessage("registrationUrl") }),
 				scopes: z.array(z.string()).optional(),
 				resource: z.string().optional(),
 			})
 			.optional(),
 		token_exchange: z
 			.object({
-				audience: z.string().trim().min(1, "Audience is required"),
+				audience: z
+					.string()
+					.trim()
+					.min(1, { error: () => configSchemaMessage("audience") }),
 				use_idp_credentials: z.boolean().optional(),
 				client_id: secretVarSchema.optional(),
 				client_secret: secretVarSchema.optional(),
@@ -1480,7 +1543,7 @@ export const mcpClientUpdateSchema = z
 					.string()
 					.optional()
 					.refine((val) => !val || /^https?:\/\/.+$/.test(val), {
-						message: "Authorization Server URL must start with http:// or https://",
+						error: () => configSchemaMessage("authorizationServerUrl"),
 					}),
 				scopes: z.array(z.string()).optional(),
 			})
@@ -1500,7 +1563,7 @@ export const mcpClientUpdateSchema = z
 			ctx.addIssue({
 				code: "custom",
 				path: ["per_user_header_keys"],
-				message: "Declare at least one header name users must supply.",
+				message: configSchemaMessage("oneUserHeader"),
 			});
 		}
 	});
@@ -1533,7 +1596,7 @@ export const globalProxyConfigSchema = z
 			return true;
 		},
 		{
-			message: "Proxy URL is required when proxy is enabled",
+			error: () => configSchemaMessage("enabledProxyUrl"),
 			path: ["url"],
 		},
 	)
@@ -1551,7 +1614,7 @@ export const globalProxyConfigSchema = z
 			return true;
 		},
 		{
-			message: "Must be a valid URL (e.g., http://proxy.example.com:8080)",
+			error: () => configSchemaMessage("proxyUrl"),
 			path: ["url"],
 		},
 	);
@@ -1576,34 +1639,50 @@ export const globalHeaderFilterFormSchema = z.object({
 // Routing rule creation schema
 export const routingRuleSchema = z
 	.object({
-		name: z.string().min(1, "Rule name is required").max(255, "Rule name must be less than 255 characters"),
-		description: z.string().max(1000, "Description must be less than 1000 characters").optional(),
+		name: z
+			.string()
+			.min(1, { error: () => configSchemaMessage("ruleName") })
+			.max(255, { error: () => configSchemaMessage("ruleNameMax") }),
+		description: z
+			.string()
+			.max(1000, { error: () => configSchemaMessage("descriptionMax") })
+			.optional(),
 		cel_expression: z.string().optional(),
-		provider: z.string().min(1, "Provider is required"),
+		provider: z.string().min(1, { error: () => configSchemaMessage("provider") }),
 		model: z.string().optional(),
 		fallbacks: z.array(z.string()).optional().default([]),
 		scope: z.enum(["global", "team", "customer", "virtual_key"]),
 		scope_id: z.string().optional(),
-		priority: z.number().min(0, "Priority must be 0 or greater").max(1000, "Priority must be 1000 or less"),
+		priority: z
+			.number()
+			.min(0, { error: () => configSchemaMessage("priorityMin") })
+			.max(1000, { error: () => configSchemaMessage("priorityMax") }),
 		enabled: z.boolean().default(true),
 		chain_rule: z.boolean().default(false),
 	})
 	.refine((data) => data.scope === "global" || (data.scope_id != null && data.scope_id.trim() !== ""), {
-		message: "Scope ID is required when scope is not global",
+		error: () => configSchemaMessage("scopeId"),
 		path: ["scope_id"],
 	});
 
 // Budget override form schema (BudgetOverrideDialog)
-export const budgetOverrideFormSchema = z
-	.object({
-		amount: z.number("Additional budget must be greater than 0.").positive("Additional budget must be greater than 0."),
-		mode: z.enum(["cycles", "forever"]),
-		cycles: z.number().optional(),
-	})
-	.refine((data) => data.mode !== "cycles" || (data.cycles !== undefined && Number.isSafeInteger(data.cycles) && data.cycles > 0), {
-		message: "Reset cycles must be a positive whole number.",
-		path: ["cycles"],
-	});
+/** 可注入界面翻译器；未注入时保留原有英文校验合同。 */
+export const createBudgetOverrideFormSchema = (t?: TFunction) =>
+	z
+		.object({
+			amount: z
+				.number({ error: () => (t ? t("overrideUi.amountPositive", { ns: "governance" }) : "Additional budget must be greater than 0.") })
+				.positive({
+					error: () => (t ? t("overrideUi.amountPositive", { ns: "governance" }) : "Additional budget must be greater than 0."),
+				}),
+			mode: z.enum(["cycles", "forever"]),
+			cycles: z.number().optional(),
+		})
+		.refine((data) => data.mode !== "cycles" || (data.cycles !== undefined && Number.isSafeInteger(data.cycles) && data.cycles > 0), {
+			error: () => (t ? t("overrideUi.cyclesPositive", { ns: "governance" }) : "Reset cycles must be a positive whole number."),
+			path: ["cycles"],
+		});
+export const budgetOverrideFormSchema = createBudgetOverrideFormSchema();
 
 // Proof of control for an auth_config change made while dashboard auth is disabled but an
 // admin account exists (SecurityView). PUT /api/config refuses such a change with 403 unless
@@ -1622,8 +1701,10 @@ export const authProofOfControlSchema = z
 			ctx.addIssue({
 				code: "custom",
 				path: ["current_password"],
-				message:
+				message: schemaMessage(
+					"authProof",
 					"Enter the current admin password to confirm this change. Dashboard protection is off, so this session is not signed in. If you do not know the password, use the setup token instead.",
+				),
 			});
 		}
 	});
@@ -1655,7 +1736,10 @@ export type RoutingRuleSchema = z.infer<typeof routingRuleSchema>;
 export type BudgetOverrideFormSchema = z.infer<typeof budgetOverrideFormSchema>;
 // OSS setup lock: the operator's setup token entered on the login setup view.
 export const setupTokenFormSchema = z.object({
-	setup_token: z.string().trim().min(1, "Enter the setup token configured for this Bifrost instance"),
+	setup_token: z
+		.string()
+		.trim()
+		.min(1, { error: () => schemaMessage("setupToken", "Enter the setup token configured for this Bifrost instance") }),
 });
 
 export type SetupTokenFormSchema = z.infer<typeof setupTokenFormSchema>;

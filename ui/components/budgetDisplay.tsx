@@ -1,9 +1,15 @@
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { fiscalQuarterNote, resetDurationLabels, supportsCalendarAlignment } from "@/lib/constants/governance";
 import { Budget } from "@/lib/types/governance";
 import { cn } from "@/lib/utils";
-import { formatCurrency, getEffectiveBudgetLimit, hasActiveBudgetOverride } from "@/lib/utils/governance";
+import {
+	formatBudgetResetDuration,
+	formatFiscalQuarterNote,
+	formatCurrency,
+	getEffectiveBudgetLimit,
+	hasActiveBudgetOverride,
+} from "@/lib/utils/governance";
+import { useTranslation } from "react-i18next";
 
 interface BudgetDisplayProps {
 	/** A line may carry a label naming what the budget is on, for tables where lines on the same window differ by scope. */
@@ -14,18 +20,15 @@ interface BudgetDisplayProps {
 	maxVisible?: number;
 }
 
-const formatResetDuration = (duration?: string | null, calendarAligned?: boolean) => {
-	if (!duration) return "";
-	const label = resetDurationLabels[duration] || duration;
-	return calendarAligned && supportsCalendarAlignment(duration) ? `${label} (calendar)` : label;
-};
-
 /**
  * Renders a team-style usage bar per budget line: max limit + reset period on top, a
  * color-coded progress bar (emerald < 80% < amber < exhausted = red), and a tooltip with
  * the exact current/max spend. Mirrors RateLimitDisplay for visual consistency across tables.
  */
+/** 展示本地化预算用量，保留预算覆盖与折叠显示规则。 */
 export function BudgetDisplay({ budgets, calendarAligned, maxVisible }: BudgetDisplayProps) {
+	const { t } = useTranslation("governance");
+	const formatResetDuration = (duration?: string | null, aligned?: boolean) => formatBudgetResetDuration(duration, aligned, t);
 	if (!budgets || budgets.length === 0) {
 		return <span className="text-muted-foreground text-sm">-</span>;
 	}
@@ -50,14 +53,18 @@ export function BudgetDisplay({ budgets, calendarAligned, maxVisible }: BudgetDi
 									<span className="text-xs font-medium">
 										{formatCurrency(effectiveMaxLimit)}
 										{b.label ? <span className="text-muted-foreground ml-1 text-xs font-normal">{b.label}</span> : null}
-										{hasOverride ? <span className="text-muted-foreground ml-1 text-[10px]">override</span> : null}
+										{hasOverride ? <span className="text-muted-foreground ml-1 text-[10px]">{t("displayUi.override")}</span> : null}
 									</span>
 									<span className="text-muted-foreground text-xs">
 										{formatResetDuration(b.reset_duration, calendarAligned)}
-										{fiscalQuarterNote(b.reset_duration, b.reset_config)}
+										{formatFiscalQuarterNote(b.reset_duration, b.reset_config, t)}
 									</span>
 								</div>
-								<Progress aria-label="Budget usage" value={pct} className={cn("bg-muted/70 dark:bg-muted/30 h-1.5", barClass)} />
+								<Progress
+									aria-label={t("displayUi.budgetUsage")}
+									value={pct}
+									className={cn("bg-muted/70 dark:bg-muted/30 h-1.5", barClass)}
+								/>
 							</div>
 						</TooltipTrigger>
 						<TooltipContent>
@@ -66,13 +73,13 @@ export function BudgetDisplay({ budgets, calendarAligned, maxVisible }: BudgetDi
 							</p>
 							{hasOverride ? (
 								<p className="text-muted-foreground mt-1 text-xs">
-									Base {formatCurrency(b.max_limit)} + {formatCurrency(b.override_amount ?? 0)} override
+									{t("displayUi.baseOverride", { base: formatCurrency(b.max_limit), override: formatCurrency(b.override_amount ?? 0) })}
 								</p>
 							) : null}
 							{b.reset_duration ? (
 								<p className="text-muted-foreground mt-1 text-xs">
-									Resets {formatResetDuration(b.reset_duration, calendarAligned)}
-									{fiscalQuarterNote(b.reset_duration, b.reset_config)}
+									{t("displayUi.resets", { period: formatResetDuration(b.reset_duration, calendarAligned) })}
+									{formatFiscalQuarterNote(b.reset_duration, b.reset_config, t)}
 								</p>
 							) : null}
 						</TooltipContent>
@@ -83,7 +90,7 @@ export function BudgetDisplay({ budgets, calendarAligned, maxVisible }: BudgetDi
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<button type="button" className="text-muted-foreground block cursor-help text-left text-xs">
-							+{hidden.length} more
+							{t("displayUi.more", { count: hidden.length })}
 						</button>
 					</TooltipTrigger>
 					<TooltipContent>

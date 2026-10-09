@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import FieldLabel from "./fieldLabel";
 import ParameterFieldView from "./paramFieldView";
 import { Parameter } from "./types";
+import { useTranslation } from "react-i18next";
 
 interface Props {
 	field: Parameter;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function SelectFieldView(props: Props) {
+	const { t } = useTranslation("observability");
 	const { field, config } = props;
 	const value = field.accesorKey ? (config[field.id] as any)?.[field.accesorKey] || "" : config[field.id];
 
@@ -56,7 +58,7 @@ export default function SelectFieldView(props: Props) {
 					value={Array.isArray(value) ? value : []}
 					onValueChange={(vals) => props.onChange(field.accesorKey ? { [field.accesorKey]: vals } : vals)}
 					disabled={props.disabled}
-					placeholder={`Add ${field.label}`}
+					placeholder={t("parameterControls.add", { label: field.label })}
 					className="h-9"
 				/>
 			) : (
@@ -65,7 +67,7 @@ export default function SelectFieldView(props: Props) {
 					value={(value as string) || null}
 					onValueChange={onFieldChange}
 					disabled={props.disabled}
-					placeholder="Select"
+					placeholder={t("shared.select")}
 					disableSearch
 					className="h-9"
 				/>
