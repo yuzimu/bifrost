@@ -1,8 +1,7 @@
 // A badge that gives up on fitting its text and truncates to whatever width the
 // column allows, with the full value in a tooltip.
 //
-// Association cells — "Assigned To" on the virtual keys table, the teams and
-// business units a customer reaches a user through — carry names of arbitrary
+
 // length in a fixed-width column. Wrapping would relayout the row on one long
 // name, so they truncate; the tooltip is what keeps the truncated half readable.
 

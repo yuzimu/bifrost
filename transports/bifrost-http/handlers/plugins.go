@@ -1,17 +1,18 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 
 	"github.com/fasthttp/router"
 	"github.com/maximhq/bifrost/core/schemas"
 	"github.com/maximhq/bifrost/framework/configstore"
 	configstoreTables "github.com/maximhq/bifrost/framework/configstore/tables"
-	"github.com/maximhq/bifrost/framework/plugins"
 	"github.com/maximhq/bifrost/transports/bifrost-http/lib"
 	"github.com/valyala/fasthttp"
 )
@@ -29,6 +30,30 @@ type PluginsLoader interface {
 	// using the loaded plugin instance if it implements ConfigMarshallerPlugin.
 	// Returns nil, nil when the plugin is not loaded or does not implement the interface.
 	ExpandPluginConfigForAPI(name string, config map[string]any) (map[string]any, error)
+}
+
+// PluginConfigurationManager 让宿主负责候选校验、持久化和运行时发布的串行生命周期。
+type PluginConfigurationManager interface {
+	ApplyPluginConfig(context.Context, *configstoreTables.TablePlugin, bool) error
+	DeletePluginConfiguration(context.Context, string) error
+}
+
+type InvalidPluginConfigurationError struct {
+	Err error
+}
+
+func (e *InvalidPluginConfigurationError) Error() string { return e.Err.Error() }
+func (e *InvalidPluginConfigurationError) Unwrap() error { return e.Err }
+
+// sendPluginChangeError 区分配置拒绝和存储错误，不把内部存储错误回显给调用者。
+func sendPluginChangeError(ctx *fasthttp.RequestCtx, err error) {
+	var invalid *InvalidPluginConfigurationError
+	if errors.As(err, &invalid) {
+		SendError(ctx, fasthttp.StatusBadRequest, fmt.Sprintf("Invalid plugin configuration: %v", invalid))
+		return
+	}
+	logger.Error("failed to change plugin configuration: %v", err)
+	SendError(ctx, fasthttp.StatusInternalServerError, "Failed to change plugin configuration")
 }
 
 // PluginsHandler is the handler for the plugins API
@@ -62,6 +87,19 @@ type UpdatePluginRequest struct {
 	Config    map[string]any           `json:"config"`
 	Placement *schemas.PluginPlacement `json:"placement,omitempty"`
 	Order     *int                     `json:"order,omitempty"`
+}
+
+// decodePluginRequest 拒绝未知管理字段和拼接文档，避免大小写或拼写错误成为静默空操作。
+func decodePluginRequest(body []byte, request any) error {
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(request); err != nil {
+		return err
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return fmt.Errorf("expected a single JSON object")
+	}
+	return nil
 }
 
 // normalizePluginConfig calls the loaded plugin's MarshalConfigForStorage if it
@@ -139,7 +177,19 @@ func (h *PluginsHandler) buildPluginResponseWithStatuses(plugin *configstoreTabl
 		}
 	}
 	config := plugin.Config
-	if configMap, ok := plugin.Config.(map[string]any); ok {
+	configMap, mapConfig := plugin.Config.(map[string]any)
+	if !mapConfig && lib.IsHostManagedPlugin(plugin.Name) {
+		raw, err := schemas.MarshalSorted(plugin.Config)
+		if err == nil {
+			err = json.Unmarshal(raw, &configMap)
+		}
+		if err != nil {
+			config = map[string]any{}
+		} else {
+			mapConfig = true
+		}
+	}
+	if mapConfig {
 		redacted, err := h.expandPluginConfigForAPI(plugin.Name, configMap)
 		if err != nil {
 			logger.Warn("failed to redact config for plugin %s: %v", plugin.Name, err)
@@ -282,7 +332,7 @@ func (h *PluginsHandler) createPlugin(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	var request CreatePluginRequest
-	if err := json.Unmarshal(ctx.PostBody(), &request); err != nil {
+	if err := decodePluginRequest(ctx.PostBody(), &request); err != nil {
 		logger.Error("failed to unmarshal create plugin request: %v", err)
 		SendError(ctx, 400, "Invalid request body")
 		return
@@ -335,8 +385,12 @@ func (h *PluginsHandler) createPlugin(ctx *fasthttp.RequestCtx) {
 		SendError(ctx, fasthttp.StatusBadRequest, fmt.Sprintf("Invalid plugin configuration: %v", err))
 		return
 	}
-	// Create DB entry first to avoid orphaned in-memory state if DB write fails
-	if err := h.configStore.CreatePlugin(ctx, &configstoreTables.TablePlugin{
+	manager, ok := h.pluginsLoader.(PluginConfigurationManager)
+	if !ok {
+		SendError(ctx, fasthttp.StatusServiceUnavailable, "Plugin configuration manager is unavailable")
+		return
+	}
+	if err := manager.ApplyPluginConfig(ctx, &configstoreTables.TablePlugin{
 		Name:      request.Name,
 		Enabled:   request.Enabled,
 		Config:    normalizedConfig,
@@ -344,22 +398,9 @@ func (h *PluginsHandler) createPlugin(ctx *fasthttp.RequestCtx) {
 		IsCustom:  !isBuiltin,
 		Placement: request.Placement,
 		Order:     request.Order,
-	}); err != nil {
-		logger.Error("failed to create plugin: %v", err)
-		SendError(ctx, 500, "Failed to create plugin")
+	}, true); err != nil {
+		sendPluginChangeError(ctx, err)
 		return
-	}
-
-	// Reload the plugin into memory if it's enabled
-	if request.Enabled {
-		if err := h.pluginsLoader.ReloadPlugin(ctx, request.Name, request.Path, normalizedConfig, request.Placement, request.Order); err != nil {
-			logger.Error("failed to load plugin: %v", err)
-			if rbErr := h.configStore.DeletePlugin(ctx, request.Name); rbErr != nil {
-				logger.Error("failed to rollback plugin creation: %v", rbErr)
-			}
-			SendError(ctx, fasthttp.StatusInternalServerError, fmt.Sprintf("Plugin created in database but failed to load: %v", err))
-			return
-		}
 	}
 
 	plugin, err := h.configStore.GetPlugin(ctx, request.Name)
@@ -408,21 +449,7 @@ func (h *PluginsHandler) updatePlugin(ctx *fasthttp.RequestCtx) {
 	var existingPlugin *configstoreTables.TablePlugin
 	existingPlugin, err = h.configStore.GetPlugin(ctx, name)
 	if err != nil {
-		// If doesn't exist, create it
-		if errors.Is(err, configstore.ErrNotFound) {
-			plugin = &configstoreTables.TablePlugin{
-				Name:     name,
-				Enabled:  false,
-				Config:   map[string]any{},
-				Path:     nil,
-				IsCustom: false,
-			}
-			if err := h.configStore.CreatePlugin(ctx, plugin); err != nil {
-				logger.Error("failed to create plugin: %v", err)
-				SendError(ctx, 500, "Failed to create plugin")
-				return
-			}
-		} else {
+		if !errors.Is(err, configstore.ErrNotFound) {
 			logger.Error("failed to get plugin: %v", err)
 			SendError(ctx, 500, "Failed to update plugin")
 			return
@@ -431,7 +458,7 @@ func (h *PluginsHandler) updatePlugin(ctx *fasthttp.RequestCtx) {
 
 	// Unmarshalling the request body
 	var request UpdatePluginRequest
-	if err := json.Unmarshal(ctx.PostBody(), &request); err != nil {
+	if err := decodePluginRequest(ctx.PostBody(), &request); err != nil {
 		logger.Error("failed to unmarshal update plugin request: %v", err)
 		SendError(ctx, 400, "Invalid request body")
 		return
@@ -469,6 +496,12 @@ func (h *PluginsHandler) updatePlugin(ctx *fasthttp.RequestCtx) {
 	// calling form (e.g. plugin_span_filter set by a separate UI sheet) are not wiped.
 	mergedConfig := request.Config
 	if existingPlugin != nil {
+		if request.Placement == nil {
+			request.Placement = existingPlugin.Placement
+		}
+		if request.Order == nil {
+			request.Order = existingPlugin.Order
+		}
 		if existingCfg, ok := existingPlugin.Config.(map[string]any); ok && len(existingCfg) > 0 {
 			mergedConfig = make(map[string]any, len(existingCfg)+len(request.Config))
 			maps.Copy(mergedConfig, existingCfg)
@@ -485,8 +518,12 @@ func (h *PluginsHandler) updatePlugin(ctx *fasthttp.RequestCtx) {
 		SendError(ctx, fasthttp.StatusBadRequest, fmt.Sprintf("Invalid plugin configuration: %v", err))
 		return
 	}
-	// Updating the plugin
-	if err := h.configStore.UpdatePlugin(ctx, &configstoreTables.TablePlugin{
+	manager, ok := h.pluginsLoader.(PluginConfigurationManager)
+	if !ok {
+		SendError(ctx, fasthttp.StatusServiceUnavailable, "Plugin configuration manager is unavailable")
+		return
+	}
+	if err := manager.ApplyPluginConfig(ctx, &configstoreTables.TablePlugin{
 		Name:      name,
 		Enabled:   request.Enabled,
 		Config:    mergedConfig,
@@ -494,9 +531,8 @@ func (h *PluginsHandler) updatePlugin(ctx *fasthttp.RequestCtx) {
 		IsCustom:  !isBuiltin,
 		Placement: request.Placement,
 		Order:     request.Order,
-	}); err != nil {
-		logger.Error("failed to update plugin: %v", err)
-		SendError(ctx, 500, "Failed to update plugin")
+	}, existingPlugin == nil); err != nil {
+		sendPluginChangeError(ctx, err)
 		return
 	}
 	plugin, err = h.configStore.GetPlugin(ctx, name)
@@ -509,24 +545,6 @@ func (h *PluginsHandler) updatePlugin(ctx *fasthttp.RequestCtx) {
 		SendError(ctx, 500, "Failed to retrieve plugin")
 		return
 	}
-	// We reload the plugin if its enabled, otherwise we stop it
-	if request.Enabled {
-		if err := h.pluginsLoader.ReloadPlugin(ctx, name, request.Path, mergedConfig, request.Placement, request.Order); err != nil {
-			logger.Error("failed to load plugin: %v", err)
-			SendError(ctx, fasthttp.StatusInternalServerError, fmt.Sprintf("Plugin updated in database but failed to load: %v", err))
-			return
-		}
-	} else {
-		ctx.SetUserValue(PluginDisabledKey, true)
-		if err := h.pluginsLoader.RemovePlugin(ctx, name); err != nil {
-			if !errors.Is(err, plugins.ErrPluginNotFound) {
-				SendError(ctx, fasthttp.StatusInternalServerError, fmt.Sprintf("Plugin updated in database but failed to stop: %v", err))
-				return
-			}
-			// If not found then we don't need to do anything
-		}
-	}
-
 	SendJSON(ctx, map[string]interface{}{
 		"message": "Plugin updated successfully",
 		"plugin":  h.buildPluginResponse(ctx, plugin),
@@ -560,7 +578,12 @@ func (h *PluginsHandler) deletePlugin(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if err := h.configStore.DeletePlugin(ctx, name); err != nil {
+	manager, ok := h.pluginsLoader.(PluginConfigurationManager)
+	if !ok {
+		SendError(ctx, fasthttp.StatusServiceUnavailable, "Plugin configuration manager is unavailable")
+		return
+	}
+	if err := manager.DeletePluginConfiguration(ctx, name); err != nil {
 		if errors.Is(err, configstore.ErrNotFound) {
 			SendError(ctx, fasthttp.StatusNotFound, "Plugin not found")
 			return
@@ -570,12 +593,6 @@ func (h *PluginsHandler) deletePlugin(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if err := h.pluginsLoader.RemovePlugin(ctx, name); err != nil {
-		if !errors.Is(err, plugins.ErrPluginNotFound) {
-			SendError(ctx, fasthttp.StatusInternalServerError, fmt.Sprintf("Plugin deleted in database but failed to stop: %v", err))
-			return
-		}
-	}
 	SendJSON(ctx, map[string]interface{}{
 		"message": "Plugin deleted successfully",
 	})

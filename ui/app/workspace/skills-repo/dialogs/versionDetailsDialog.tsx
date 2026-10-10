@@ -1,7 +1,5 @@
 "use client";
-
 import { Badge } from "@/components/ui/badge";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/store/apis/baseApi";
@@ -13,9 +11,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { composeFrontmatter } from "../components/helpers";
 import { SkillHeader, SkillReadOnlyContent } from "../components/shared";
-
 // ---------- VersionDetailDialog ----------
-
 export function VersionDetailDialog({
 	skillId,
 	version,
@@ -33,14 +29,9 @@ export function VersionDetailDialog({
 	const { t: tc } = useTranslation("common");
 	const { data: versionData, isLoading, isError } = useGetSkillQuery({ id: skillId, version }, { skip: !open });
 	const [shiftVersion, { isLoading: isShifting }] = useShiftSkillVersionMutation();
-	const hasEditAccess = useRbac(RbacResource.SkillsRepository, RbacOperation.Update);
-
 	const skill = versionData?.skill;
-
 	const extraFrontmatter = skill?.extra_frontmatter && Object.keys(skill.extra_frontmatter).length > 0 ? skill.extra_frontmatter : null;
-
 	const metadata = skill?.metadata && Object.keys(skill.metadata).length > 0 ? (skill.metadata as Record<string, unknown>) : null;
-
 	const composedSkillMd = skill
 		? composeFrontmatter({
 				name: skill.name,
@@ -54,7 +45,6 @@ export function VersionDetailDialog({
 			"\n\n" +
 			skill.skill_md_body
 		: "";
-
 	const fileEntries: SkillFileEntry[] = skill?.files
 		? skill.files.map((f: SkillFile) => ({
 				path: f.path,
@@ -68,11 +58,9 @@ export function VersionDetailDialog({
 				file_size_bytes: f.file_size_bytes,
 			}))
 		: [];
-
 	const downloadUrl = skill
 		? `${getApiBaseUrl()}/skills/serve/${encodeURIComponent(skill.name)}/download.zip?version=${encodeURIComponent(version)}`
 		: "";
-
 	const handleShiftVersion = async () => {
 		try {
 			await shiftVersion({ id: skillId, version }).unwrap();
@@ -84,11 +72,10 @@ export function VersionDetailDialog({
 			});
 		}
 	};
-
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				showCloseButton={false}
+				showCloseButton
 				className="h-[90vh] max-h-[90vh] w-[95vw] max-w-[95vw] min-w-0 gap-0 overflow-hidden p-0 sm:w-[85vw] sm:max-w-[85vw] md:w-[75vw] md:max-w-[75vw]"
 			>
 				<div className="flex items-center justify-between border-b pr-2 pl-6">
@@ -128,7 +115,7 @@ export function VersionDetailDialog({
 						<>
 							<div className="shrink-0 px-6 pt-6 pb-3">
 								<SkillHeader
-									sticky={false}
+									sticky
 									name={skill.name}
 									version={version}
 									description={skill.description}
@@ -149,7 +136,7 @@ export function VersionDetailDialog({
 										</>
 									}
 									actions={
-										!isServingVersion && hasEditAccess ? (
+										!isServingVersion ? (
 											<Button size="sm" data-testid="skill-version-shift-btn" onClick={handleShiftVersion} disabled={isShifting}>
 												{isShifting ? (
 													<>

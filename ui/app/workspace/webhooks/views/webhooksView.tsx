@@ -27,7 +27,6 @@ import {
 } from "@/lib/store";
 import { WEBHOOK_EVENTS, WebhookEndpoint, WebhookEndpointRequest, WebhookEvent } from "@/lib/types/webhooks";
 import { useDebouncedValue } from "@/hooks/useDebounce";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, History, MoreHorizontal, PencilIcon, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
@@ -39,7 +38,6 @@ import { WebhookDetailsSheet } from "./webhookDetailsSheet";
 import { WebhookSheet } from "./webhookSheet";
 import { WebhooksEmptyState } from "./webhooksEmptyState";
 import WebhooksFilterBar from "./webhooksFilterBar";
-
 const POLLING_INTERVAL = 5000;
 const PAGE_SIZE = 25;
 // Event filter values come from the URL and may be shared or hand-edited; only
@@ -49,7 +47,6 @@ const VALID_WEBHOOK_EVENTS = new Set<string>(WEBHOOK_EVENTS.map((e) => e.value))
 // Status filter is likewise URL-driven; an unknown value must be ignored rather
 // than collapsing to "enabled" and silently hiding disabled endpoints.
 const VALID_WEBHOOK_STATUSES = new Set<string>(["enabled", "disabled"]);
-
 // PUT replaces the endpoint's full editable state, so toggles resend the row
 // as-is. Redacted header values round-trip untouched and the server keeps the
 // stored credentials.
@@ -69,7 +66,6 @@ const toRequest = (endpoint: WebhookEndpoint, overrides: Partial<WebhookEndpoint
 	max_concurrent_deliveries: endpoint.max_concurrent_deliveries ?? 0,
 	...overrides,
 });
-
 function WebhookActionsMenu({
 	endpoint,
 	hasUpdateAccess,
@@ -90,7 +86,6 @@ function WebhookActionsMenu({
 	const { t } = useTranslation("governance");
 	const { t: tCommon } = useTranslation("common");
 	const [isOpen, setIsOpen] = useState(false);
-
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild>
@@ -167,22 +162,19 @@ function WebhookActionsMenu({
 		</DropdownMenu>
 	);
 }
-
 export default function WebhooksView() {
 	const { t } = useTranslation("governance");
 	const { t: tCommon } = useTranslation("common");
-	const hasCreateAccess = useRbac(RbacResource.Governance, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Governance, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.Governance, RbacOperation.Delete);
 	const navigate = useNavigate();
-
 	const handleViewDeliveries = useCallback(
 		(endpoint: WebhookEndpoint) => {
-			navigate({ to: "/workspace/webhooks/deliveries", search: { webhook_id: [endpoint.id] } as never });
+			navigate({
+				to: "/workspace/webhooks/deliveries",
+				search: { webhook_id: [endpoint.id] } as never,
+			});
 		},
 		[navigate],
 	);
-
 	const [urlState, setUrlState] = useQueryStates({
 		q: parseAsString.withDefault(""),
 		event: parseAsArrayOf(parseAsString).withDefault([]),
@@ -202,7 +194,6 @@ export default function WebhooksView() {
 	// URL offset is user-editable; clamp to a non-negative, page-aligned value so
 	// a hand-edited "?offset=-25" never 400s the query and blocks recovery.
 	const offset = Math.max(0, Math.floor(urlState.offset / PAGE_SIZE) * PAGE_SIZE);
-
 	const { data, isLoading, isFetching, isError, error, refetch } = useGetWebhookEndpointsQuery(
 		{
 			search: debouncedSearch.trim() || undefined,
@@ -217,7 +208,6 @@ export default function WebhooksView() {
 	const [deleteWebhookEndpoint, { isLoading: isDeleting }] = useDeleteWebhookEndpointMutation();
 	const [rotateWebhookEndpointSecret, { isLoading: isRotating }] = useRotateWebhookEndpointSecretMutation();
 	const [testWebhookEndpoint] = useTestWebhookEndpointMutation();
-
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [editingEndpoint, setEditingEndpoint] = useState<WebhookEndpoint | null>(null);
 	const [detailsEndpoint, setDetailsEndpoint] = useState<WebhookEndpoint | null>(null);
@@ -226,11 +216,9 @@ export default function WebhooksView() {
 	const [secretReveal, setSecretReveal] = useState<WebhookSecretReveal | null>(null);
 	const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 	const [testingIds, setTestingIds] = useState<Set<string>>(new Set());
-
 	const endpoints = useMemo(() => data?.endpoints ?? [], [data]);
 	const totalCount = data?.total_count ?? 0;
 	const hasActiveFilters = urlState.q !== "" || urlState.event.length > 0 || urlState.status.length > 0;
-
 	// Keep the URL offset valid: non-negative, page-aligned, and within the
 	// current match set. Covers a hand-edited offset and a match set that
 	// shrank below the current page (delete, narrowed filter).
@@ -239,34 +227,32 @@ export default function WebhooksView() {
 		const maxOffset = totalCount === 0 ? 0 : Math.floor((totalCount - 1) / PAGE_SIZE) * PAGE_SIZE;
 		const normalized = Math.min(maxOffset, offset);
 		if (normalized !== urlState.offset) {
-			setUrlState({ offset: normalized || null });
+			setUrlState({ offset: normalized });
 		}
 	}, [isLoading, totalCount, offset, urlState.offset, setUrlState]);
-
 	const handleClearFilters = () => {
 		setUrlState({ q: null, event: null, status: null, offset: null });
 	};
-
 	// Row data refreshes every poll; keep the open details sheet in sync.
 	const liveDetailsEndpoint = useMemo(
 		() => (detailsEndpoint ? (endpoints.find((e) => e.id === detailsEndpoint.id) ?? detailsEndpoint) : null),
 		[detailsEndpoint, endpoints],
 	);
-
 	const handleAdd = () => {
 		setEditingEndpoint(null);
 		setSheetOpen(true);
 	};
-
 	const handleEdit = (endpoint: WebhookEndpoint) => {
 		setEditingEndpoint(endpoint);
 		setSheetOpen(true);
 	};
-
 	const handleToggle = async (endpoint: WebhookEndpoint, enabled: boolean) => {
 		setTogglingIds((prev) => new Set(prev).add(endpoint.id));
 		try {
-			await updateWebhookEndpoint({ id: endpoint.id, data: toRequest(endpoint, { disabled: !enabled }) }).unwrap();
+			await updateWebhookEndpoint({
+				id: endpoint.id,
+				data: toRequest(endpoint, { disabled: !enabled }),
+			}).unwrap();
 			toast.success(enabled ? t("webhooks.enabledSuccess") : t("webhooks.disabledSuccess"));
 		} catch (err) {
 			toast.error(getErrorMessage(err));
@@ -278,7 +264,6 @@ export default function WebhooksView() {
 			});
 		}
 	};
-
 	const handleTest = async (endpoint: WebhookEndpoint, event: WebhookEvent) => {
 		setTestingIds((prev) => new Set(prev).add(endpoint.id));
 		try {
@@ -300,7 +285,6 @@ export default function WebhooksView() {
 			});
 		}
 	};
-
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
 		try {
@@ -313,7 +297,6 @@ export default function WebhooksView() {
 			setDeleteTarget(null);
 		}
 	};
-
 	const handleRotate = async () => {
 		if (!rotateTarget) return;
 		try {
@@ -326,11 +309,9 @@ export default function WebhooksView() {
 			setRotateTarget(null);
 		}
 	};
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	// A failed load must not masquerade as an empty workspace; the empty state
 	// invites creating an endpoint, so a hidden fetch error could prompt a
 	// duplicate. Only fatal when there is no data to fall back on; a transient
@@ -346,20 +327,17 @@ export default function WebhooksView() {
 			</div>
 		);
 	}
-
 	return (
 		<div className="w-full space-y-4">
 			{totalCount === 0 && !hasActiveFilters ? (
-				<WebhooksEmptyState onAddClick={handleAdd} canCreate={hasCreateAccess} />
+				<WebhooksEmptyState onAddClick={handleAdd} canCreate={true} />
 			) : (
 				<>
-					<PageTitle title={t("webhooks.title")}>
-						{t("webhooks.description")}
-					</PageTitle>
+					<PageTitle title={t("webhooks.title")}>{t("webhooks.description")}</PageTitle>
 
 					<WebhooksFilterBar
 						search={urlState.q}
-						onSearchChange={(value) => setUrlState({ q: value || null, offset: 0 })}
+						onSearchChange={(value) => setUrlState({ q: value, offset: 0 })}
 						eventFilter={urlState.event}
 						onEventFilterChange={(value) => setUrlState({ event: value.length ? value : null, offset: 0 })}
 						statusFilter={urlState.status}
@@ -371,7 +349,6 @@ export default function WebhooksView() {
 								<TooltipTrigger asChild>
 									<Button
 										onClick={handleAdd}
-										disabled={!hasCreateAccess}
 										aria-label={t("webhooks.addEndpoint")}
 										data-testid="create-webhook-btn"
 										className="size-9 px-0 @5xl/webhooks-toolbar:w-auto @5xl/webhooks-toolbar:px-4"
@@ -427,7 +404,7 @@ export default function WebhooksView() {
 											<TableCell onClick={(e) => e.stopPropagation()}>
 												<Switch
 													checked={!endpoint.disabled}
-													disabled={!hasUpdateAccess || togglingIds.has(endpoint.id)}
+													disabled={togglingIds.has(endpoint.id)}
 													onCheckedChange={(checked) => void handleToggle(endpoint, checked)}
 													data-testid={`webhook-enabled-switch-${endpoint.name}`}
 												/>
@@ -438,8 +415,8 @@ export default function WebhooksView() {
 											>
 												<WebhookActionsMenu
 													endpoint={endpoint}
-													hasUpdateAccess={hasUpdateAccess}
-													hasDeleteAccess={hasDeleteAccess}
+													hasUpdateAccess={true}
+													hasDeleteAccess={true}
 													onEdit={handleEdit}
 													onRotate={setRotateTarget}
 													onDelete={setDeleteTarget}
@@ -466,7 +443,7 @@ export default function WebhooksView() {
 								<Button
 									variant="ghost"
 									size="sm"
-									onClick={() => setUrlState({ offset: Math.max(0, offset - PAGE_SIZE) || null })}
+									onClick={() => setUrlState({ offset: Math.max(0, offset - PAGE_SIZE) })}
 									disabled={offset === 0}
 									data-testid="webhooks-pagination-prev-btn"
 									aria-label={t("webhooks.pagination.previousPage")}
@@ -507,7 +484,7 @@ export default function WebhooksView() {
 			<WebhookDetailsSheet
 				endpoint={liveDetailsEndpoint}
 				isTesting={liveDetailsEndpoint ? testingIds.has(liveDetailsEndpoint.id) : false}
-				canManage={hasUpdateAccess}
+				canManage={true}
 				onTest={(e, event) => void handleTest(e, event)}
 				onClose={() => setDetailsEndpoint(null)}
 			/>

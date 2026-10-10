@@ -4,21 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage, useGetCoreConfigQuery, useUpdateCoreConfigMutation } from "@/lib/store";
 import { CoreConfig, DefaultCoreConfig } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 export default function PerformanceTuningView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.client_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [localConfig, setLocalConfig] = useState<CoreConfig>(DefaultCoreConfig);
 	const [needsRestart, setNeedsRestart] = useState<boolean>(false);
-
 	const [localValues, setLocalValues] = useState<{
 		initial_pool_size: string;
 		max_request_body_size_mb: string;
@@ -26,7 +22,6 @@ export default function PerformanceTuningView() {
 		initial_pool_size: "1000",
 		max_request_body_size_mb: "100",
 	});
-
 	useEffect(() => {
 		if (bifrostConfig && config) {
 			setLocalConfig(config);
@@ -36,14 +31,12 @@ export default function PerformanceTuningView() {
 			});
 		}
 	}, [config, bifrostConfig]);
-
 	const hasChanges = useMemo(() => {
 		if (!config) return false;
 		return (
 			localConfig.initial_pool_size !== config.initial_pool_size || localConfig.max_request_body_size_mb !== config.max_request_body_size_mb
 		);
 	}, [config, localConfig]);
-
 	const handlePoolSizeChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, initial_pool_size: value }));
 		const numValue = Number.parseInt(value);
@@ -52,7 +45,6 @@ export default function PerformanceTuningView() {
 		}
 		setNeedsRestart(true);
 	}, []);
-
 	const handleMaxRequestBodySizeMBChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, max_request_body_size_mb: value }));
 		const numValue = Number.parseInt(value);
@@ -61,22 +53,18 @@ export default function PerformanceTuningView() {
 		}
 		setNeedsRestart(true);
 	}, []);
-
 	const handleSave = useCallback(async () => {
 		try {
 			const poolSize = Number.parseInt(localValues.initial_pool_size);
 			const maxBodySize = Number.parseInt(localValues.max_request_body_size_mb);
-
 			if (isNaN(poolSize) || poolSize <= 0) {
 				toast.error(t("performance.toastPoolPositive"));
 				return;
 			}
-
 			if (isNaN(maxBodySize) || maxBodySize <= 0) {
 				toast.error(t("performance.toastBodyPositive"));
 				return;
 			}
-
 			if (!bifrostConfig) {
 				toast.error(t("configNotLoadedRefresh"));
 				return;
@@ -87,7 +75,6 @@ export default function PerformanceTuningView() {
 			toast.error(getErrorMessage(error));
 		}
 	}, [bifrostConfig, localConfig, localValues, t, updateCoreConfig]);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-4">
 			<PageTitle title={t("performance.title")}>{t("performance.description")}</PageTitle>
@@ -139,14 +126,13 @@ export default function PerformanceTuningView() {
 				</div>
 			</div>
 			<div className="flex justify-end pt-2">
-				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess}>
+				<Button onClick={handleSave} disabled={!hasChanges || isLoading}>
 					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>
 		</div>
 	);
 }
-
 const RestartWarning = () => {
 	const { t } = useTranslation("config");
 	return <div className="text-muted-foreground mt-2 pl-4 text-xs font-semibold">{t("restartWarning")}</div>;

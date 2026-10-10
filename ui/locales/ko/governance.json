@@ -5,7 +5,6 @@
 		"bookDemo": "데모 예약",
 		"bookDemoAria": "데모 예약(새 탭에서 Calendly 열림)"
 	},
-	"unlockSharedDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. 사용 장면과 어떻게 도울 수 있을지 알고 싶습니다.",
 	"customers": {
 		"title": "고객",
 		"description": "자체 팀, 예산, 액세스 제어를 통해 고객 계정을 관리하세요.",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "웹훅 검색..."
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "사전 모니터링을 위한 알림 채널 잠금 해제",
-		"channelsUnlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. Slack, PagerDuty, OpsGenie 및 웹훅 알림을 구성하여 예산 및 성능 문제를 미리 방지하세요.",
-		"rulesUnlockTitle": "사전 모니터링을 위한 경고 규칙 잠금 해제",
-		"rulesUnlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. 예산, 지연 시간, 성능 저하 문제가 발생하기 전에 이를 포착할 수 있는 알림 규칙을 정의하세요.",
-		"historyUnlockTitle": "사전 모니터링을 위한 알림 기록 잠금 해제",
-		"historyUnlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. 알림 전달 결과, 실패, 해결 이벤트를 한 곳에서 검토하세요."
-	},
 	"guardrails": {
 		"unlockTitle": "보안 강화를 위해 가드레일 잠금 해제"
-	},
-	"auditLogs": {
-		"unlockTitle": "더 나은 규정 준수를 위해 감사 로그 잠금 해제"
-	},
-	"rbac": {
-		"unlockTitle": "보안 강화를 위해 역할 및 권한 잠금 해제"
-	},
-	"projects": {
-		"unlockTitle": "범위가 지정된 액세스 및 지출을 위해 프로젝트 잠금 해제",
-		"unlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. 프로젝트는 요청이 선택한 것이에요. 프로젝트는 호출자가 이미 보유하고 있는 것과 함께 액세스 권한을 부여하고 지출이 누구의 원장에 있는지 결정해요."
-	},
-	"userRankings": {
-		"unlockTitle": "더 나은 가시성을 위해 사용자 순위 잠금 해제"
-	},
-	"promptDeployments": {
-		"unlockTitle": "더 나은 프롬프트 버전 관리 및 A/B 테스트를 위해 프롬프트 배포를 잠금 해제하세요."
-	},
-	"connectorsUnlock": {
-		"splunk": "더 나은 관찰 가능성을 위해 기본 Splunk 데이터 수집을 잠금 해제해요.",
-		"pubsub": "Google Cloud Pub/Sub 추적 스트리밍 잠금 해제",
-		"datadog": "더 나은 관찰 가능성을 위해 기본 Datadog 데이터 수집을 잠금 해제해요.",
-		"bigquery": "분석을 위한 기본 BigQuery 데이터 수집 활용",
-		"kafka": "실시간 관찰을 위한 기본 Kafka 로그 스트리밍 잠금 해제",
-		"kafkaDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. 실시간 분석, 경고 및 다운스트림 처리를 위해 완료된 요청 추적을 JSON으로 Kafka 주제로 스트리밍해요."
-	},
-	"accessProfiles": {
-		"unlockTitle": "더 나은 성능을 위해 액세스 프로필을 잠금 해제하세요",
-		"unlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. 리소스에 대한 액세스를 제어하려면 액세스 프로필을 생성하세요."
-	},
-	"users": {
-		"unlockTitle": "사용자 및 사용자 거버넌스 잠금 해제",
-		"unlockDescription": "엔터프라이즈급 거버넌스를 통해 사용자를 관리하고, 사용자별 예산과 속도 제한을 설정하며, 액세스를 제어하세요. 이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다."
-	},
-	"businessUnits": {
-		"unlockTitle": "사업부 및 고급 거버넌스 잠금 해제",
-		"unlockDescription": "엔터프라이즈급 거버넌스를 통해 사용자와 비즈니스 유닛을 관리하세요. 이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다."
 	},
 	"sheet": {
 		"saving": "저장 중...",

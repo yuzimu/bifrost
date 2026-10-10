@@ -12,7 +12,6 @@ import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import { ModelProvider, isKnownProvider } from "@/lib/types/config";
 import { networkOnlyFormSchema, type SecretVar, type NetworkOnlyFormSchema } from "@/lib/types/schemas";
 import { toSecretVarFormValue, toOptionalSecretVarPayload } from "@/lib/utils/secretVarForm";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TFunction } from "i18next";
 import { useEffect } from "react";
@@ -20,11 +19,9 @@ import { useForm, type Resolver } from "react-hook-form";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface NetworkFormFragmentProps {
 	provider: ModelProvider;
 }
-
 // seconds to human readable time
 const secondsToHumanReadable = (seconds: number, t: TFunction) => {
 	// Handle edge cases
@@ -64,14 +61,11 @@ const secondsToHumanReadable = (seconds: number, t: TFunction) => {
 	if (remainingSeconds > 0) parts.push(unit("second", remainingSeconds));
 	return parts.join(" ");
 };
-
 export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const isCustomProvider = !isKnownProvider(provider.name as string);
-
 	const form = useForm<NetworkOnlyFormSchema, any, NetworkOnlyFormSchema>({
 		resolver: zodResolver(networkOnlyFormSchema) as Resolver<NetworkOnlyFormSchema, any, NetworkOnlyFormSchema>,
 		mode: "onChange",
@@ -99,11 +93,9 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 			},
 		},
 	});
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	const onSubmit = (data: NetworkOnlyFormSchema) => {
 		const requiresBaseUrl = isCustomProvider;
 		if (requiresBaseUrl && (data.network_config?.base_url ?? "").trim() === "") {
@@ -150,7 +142,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 				});
 			});
 	};
-
 	useEffect(() => {
 		// Reset form with new provider's network_config when provider.name changes
 		form.reset({
@@ -176,13 +167,10 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 			},
 		});
 	}, [form, provider.name, provider.network_config]);
-
 	// HTTP/2 PING keepalives only apply when HTTP/2 is enforced
 	const enforceHTTP2 = form.watch("network_config.enforce_http2");
-
 	const baseURLRequired = isCustomProvider;
 	const hideBaseURL = provider.name === "vllm" || provider.name === "ollama" || provider.name === "sgl";
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
@@ -201,13 +189,10 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 										<FormControl>
 											<Input
 												placeholder={
-													isCustomProvider
-														? t("providers.network.baseUrlCustomPlaceholder")
-														: t("providers.network.baseUrlPlaceholder")
+													isCustomProvider ? t("providers.network.baseUrlCustomPlaceholder") : t("providers.network.baseUrlPlaceholder")
 												}
 												{...field}
 												value={field.value || ""}
-												disabled={!hasUpdateProviderAccess}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -227,7 +212,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												placeholder="30"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -259,7 +243,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												data-testid="network-config-stream-idle-timeout-input"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -292,7 +275,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												placeholder="0"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -324,7 +306,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												placeholder={t("providers.network.placeholderInitialBackoff")}
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -354,7 +335,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												placeholder={t("providers.network.placeholderMaxBackoff")}
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -387,7 +367,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												placeholder="5000"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -402,9 +381,7 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												}}
 											/>
 										</FormControl>
-										<FormDescription>
-											{t("providers.network.maxConnsHelp")}
-										</FormDescription>
+										<FormDescription>{t("providers.network.maxConnsHelp")}</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -421,7 +398,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 												placeholder="30"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -454,12 +430,7 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 										<FormDescription>{t("providers.network.enforceHttp2Help")}</FormDescription>
 									</div>
 									<FormControl>
-										<Switch
-											checked={field.value ?? false}
-											onCheckedChange={field.onChange}
-											disabled={!hasUpdateProviderAccess}
-											data-testid="network-config-enforce-http2"
-										/>
+										<Switch checked={field.value ?? false} onCheckedChange={field.onChange} data-testid="network-config-enforce-http2" />
 									</FormControl>
 								</FormItem>
 							)}
@@ -476,7 +447,7 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 											placeholder="0"
 											{...field}
 											value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-											disabled={!hasUpdateProviderAccess || !enforceHTTP2}
+											disabled={!enforceHTTP2}
 											onChange={(e) => {
 												const value = e.target.value;
 												if (value === "") {
@@ -513,7 +484,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 										<Switch
 											checked={field.value ?? false}
 											onCheckedChange={field.onChange}
-											disabled={!hasUpdateProviderAccess}
 											data-testid="network-config-allow-private-network"
 										/>
 									</FormControl>
@@ -532,7 +502,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 											keyPlaceholder={t("providers.headerName")}
 											valuePlaceholder={t("providers.headerValue")}
 											label={t("providers.extraHeaders")}
-											disabled={!hasUpdateProviderAccess}
 										/>
 									</FormControl>
 									<FormMessage />
@@ -558,7 +527,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 													<Switch
 														checked={field.value ?? false}
 														onCheckedChange={field.onChange}
-														disabled={!hasUpdateProviderAccess}
 														data-testid="network-config-insecure-skip-verify"
 													/>
 												</FormControl>
@@ -581,7 +549,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 														redactNonEnvValue
 														{...field}
 														value={field.value}
-														disabled={!hasUpdateProviderAccess}
 														data-testid="network-config-ca-cert-pem"
 													/>
 												</FormControl>
@@ -609,7 +576,6 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 								onSubmit(form.getValues());
 							}}
 							disabled={
-								!hasUpdateProviderAccess ||
 								isUpdatingProvider ||
 								!provider.network_config ||
 								!provider.network_config.base_url ||
@@ -622,7 +588,7 @@ export function NetworkFormFragment({ provider }: NetworkFormFragmentProps) {
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button type="submit" disabled={!form.formState.isDirty || !hasUpdateProviderAccess} isLoading={isUpdatingProvider}>
+								<Button type="submit" disabled={!form.formState.isDirty} isLoading={isUpdatingProvider}>
 									{t("providers.saveNetworkConfig")}
 								</Button>
 							</TooltipTrigger>

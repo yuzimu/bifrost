@@ -4,7 +4,6 @@ import FieldLabel from "./fieldLabel";
 import ParameterFieldView from "./paramFieldView";
 import { Parameter } from "./types";
 import { useTranslation } from "react-i18next";
-
 interface Props {
 	field: Parameter;
 	config: Record<string, unknown>;
@@ -17,12 +16,10 @@ interface Props {
 	className?: string;
 	forceHideFields?: string[];
 }
-
 export default function SelectFieldView(props: Props) {
 	const { t } = useTranslation("observability");
 	const { field, config } = props;
 	const value = field.accesorKey ? (config[field.id] as any)?.[field.accesorKey] || "" : config[field.id];
-
 	const onFieldChange = (fieldValue: string | null) => {
 		if (fieldValue === null) {
 			props.onChange(undefined);
@@ -31,7 +28,6 @@ export default function SelectFieldView(props: Props) {
 		const res = field.accesorKey ? { [field.accesorKey]: fieldValue } : fieldValue;
 		props.onChange(res);
 	};
-
 	const onSubFieldChange = (subFieldId: string, subFieldValue: string) => {
 		if (field.accesorKey) {
 			const existing = config[field.id] && typeof config[field.id] === "object" ? (config[field.id] as Record<string, unknown>) : {};
@@ -44,9 +40,7 @@ export default function SelectFieldView(props: Props) {
 			props.onChange(value, { [subFieldId]: subFieldValue });
 		}
 	};
-
 	const currentField = field.options?.find((f) => f.value === value);
-
 	return (
 		<div className={cn("flex flex-col gap-2", props.className)}>
 			<FieldLabel label={field.label} helpText={field.helpText} onClear={props.onClear} />
@@ -64,7 +58,7 @@ export default function SelectFieldView(props: Props) {
 			) : (
 				<ComboboxSelect
 					options={field.options || []}
-					value={(value as string) || null}
+					value={value as string}
 					onValueChange={onFieldChange}
 					disabled={props.disabled}
 					placeholder={t("shared.select")}

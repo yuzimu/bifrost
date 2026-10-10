@@ -23,16 +23,20 @@ import {
 	useUpdateVirtualMCPMutation,
 } from "@/lib/store";
 import { VirtualMCPRequest, VirtualMCPToolSpec } from "@/lib/types/virtualMcps";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import VirtualMCPAccessTab from "./virtualMcpAccessTab";
 import VirtualMCPGeneralTab from "./virtualMcpGeneralTab";
 import VirtualMcpToolsEditor from "./virtualMcpToolsEditor";
-
-export type VirtualMCPSheetTarget = { mode: "create" } | { mode: "edit"; id: number };
-
+export type VirtualMCPSheetTarget =
+	| {
+			mode: "create";
+	  }
+	| {
+			mode: "edit";
+			id: number;
+	  };
 interface VirtualMCPSheetProps {
 	target: VirtualMCPSheetTarget;
 	onClose: () => void;
@@ -40,20 +44,17 @@ interface VirtualMCPSheetProps {
 	hasNext?: boolean;
 	onNavigate?: (direction: "prev" | "next") => void;
 }
-
 function normalizeTools(tools: VirtualMCPToolSpec[]) {
 	return tools
 		.map((t) => ({ mcp_client_id: t.mcp_client_id, tool_names: [...t.tool_names].sort() }))
 		.sort((a, b) => a.mcp_client_id.localeCompare(b.mcp_client_id));
 }
-
 export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasNext = false, onNavigate }: VirtualMCPSheetProps) {
 	const { t } = useTranslation("mcp");
 	const { t: tc } = useTranslation("common");
 	const { toast } = useToast();
 	const editId = target.mode === "edit" ? target.id : null;
 	const isCreate = target.mode === "create";
-
 	// currentData (not data) so a nav to another vMCP clears it until the new record loads, instead of
 	// hydrating the form from the previous one.
 	const { currentData: existing, isFetching: loadingExisting } = useGetVirtualMCPQuery(editId ?? 0, { skip: editId == null });
@@ -61,12 +62,7 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 	const [updateVirtualMCP, { isLoading: updating }] = useUpdateVirtualMCPMutation();
 	const [attachVk] = useAttachVirtualMCPVirtualKeyMutation();
 	const [detachVk] = useDetachVirtualMCPVirtualKeyMutation();
-
-	// RBAC: no-ops to true in OSS (no access profiles / RBAC); enforced in enterprise.
-	const canCreate = useRbac(RbacResource.VirtualMCPs, RbacOperation.Create);
-	const canUpdate = useRbac(RbacResource.VirtualMCPs, RbacOperation.Update);
-	const hasSavePermission = isCreate ? canCreate : canUpdate;
-
+	const hasSavePermission = isCreate ? true : true;
 	const [tab, setTab] = useState("general");
 	const [name, setName] = useState("");
 	const [endpointSlug, setEndpointSlug] = useState("");
@@ -75,14 +71,12 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 	const [tools, setTools] = useState<VirtualMCPToolSpec[]>([]);
 	const [assignedVkIds, setAssignedVkIds] = useState<string[]>([]);
 	const [pendingNav, setPendingNav] = useState<"prev" | "next" | null>(null);
-
 	// Reset to the first tab when the sheet target changes (open / switch record), and arm re-hydration.
 	const hydrated = useRef(false);
 	useEffect(() => {
 		setTab("general");
 		hydrated.current = false;
 	}, [target]);
-
 	// Hydrate the form once per target: defaults on create, or the record when it loads on edit. Guarded
 	// so a background refetch (e.g. after assigning a virtual key) does not stomp the form or active tab.
 	useEffect(() => {
@@ -107,10 +101,8 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 			hydrated.current = true;
 		}
 	}, [target, existing, isCreate]);
-
 	const saving = creating || updating;
 	const showLoader = !isCreate && loadingExisting && !existing;
-
 	// Dirty tracks every staged field (General, Tools, and virtual-key assignments), all committed
 	// together on Save. On create, "dirty" just means there is a name to submit.
 	const isDirty = useMemo(() => {
@@ -124,9 +116,7 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 			JSON.stringify([...assignedVkIds].sort()) !== JSON.stringify([...(existing.virtual_key_ids ?? [])].sort())
 		);
 	}, [isCreate, existing, name, description, enabled, tools, assignedVkIds]);
-
 	const canSave = name.trim().length > 0 && !saving && isDirty && hasSavePermission;
-
 	const handleSave = async () => {
 		if (!canSave) return;
 		const body: VirtualMCPRequest = {
@@ -163,7 +153,6 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 			});
 		}
 	};
-
 	// Guard row navigation the same way the MCP sheet does: confirm before discarding staged edits.
 	const handleNavigate = (direction: "prev" | "next") => {
 		if (!onNavigate) return;
@@ -173,11 +162,10 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 		}
 		onNavigate(direction);
 	};
-
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
 			<SheetContent className="flex w-full flex-col overflow-hidden! pt-4 sm:max-w-[60%]">
-				<SheetHeader headerClassName="mb-0 px-4 py-4 md:px-8" showCloseButton={false}>
+				<SheetHeader headerClassName="mb-0 px-4 py-4 md:px-8" showCloseButton>
 					<div className="flex w-full items-center justify-between gap-2">
 						<div className="space-y-2">
 							<SheetTitle className="flex w-fit items-center gap-2 font-medium">
@@ -187,7 +175,12 @@ export default function VirtualMCPSheet({ target, onClose, hasPrev = false, hasN
 							<SheetDescription>{t("virtualMcps.sheetDesc")}</SheetDescription>
 						</div>
 						{!isCreate && onNavigate && (
-							<SheetNavigationButtons hasPrev={hasPrev} hasNext={hasNext} onNavigate={handleNavigate} entityLabel={t("virtualMcps.entity")} />
+							<SheetNavigationButtons
+								hasPrev={hasPrev}
+								hasNext={hasNext}
+								onNavigate={handleNavigate}
+								entityLabel={t("virtualMcps.entity")}
+							/>
 						)}
 					</div>
 				</SheetHeader>

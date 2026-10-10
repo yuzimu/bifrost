@@ -6,11 +6,9 @@ import { buildAntigravityConfig } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { HarnessInstallProps } from "../types";
 import { getRegistrationLabel, getUserHomePrefix } from "../utils";
-
 export function AntigravityIcon({ className }: { className?: string }) {
 	return <Orbit className={cn("text-muted-foreground", className)} />;
 }
-
 export function AntigravityHarnessInstall({
 	canGenerateCommand,
 	clientConfig,
@@ -22,7 +20,6 @@ export function AntigravityHarnessInstall({
 }: HarnessInstallProps) {
 	const { t } = useTranslation("mcp");
 	const configPath = `${getUserHomePrefix(platform)}/.gemini/antigravity/mcp_config.json`;
-
 	const config = useMemo(
 		() =>
 			buildAntigravityConfig({
@@ -32,12 +29,11 @@ export function AntigravityHarnessInstall({
 			}),
 		[clientConfig, headers, selectedServers, serverScope],
 	);
-
 	return (
 		<HarnessCommandSection
 			canCopyCommand={canGenerateCommand}
 			command={config}
-			controls={null}
+			controls
 			copySuccessMessage={t("common.configCopied")}
 			emptyMessage={emptyMessage}
 			harnessName="Antigravity"

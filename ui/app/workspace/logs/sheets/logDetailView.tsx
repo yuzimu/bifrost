@@ -64,8 +64,6 @@ import { downloadAsJson } from "@/lib/utils/browser-download";
 import { formatCompactNumber } from "@/lib/utils/numbers";
 import { applyRedactionMapping, applyRedactionMappingToValue, hasRedactionMappingEntries } from "@/lib/utils/redaction";
 import { isJson } from "@/lib/utils/validation";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import "@enterprise/lib/registrations/logs";
 import { Link } from "@tanstack/react-router";
 import { addMilliseconds, format } from "date-fns";
 import { AlertCircle, ChevronDown, Clipboard, Copy, Download, Loader2, MoreVertical, Trash2, Wrench, X } from "lucide-react";
@@ -94,24 +92,17 @@ import {
 import LiveSessionView from "../views/liveSessionView";
 import {
 	CollapsibleCode,
-	EncryptedReveal,
 	MessageRow,
 	ResponsesItemRow,
-	ToolNameLabel,
-	extractReasoningParts,
 	extractResponsesText,
 	flattenDeclaredTools,
 	getResponsesRole,
 	messageDotClass,
-	messageRoleLabel,
-	messageToneClass,
 	type MessageRole,
 } from "../views/responsesItemRow";
-
 // Full-precision cost for the detail view; per-request costs are often < $0.01,
 // where formatCost's 2-4 dp rounding would hide the value.
 const formatCostPrecise = (value?: number): string => `$${parseFloat((value ?? 0).toFixed(6))}`;
-
 const formatRealtimeTransport = (value: unknown): string => {
 	const transport = String(value ?? "").trim();
 	switch (transport.toLowerCase()) {
@@ -123,7 +114,6 @@ const formatRealtimeTransport = (value: unknown): string => {
 			return transport || i18n.t("logs.detail.unknown", { ns: "observability" });
 	}
 };
-
 const getRealtimeTransportBadgeClass = (value: unknown): string => {
 	switch (String(value ?? "").toLowerCase()) {
 		case "websocket":
@@ -134,7 +124,6 @@ const getRealtimeTransportBadgeClass = (value: unknown): string => {
 			return "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-300";
 	}
 };
-
 const formatRealtimeSource = (value: unknown): string => {
 	const source = String(value ?? "").trim();
 	switch (source.toLowerCase()) {
@@ -146,7 +135,6 @@ const formatRealtimeSource = (value: unknown): string => {
 			return source || i18n.t("logs.detail.unknown", { ns: "observability" });
 	}
 };
-
 const extractChatReasoning = (message: any, mapping?: Record<string, string>): string => {
 	if (!message) return "";
 	let text = "";
@@ -166,14 +154,11 @@ const extractChatReasoning = (message: any, mapping?: Record<string, string>): s
 	}
 	return text;
 };
-
 const isPlainAssistantResponsesMessage = (m: ResponsesMessage): boolean => {
 	if (m.type && m.type !== "message") return false;
 	return getResponsesRole(m) === "assistant";
 };
-
 const isReasoningResponsesMessage = (m: ResponsesMessage): boolean => m.type === "reasoning";
-
 // Streaming providers can emit a single logical assistant turn (or reasoning
 // item) as many small messages. Collapse adjacent ones so the UI shows one
 // bubble per turn instead of N "1 line" bubbles.
@@ -198,7 +183,6 @@ const dedupeDeclaredTools = (tools: any[]): any[] => {
 	}
 	return out;
 };
-
 const coalesceResponsesMessages = (msgs: ResponsesMessage[]): ResponsesMessage[] => {
 	const out: ResponsesMessage[] = [];
 	for (const m of msgs) {
@@ -231,7 +215,6 @@ const coalesceResponsesMessages = (msgs: ResponsesMessage[]): ResponsesMessage[]
 		return extractResponsesText(m).length > 0;
 	});
 };
-
 const extractMessageText = (message: any, mapping?: Record<string, string>): string => {
 	if (!message || message.content == null) return "";
 	let text: string;
@@ -252,7 +235,6 @@ const extractMessageText = (message: any, mapping?: Record<string, string>): str
 	}
 	return text;
 };
-
 const formatJsonSafe = (str: string | undefined): string => {
 	try {
 		return JSON.stringify(JSON.parse(str || ""), null, 2);
@@ -260,7 +242,6 @@ const formatJsonSafe = (str: string | undefined): string => {
 		return str || "";
 	}
 };
-
 const formatToolChoice = (value: unknown): string => {
 	if (typeof value === "string") return value;
 	try {
@@ -269,7 +250,6 @@ const formatToolChoice = (value: unknown): string => {
 		return String(value);
 	}
 };
-
 // batchRequestStates lists the provider's per-state request tallies as discrete
 // label/count pairs. Total, Completed, and Failed are universal (every provider
 // sets them, and a 0 is a real, useful count — e.g. "no failures yet"), so they
@@ -288,9 +268,7 @@ const batchRequestStates = (counts: BatchRequestCounts): [string, number][] => {
 		...optional.filter((entry): entry is [string, number] => Boolean(entry[1])),
 	].map(([label, count]) => [i18n.t(`detailExtras.batch.${label}`, { ns: "observability" }), count]) as [string, number][];
 };
-
 const formatExactNumber = (value: number) => value.toLocaleString(i18n.resolvedLanguage ?? i18n.language);
-
 // Input tokens are normalized to include cache read/write tokens, so break the total down.
 const getInputTokensTooltip = (usage?: LLMUsage): string | undefined => {
 	const total = usage?.prompt_tokens ?? 0;
@@ -330,7 +308,6 @@ const getInputTokensTooltip = (usage?: LLMUsage): string | undefined => {
 	);
 	return lines.join("\n");
 };
-
 const INPUT_COST_LABELS: [keyof InputCostDetails, string][] = [
 	["text_cost", "Text"],
 	["audio_cost", "Audio"],
@@ -339,7 +316,6 @@ const INPUT_COST_LABELS: [keyof InputCostDetails, string][] = [
 	["cached_write_cost", "Cache write"],
 	["request_cost", "Per-request fee"],
 ];
-
 const OUTPUT_COST_LABELS: [keyof OutputCostDetails, string][] = [
 	["text_cost", "Text"],
 	["audio_cost", "Audio"],
@@ -348,7 +324,6 @@ const OUTPUT_COST_LABELS: [keyof OutputCostDetails, string][] = [
 	["citation_cost", "Citations"],
 	["search_queries_cost", "Web search"],
 ];
-
 // Lists the non-zero cost categories; undefined when there are none or text is the only one.
 const getCostDetailsTooltip = <T extends InputCostDetails | OutputCostDetails>(
 	details: T | undefined,
@@ -361,13 +336,10 @@ const getCostDetailsTooltip = <T extends InputCostDetails | OutputCostDetails>(
 		.map(([key]) => `${i18n.t(`detailExtras.cost.${String(key)}`, { ns: "observability" })}: ${formatCostPrecise(details[key] as number)}`)
 		.join("\n");
 };
-
 // Helper to detect passthrough operations
 const isPassthroughOperation = (object: string) => object === "passthrough" || object === "passthrough_stream";
-
 // Helper to detect batch operations (they carry no messages or tool declarations)
 const isBatchOperation = (object: string) => object.startsWith("batch_");
-
 // Helper to detect container operations (for hiding irrelevant fields like Model/Tokens)
 const isContainerOperation = (object: string) => {
 	const containerTypes = [
@@ -383,7 +355,6 @@ const isContainerOperation = (object: string) => {
 	];
 	return containerTypes.includes(object?.toLowerCase());
 };
-
 const statusPillStyles: Record<string, string> = {
 	success: "border-chart-success/30 bg-chart-success/10 text-chart-success-ink",
 	error: "border-chart-error/30 bg-chart-error/10 text-chart-error-ink",
@@ -396,7 +367,6 @@ const statusDotStyles: Record<string, string> = {
 	processing: "bg-blue-500",
 	cancelled: "bg-gray-400",
 };
-
 const batchStatusBadgeStyles: Record<string, string> = {
 	completed: "bg-chart-success/15 text-chart-success-ink",
 	ended: "bg-chart-success/15 text-chart-success-ink",
@@ -406,7 +376,6 @@ const batchStatusBadgeStyles: Record<string, string> = {
 	deleted: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
 };
 const batchStatusBadgeDefault = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-
 function StatusPill({ status }: { status: Status }) {
 	const { t } = useTranslation("observability");
 	return (
@@ -421,7 +390,6 @@ function StatusPill({ status }: { status: Status }) {
 		</span>
 	);
 }
-
 // Colors an HTTP status code badge by response class.
 function statusCodeBadgeClass(code: number): string {
 	if (code >= 200 && code < 300) return "border-chart-success/30 bg-chart-success/10 text-chart-success-ink";
@@ -431,7 +399,6 @@ function statusCodeBadgeClass(code: number): string {
 		return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900";
 	return "border-chart-error/30 bg-chart-error/10 text-chart-error-ink";
 }
-
 function HeroStat({
 	label,
 	value,
@@ -457,7 +424,6 @@ function HeroStat({
 		</div>
 	);
 }
-
 function CopyInlineButton({ text, testId }: { text: string; testId?: string }) {
 	const { t } = useTranslation("observability");
 	const { copy } = useCopyToClipboard({ successMessage: t("labels.copied") });
@@ -476,7 +442,6 @@ function CopyInlineButton({ text, testId }: { text: string; testId?: string }) {
 		</button>
 	);
 }
-
 // Decision logs store the state as the user message and the answers as the
 // assistant message; label them by what they actually are.
 const decisionRoleLabel = (requestType: string | undefined, role: MessageRole): string | undefined => {
@@ -485,7 +450,6 @@ const decisionRoleLabel = (requestType: string | undefined, role: MessageRole): 
 	if (role === "assistant") return i18n.t("logs.detail.roles.decision", { ns: "observability" });
 	return undefined;
 };
-
 // deriveComplexityRouting returns the complexity tier / classification mechanism /
 // raw score behind a routing decision. Rows written since the structured columns
 // exist carry them directly; older rows fall back to parsing the prose routing
@@ -513,7 +477,6 @@ function deriveComplexityRouting(log: LogEntry): {
 	}
 	return {};
 }
-
 function RoutingDecisionLogs({ logs }: { logs: string }) {
 	const { t } = useTranslation("observability");
 	const { copy } = useCopyToClipboard({ successMessage: t("labels.copied") });
@@ -529,7 +492,6 @@ function RoutingDecisionLogs({ logs }: { logs: string }) {
 	// Rows written before the level was recorded carry none, so there is nothing to filter on.
 	const hasLevels = lines.some((line) => line.level !== null);
 	const visible = hasLevels ? lines.filter((line) => meetsMinLogLevel(line.level, minLevel)) : lines;
-
 	return (
 		<div className="w-full rounded-sm border">
 			<div className="flex items-center justify-between gap-3 border-b py-2 pl-6">
@@ -582,7 +544,6 @@ function RoutingDecisionLogs({ logs }: { logs: string }) {
 		</div>
 	);
 }
-
 // 查找同会话后续请求，仅提供跳转，不假定后续请求包含工具结果。
 function NextSessionRequestLink({ log, onOpenLog }: { log: LogEntry; onOpenLog: (logId: string) => void }) {
 	const { t } = useTranslation("observability");
@@ -596,7 +557,7 @@ function NextSessionRequestLink({ log, onOpenLog }: { log: LogEntry; onOpenLog: 
 		},
 		// The caller may send its follow-up after this opens, so look again while
 		// the page is in view.
-		{ skip: !log.session_id, pollingInterval: 10_000, skipPollingIfUnfocused: true },
+		{ skip: !log.session_id, pollingInterval: 10000, skipPollingIfUnfocused: true },
 	);
 	const next = currentData ? pickNextSessionLog(currentData.logs, log) : undefined;
 	// A failed lookup is not "there is no next request": say so, and offer a retry.
@@ -637,7 +598,6 @@ function NextSessionRequestLink({ log, onOpenLog }: { log: LogEntry; onOpenLog: 
 		</div>
 	);
 }
-
 // Collapses all but the last two messages of a long input history. The earlier
 // turns stay in the DOM order they occurred in; expanding reveals them in place.
 function MessageHistoryCollapse({ count, children }: { count: number; children: ReactNode }) {
@@ -659,7 +619,6 @@ function MessageHistoryCollapse({ count, children }: { count: number; children: 
 		</>
 	);
 }
-
 function EmbeddingJsonBox({ title, value }: { title: string; value: unknown }) {
 	const json = JSON.stringify(value, null, 2);
 	return (
@@ -681,7 +640,6 @@ function EmbeddingJsonBox({ title, value }: { title: string; value: unknown }) {
 		</CollapsibleBox>
 	);
 }
-
 interface LogDetailViewProps {
 	log: LogEntry | null;
 	resolvedSelectedPromptName?: string; // Current prompt name from prompt-repo when `selected_prompt_id` is set; falls back to stored log name
@@ -694,7 +652,6 @@ interface LogDetailViewProps {
 	onFilterBySessionId?: (sessionId: string) => void;
 	onOpenLog?: (logId: string) => void;
 }
-
 // Explains an empty Raw JSON tab. Raw payloads are only persisted when the
 // provider's `store_raw_request_response` is on, and teams that turn it off for
 // storage reasons otherwise just see an unexplained blank tab. This reads the
@@ -706,25 +663,18 @@ interface LogDetailViewProps {
 // fetched we show neither message - see `resolveRawJsonNoticeState`.
 function RawJsonUnavailableNotice({ provider }: { provider: string }) {
 	const { t } = useTranslation("observability");
-	const hasProvidersAccess = useRbac(RbacResource.ModelProvider, RbacOperation.View);
-	const {
-		data: providers,
-		isLoading: isProvidersLoading,
-		isError: isProvidersError,
-	} = useGetProvidersQuery(undefined, { skip: !hasProvidersAccess });
-
+	const { data: providers, isLoading: isProvidersLoading, isError: isProvidersError } = useGetProvidersQuery(undefined, { skip: false });
 	const noticeState = useMemo(
 		() =>
 			resolveRawJsonNoticeState({
-				hasProvidersAccess,
+				hasProvidersAccess: true,
 				isProvidersLoading,
 				isProvidersError,
 				providers,
 				provider,
 			}),
-		[hasProvidersAccess, isProvidersLoading, isProvidersError, providers, provider],
+		[isProvidersLoading, isProvidersError, providers, provider],
 	);
-
 	if (noticeState === "loading") {
 		return (
 			<div className="rounded-sm border border-dashed p-5">
@@ -732,11 +682,9 @@ function RawJsonUnavailableNotice({ provider }: { provider: string }) {
 			</div>
 		);
 	}
-
 	if (noticeState === "unknown") {
 		return <div className="text-muted-foreground rounded-sm border border-dashed p-5 text-center text-sm">{t("logs.noRawJson")}</div>;
 	}
-
 	return (
 		<div className="text-muted-foreground space-y-3 rounded-sm border border-dashed p-5 text-sm">
 			<div className="text-foreground font-medium">{t("logs.rawJsonDisabled")}</div>
@@ -755,7 +703,6 @@ function RawJsonUnavailableNotice({ provider }: { provider: string }) {
 		</div>
 	);
 }
-
 export function LogDetailView({
 	log,
 	resolvedSelectedPromptName,
@@ -779,22 +726,16 @@ export function LogDetailView({
 	const revealEnabled = revealAvailable && showRevealedValues;
 	const activeInputRevealMapping = revealEnabled ? revealMapping?.input : undefined;
 	const activeOutputRevealMapping = revealEnabled ? revealMapping?.output : undefined;
-
 	useEffect(() => {
 		setShowRevealedValues(false);
 	}, [log?.id, revealAvailable]);
-
 	const allRoles: MessageRole[] = ["system", "user", "assistant", "tool", "reasoning"];
 	const [visibleRoles, setVisibleRoles] = useState<Set<MessageRole>>(new Set(allRoles));
-
 	const handleToggleReveal = (checked: boolean) => {
 		setShowRevealedValues(checked && revealAvailable);
 	};
-
 	if (!log) return null;
-
 	const selectedPromptDisplayName = resolvedSelectedPromptName ?? log.selected_prompt_name ?? "";
-
 	const { data: userAgentMappingsData } = useGetUserAgentMappingsQuery();
 	const customAppIcons = useMemo(() => {
 		const icons: Record<string, string> = {};
@@ -805,7 +746,6 @@ export function LogDetailView({
 		}
 		return icons;
 	}, [userAgentMappingsData?.mappings]);
-
 	const isContainer = isContainerOperation(log.object);
 	const detectedApp = log.app ? mapAppToClientApp(log.app) : log.user_agent ? mapUserAgentToApp(log.user_agent) : null;
 	const detectedAppIcon = log.app && detectedApp ? customAppIcons[log.app] || detectedApp.icon : detectedApp?.icon;
@@ -893,7 +833,6 @@ export function LogDetailView({
 	const batchId = batchDebug?.batch_id ?? (typeof batchRawResponse?.id === "string" ? (batchRawResponse.id as string) : null);
 	const batchStatus = batchDebug?.status ?? (typeof batchRawResponse?.status === "string" ? (batchRawResponse.status as string) : null);
 	const showBatchDetailsTab = showTabs && isBatch && log.object !== "batch_list";
-
 	const batchResultItems = useMemo(() => {
 		const raw = batchRawResponse;
 		const results: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.results) ? (raw!.results as any[]) : [];
@@ -956,7 +895,6 @@ export function LogDetailView({
 	// so the header doesn't render a misleading red "0" badge.
 	const rawStatusCode = log.error_details?.status_code ?? passthroughParams?.status_code ?? null;
 	const statusCode = rawStatusCode === 0 ? null : rawStatusCode;
-
 	// Tools can also be declared inside Responses input items instead of the
 	// top-level tools param (codex code-mode models send an `additional_tools`
 	// input item with the tool definitions, including namespace groupings).
@@ -971,7 +909,6 @@ export function LogDetailView({
 			toolsParameter = JSON.stringify(declaredTools, null, 2);
 		} catch {}
 	}
-
 	const audioFormat = (log.params as any)?.audio?.format || (log.params as any)?.extra_params?.audio?.format || undefined;
 	const rawRequest = applyRedactionMapping(log.raw_request, activeInputRevealMapping);
 	const rawResponse = applyRedactionMapping(log.raw_response, activeOutputRevealMapping);
@@ -999,7 +936,6 @@ export function LogDetailView({
 		} catch {}
 		return 0;
 	})();
-
 	return loading ? (
 		<div className="flex h-full items-center justify-center">
 			<Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
@@ -1363,7 +1299,7 @@ export function LogDetailView({
 					)}
 				</div>
 			</div>
-			<details className="group bg-card rounded-sm border" open={false}>
+			<details className="group bg-card rounded-sm border" open>
 				<summary className="hover:bg-muted/30 flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm transition">
 					<span className="text-foreground font-medium">{t("mcpLogs.detail.moreDetails")}</span>
 					<span className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -1685,91 +1621,7 @@ export function LogDetailView({
 									}
 								/>
 							)}
-							{(log.business_unit_ids?.length || log.business_unit_id) && (
-								<LogEntryDetailsView
-									className="w-full"
-									label={t((log.business_unit_ids?.length ?? 0) > 1 ? "mcpLogs.detail.businessUnits" : "labels.businessUnit")}
-									value={
-										<span className="inline-flex flex-wrap gap-x-1">
-											{(log.business_unit_ids?.length
-												? log.business_unit_ids.map((id, i) => ({
-														id,
-														name: log.business_unit_names?.[i] || id,
-													}))
-												: [
-														{
-															id: log.business_unit_id!,
-															name: log.business_unit_name || log.business_unit_id!,
-														},
-													]
-											).map((b, i, arr) => (
-												<Link
-													key={b.id}
-													to="/workspace/logs"
-													search={(prev) => ({
-														...prev,
-														offset: 0,
-														selected_log: "",
-														business_unit_ids: [b.id],
-													})}
-													className="text-blue-600 hover:underline dark:text-blue-400"
-													data-testid={`logdetails-business-unit-link-${b.id}`}
-												>
-													{b.name}
-													{i < arr.length - 1 ? "," : ""}
-												</Link>
-											))}
-										</span>
-									}
-								/>
-							)}
-							{log.project_id && (
-								<LogEntryDetailsView
-									className="w-full"
-									label={t("labels.project")}
-									value={
-										<Link
-											to="/workspace/logs"
-											search={(prev) => ({
-												...prev,
-												offset: 0,
-												selected_log: "",
-												project_ids: [log.project_id!],
-											})}
-											className="text-blue-600 hover:underline dark:text-blue-400"
-											data-testid={`logdetails-project-link-${log.project_id}`}
-										>
-											{log.project_name || log.project_id}
-										</Link>
-									}
-								/>
-							)}
-							{log.user_id && (
-								<LogEntryDetailsView
-									className="w-full"
-									label={t("labels.user")}
-									value={
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<Link
-													to="/workspace/logs"
-													search={(prev) => ({
-														...prev,
-														offset: 0,
-														selected_log: "",
-														user_ids: [log.user_id],
-													})}
-													className={`block max-w-full min-w-0 cursor-pointer truncate text-sm font-normal text-blue-600 underline-offset-2 hover:underline dark:text-blue-400${log.user_name ? "" : " font-mono"}`}
-													data-testid="logdetails-user-link"
-												>
-													{log.user_name || log.user_id}
-												</Link>
-											</TooltipTrigger>
-											<TooltipContent sideOffset={6}>{log.user_name ? log.user_id : t("logs.detail.filterByUser")}</TooltipContent>
-										</Tooltip>
-									}
-								/>
-							)}
+
 							{log.fallback_index > 0 && (
 								<LogEntryDetailsView className="w-full" label={t("logs.detail.fallbackIndex")} value={log.fallback_index} />
 							)}
@@ -2012,8 +1864,8 @@ export function LogDetailView({
 										/>
 									)}
 									{/* An async job settles onto a child row, so the request that started it
-									    has no cost of its own. Without this the detail view of a video
-									    generation reads as free while the list beside it shows the spend. */}
+has no cost of its own. Without this the detail view of a video
+generation reads as free while the list beside it shows the spend. */}
 									{log.cost == null && (log.children_cost ?? 0) > 0 && (
 										<LogEntryDetailsView className="w-full" label={t("logs.settledCost")} value={formatCostPrecise(log.children_cost)} />
 									)}
@@ -2654,7 +2506,7 @@ export function LogDetailView({
 														return (
 															<MessageRow key={msgIndex} role={role} last={msgIndex === request.messages.length - 1}>
 																{text ? (
-																	<CollapsibleCode text={text} preview={3} mono={false} />
+																	<CollapsibleCode text={text} preview={3} mono />
 																) : (
 																	<span className="text-muted-foreground text-xs">{t("logs.detail.emptyMessage")}</span>
 																)}
@@ -2699,7 +2551,7 @@ export function LogDetailView({
 															return (
 																<MessageRow role={role} last>
 																	{text ? (
-																		<CollapsibleCode text={text} preview={3} mono={false} />
+																		<CollapsibleCode text={text} preview={3} mono />
 																	) : (
 																		<span className="text-muted-foreground text-xs">{t("logs.detail.emptyMessage")}</span>
 																	)}
@@ -2946,7 +2798,7 @@ export function LogDetailView({
 													meta={`~${t("logs.detail.tokens", { count: reasoningTokens })}`}
 													last={isOverallLast && !showMain}
 												>
-													<CollapsibleCode text={reasoningText} preview={3} mono={false} />
+													<CollapsibleCode text={reasoningText} preview={3} mono />
 												</MessageRow>,
 											);
 										}
@@ -2974,7 +2826,7 @@ export function LogDetailView({
 																}}
 															/>
 														) : usePlainText ? (
-															<CollapsibleCode text={text} preview={3} mono={false} />
+															<CollapsibleCode text={text} preview={3} mono />
 														) : (
 															<CollapsibleCode text={text} preview={3} lang={role === "system" ? "xml" : undefined} />
 														)
@@ -3072,7 +2924,7 @@ export function LogDetailView({
 														meta={`~${t("logs.detail.tokens", { count: reasoningTokens })}`}
 														last={!showAssistant}
 													>
-														<CollapsibleCode text={reasoningText} preview={3} mono={false} />
+														<CollapsibleCode text={reasoningText} preview={3} mono />
 													</MessageRow>
 												) : null}
 												{showAssistant ? (
@@ -3110,7 +2962,7 @@ export function LogDetailView({
 																	}}
 																/>
 															) : (
-																<CollapsibleCode text={text} preview={3} mono={false} />
+																<CollapsibleCode text={text} preview={3} mono />
 															)
 														) : (
 															<LogChatMessageView message={log.output_message} audioFormat={audioFormat} />
@@ -3473,7 +3325,6 @@ export function LogDetailView({
 		</>
 	);
 }
-
 const copyRequestBody = async (log: LogEntry, copy: (text: string) => Promise<void>) => {
 	try {
 		const isChat = log.object === "chat.completion" || log.object === "chat_completion" || log.object === "chat.completion.chunk";
@@ -3482,7 +3333,6 @@ const copyRequestBody = async (log: LogEntry, copy: (text: string) => Promise<vo
 		const isSpeech = log.object === "audio.speech" || log.object === "audio.speech.chunk";
 		const isTextCompletion = log.object === "text.completion" || log.object === "text.completion.chunk";
 		const isEmbedding = log.object === "embedding";
-
 		const extractTextFromMessage = (message: any): string => {
 			if (!message || !message.content) {
 				return "";
@@ -3498,7 +3348,6 @@ const copyRequestBody = async (log: LogEntry, copy: (text: string) => Promise<vo
 			}
 			return "";
 		};
-
 		const extractTextsFromMessage = (message: any): string[] => {
 			if (!message || !message.content) {
 				return [];
@@ -3511,7 +3360,6 @@ const copyRequestBody = async (log: LogEntry, copy: (text: string) => Promise<vo
 			}
 			return [];
 		};
-
 		const isSupportedType = isChat || isResponses || isRealtimeTurn || isSpeech || isTextCompletion || isEmbedding;
 		if (!isSupportedType) {
 			if (log.object === "audio.transcription" || log.object === "audio.transcription.chunk") {
@@ -3521,11 +3369,9 @@ const copyRequestBody = async (log: LogEntry, copy: (text: string) => Promise<vo
 			}
 			return;
 		}
-
 		const requestBody: any = {
 			model: log.provider && log.model ? `${log.provider}/${log.model}` : log.model || "",
 		};
-
 		if (isRealtimeTurn) {
 			if (log.input_history && log.input_history.length > 0) {
 				requestBody.messages = log.input_history;
@@ -3558,21 +3404,18 @@ const copyRequestBody = async (log: LogEntry, copy: (text: string) => Promise<vo
 				requestBody.input = texts.length === 1 ? texts[0] : texts;
 			}
 		}
-
 		if (log.params) {
 			const paramsCopy = { ...log.params };
 			delete paramsCopy.tools;
 			delete paramsCopy.instructions;
 			Object.assign(requestBody, paramsCopy);
 		}
-
 		if ((isChat || isResponses || isRealtimeTurn) && log.params?.tools && Array.isArray(log.params.tools) && log.params.tools.length > 0) {
 			requestBody.tools = log.params.tools;
 		}
 		if ((isResponses || isRealtimeTurn) && log.params?.instructions) {
 			requestBody.instructions = log.params.instructions;
 		}
-
 		const requestBodyJson = JSON.stringify(requestBody, null, 2);
 		await copy(requestBodyJson);
 	} catch {

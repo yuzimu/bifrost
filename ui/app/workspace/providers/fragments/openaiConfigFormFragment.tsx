@@ -5,22 +5,18 @@ import { getErrorMessage, setProviderFormDirtyState, useAppDispatch } from "@/li
 import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import type { ModelProvider } from "@/lib/types/config";
 import { openaiConfigFormSchema, type OpenAIConfigFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface OpenAIConfigFormFragmentProps {
 	provider: ModelProvider;
 }
-
 export function OpenAIConfigFormFragment({ provider }: OpenAIConfigFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const form = useForm<OpenAIConfigFormSchema, any, OpenAIConfigFormSchema>({
 		resolver: zodResolver(openaiConfigFormSchema) as Resolver<OpenAIConfigFormSchema, any, OpenAIConfigFormSchema>,
@@ -30,17 +26,14 @@ export function OpenAIConfigFormFragment({ provider }: OpenAIConfigFormFragmentP
 			disable_store: provider.openai_config?.disable_store ?? false,
 		},
 	});
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	useEffect(() => {
 		form.reset({
 			disable_store: provider.openai_config?.disable_store ?? false,
 		});
 	}, [form, provider.name, provider.openai_config?.disable_store]);
-
 	const onSubmit = (data: OpenAIConfigFormSchema) => {
 		updateProvider(
 			buildProviderUpdatePayload(provider, {
@@ -60,7 +53,6 @@ export function OpenAIConfigFormFragment({ provider }: OpenAIConfigFormFragmentP
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4 md:px-6" data-testid="provider-config-openai-content">
@@ -80,7 +72,6 @@ export function OpenAIConfigFormFragment({ provider }: OpenAIConfigFormFragmentP
 											data-testid="provider-openai-disable-store-switch"
 											size="md"
 											checked={field.value}
-											disabled={!hasUpdateProviderAccess}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
 												form.trigger("disable_store");
@@ -97,7 +88,7 @@ export function OpenAIConfigFormFragment({ provider }: OpenAIConfigFormFragmentP
 				<div className="flex justify-end space-x-2 pb-6">
 					<Button
 						type="submit"
-						disabled={!form.formState.isDirty || !form.formState.isValid || !hasUpdateProviderAccess || isUpdatingProvider}
+						disabled={!form.formState.isDirty || !form.formState.isValid || isUpdatingProvider}
 						isLoading={isUpdatingProvider}
 					>
 						{t("providers.saveOpenaiConfig")}

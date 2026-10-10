@@ -4,27 +4,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage, useGetCoreConfigQuery, useUpdateCoreConfigMutation } from "@/lib/store";
 import { CoreConfig, DefaultCoreConfig } from "@/lib/types/config";
 import { parseArrayFromText } from "@/lib/utils/array";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 export default function ObservabilityView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.client_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [localConfig, setLocalConfig] = useState<CoreConfig>(DefaultCoreConfig);
 	const [needsRestart, setNeedsRestart] = useState<boolean>(false);
-
 	const [localValues, setLocalValues] = useState<{
 		prometheus_labels: string;
 	}>({
 		prometheus_labels: "",
 	});
-
 	useEffect(() => {
 		if (bifrostConfig && config) {
 			setLocalConfig(config);
@@ -33,20 +28,17 @@ export default function ObservabilityView() {
 			});
 		}
 	}, [config, bifrostConfig]);
-
 	const hasChanges = useMemo(() => {
 		if (!config) return false;
 		const localLabels = localConfig.prometheus_labels.slice().sort().join(",");
 		const serverLabels = config.prometheus_labels.slice().sort().join(",");
 		return localLabels !== serverLabels;
 	}, [config, localConfig]);
-
 	const handlePrometheusLabelsChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, prometheus_labels: value }));
 		setLocalConfig((prev) => ({ ...prev, prometheus_labels: parseArrayFromText(value) }));
 		setNeedsRestart(true);
 	}, []);
-
 	const handleSave = useCallback(async () => {
 		if (!bifrostConfig) {
 			toast.error(t("observability.toastNotLoaded"));
@@ -59,7 +51,6 @@ export default function ObservabilityView() {
 			toast.error(getErrorMessage(error));
 		}
 	}, [bifrostConfig, localConfig, t, updateCoreConfig]);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-4">
 			<div className="flex items-center justify-between"></div>
@@ -90,14 +81,13 @@ export default function ObservabilityView() {
 				</div>
 			</div>
 			<div className="flex justify-end pt-2">
-				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess}>
+				<Button onClick={handleSave} disabled={!hasChanges || isLoading}>
 					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>
 		</div>
 	);
 }
-
 const RestartWarning = () => {
 	const { t } = useTranslation("config");
 	return <div className="text-muted-foreground mt-2 pl-4 text-xs font-semibold">{t("restartWarning")}</div>;

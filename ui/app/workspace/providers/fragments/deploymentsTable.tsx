@@ -12,21 +12,17 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Trash } from "lucide-react";
 import { useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 type DeploymentsValue = Record<string, AliasConfig> | undefined | null;
-
 interface Props {
 	value: DeploymentsValue;
 	onChange: (next: Record<string, AliasConfig>) => void;
 	providerName: string;
 	disabled?: boolean;
 }
-
 interface Row {
 	name: string;
 	config: AliasConfig;
 }
-
 // Normalize legacy shapes (Record<string, string> from older configs or stringified JSON)
 // into the rich Record<string, AliasConfig> the component operates on.
 function normalize(value: DeploymentsValue): Record<string, AliasConfig> {
@@ -55,10 +51,8 @@ function normalize(value: DeploymentsValue): Record<string, AliasConfig> {
 	}
 	return out;
 }
-
 const emptySecretVar: SecretVar = { value: "", ref: "" };
 const isEmptySecretVar = (v: SecretVar | undefined): boolean => !v || (!v.value && !v.ref);
-
 function FieldRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
 	return (
 		<div className="space-y-1.5">
@@ -68,7 +62,6 @@ function FieldRow({ label, hint, children }: { label: string; hint?: string; chi
 		</div>
 	);
 }
-
 function SectionHeader({ title, description }: { title: string; description?: string }) {
 	return (
 		<div className="border-b pb-2">
@@ -77,7 +70,6 @@ function SectionHeader({ title, description }: { title: string; description?: st
 		</div>
 	);
 }
-
 function SecretVarField({
 	value,
 	onChange,
@@ -98,7 +90,6 @@ function SecretVarField({
 		/>
 	);
 }
-
 function StringField({
 	value,
 	onChange,
@@ -119,13 +110,11 @@ function StringField({
 		/>
 	);
 }
-
 interface ProviderSectionProps {
 	config: AliasConfig;
 	onChange: (patch: Partial<AliasConfig>) => void;
 	disabled?: boolean;
 }
-
 // Three-way control for boolean overrides that inherit a key-level toggle when
 // unset: undefined = use the key's setting, true/false = explicit override. A
 // plain switch can't express "explicitly off while the key-level toggle is on".
@@ -171,7 +160,6 @@ function TriStateOverrideRow({
 		</div>
 	);
 }
-
 function AzureSection({ config, onChange, disabled }: ProviderSectionProps) {
 	const { t } = useTranslation("models");
 	return (
@@ -207,7 +195,6 @@ function AzureSection({ config, onChange, disabled }: ProviderSectionProps) {
 		</div>
 	);
 }
-
 function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
 	const { t } = useTranslation("models");
 	return (
@@ -219,7 +206,7 @@ function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
 			<FieldRow label={t("providers.deployments.projectId")}>
 				<SecretVarField
 					value={config.project_id}
-					onChange={(v) => onChange({ project_id: v })}
+					onChange={(v) => onChange({})}
 					placeholder={t("providers.deployments.vertexProjectIdPlaceholder")}
 					disabled={disabled}
 				/>
@@ -257,7 +244,6 @@ function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
 		</div>
 	);
 }
-
 function BedrockSection({ config, onChange, disabled }: ProviderSectionProps) {
 	const { t } = useTranslation("models");
 	return (
@@ -285,7 +271,7 @@ function BedrockSection({ config, onChange, disabled }: ProviderSectionProps) {
 			<FieldRow label={t("providers.deployments.projectId")} hint={t("providers.deployments.bedrockProjectHint")}>
 				<SecretVarField
 					value={config.project_id}
-					onChange={(v) => onChange({ project_id: v })}
+					onChange={(v) => onChange({})}
 					placeholder={t("providers.deployments.projectIdPlaceholder")}
 					disabled={disabled}
 				/>
@@ -293,7 +279,6 @@ function BedrockSection({ config, onChange, disabled }: ProviderSectionProps) {
 		</div>
 	);
 }
-
 function BedrockMantleSection({ config, onChange, disabled }: ProviderSectionProps) {
 	const { t } = useTranslation("models");
 	return (
@@ -313,7 +298,7 @@ function BedrockMantleSection({ config, onChange, disabled }: ProviderSectionPro
 			<FieldRow label={t("providers.deployments.projectId")} hint={t("providers.deployments.mantleProjectHint")}>
 				<SecretVarField
 					value={config.project_id}
-					onChange={(v) => onChange({ project_id: v })}
+					onChange={(v) => onChange({})}
 					placeholder={t("providers.deployments.projectIdPlaceholder")}
 					disabled={disabled}
 				/>
@@ -321,7 +306,6 @@ function BedrockMantleSection({ config, onChange, disabled }: ProviderSectionPro
 		</div>
 	);
 }
-
 function ReplicateSection({ config, onChange, disabled }: ProviderSectionProps) {
 	const { t } = useTranslation("models");
 	return (
@@ -341,8 +325,14 @@ function ReplicateSection({ config, onChange, disabled }: ProviderSectionProps) 
 		</div>
 	);
 }
-
-function UseAnthropicEndpointsToggleSection({ config, onChange, disabled, providerName }: ProviderSectionProps & { providerName: string }) {
+function UseAnthropicEndpointsToggleSection({
+	config,
+	onChange,
+	disabled,
+	providerName,
+}: ProviderSectionProps & {
+	providerName: string;
+}) {
 	const { t } = useTranslation("models");
 	return (
 		<div className="space-y-4">
@@ -361,8 +351,12 @@ function UseAnthropicEndpointsToggleSection({ config, onChange, disabled, provid
 		</div>
 	);
 }
-
-function ProviderSection({ providerName, ...props }: ProviderSectionProps & { providerName: string }) {
+function ProviderSection({
+	providerName,
+	...props
+}: ProviderSectionProps & {
+	providerName: string;
+}) {
 	switch (providerName) {
 		case "azure":
 			return <AzureSection {...props} />;
@@ -386,7 +380,6 @@ function ProviderSection({ providerName, ...props }: ProviderSectionProps & { pr
 			return null;
 	}
 }
-
 function ExpandedConfigPanel({
 	config,
 	onChange,
@@ -446,13 +439,11 @@ function ExpandedConfigPanel({
 		</div>
 	);
 }
-
 export function DeploymentsTable({ value, onChange, providerName, disabled = false }: Props) {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const normalized = useMemo(() => normalize(value), [value]);
 	const rows: Row[] = useMemo(() => Object.entries(normalized).map(([name, config]) => ({ name, config })), [normalized]);
-
 	// Stable per-row id keyed by current deployment name. Survives rename so
 	// expanded/pendingNames state stays attached to the same row, and gives
 	// React a stable list key instead of array index.
@@ -468,7 +459,6 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 		return id;
 	};
 	const rowsWithIds = useMemo(() => rows.map((r) => ({ ...r, rowId: ensureRowId(r.name) })), [rows]);
-
 	const [expanded, setExpanded] = useState<Set<string>>(new Set());
 	const [draftExpanded, setDraftExpanded] = useState(false);
 	const [draftRow, setDraftRow] = useState<Row>({ name: "", config: { model_id: "" } });
@@ -477,7 +467,6 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 	// empty — without this, we'd either snap the input back (jarring) or emit a
 	// duplicate and silently drop a row.
 	const [pendingNames, setPendingNames] = useState<Record<string, string>>({});
-
 	const emit = (nextRows: Row[]) => {
 		const out: Record<string, AliasConfig> = {};
 		for (const r of nextRows) {
@@ -486,18 +475,15 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 		}
 		onChange(out);
 	};
-
 	const updateRowByName = (oldName: string, patch: Partial<Row>) => {
 		const next = rows.map((r) => (r.name === oldName ? { name: patch.name ?? r.name, config: patch.config ?? r.config } : r));
 		emit(next);
 	};
-
 	const patchConfig = (name: string, patch: Partial<AliasConfig>) => {
 		const current = rows.find((r) => r.name === name);
 		if (!current) return;
 		updateRowByName(name, { config: { ...current.config, ...patch } });
 	};
-
 	const removeRow = (rowId: string, name: string) => {
 		emit(rows.filter((r) => r.name !== name));
 		rowIdsRef.current.delete(name);
@@ -513,7 +499,6 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 			return rest;
 		});
 	};
-
 	const renameRow = (rowId: string, oldName: string, newName: string) => {
 		const trimmed = newName.trim();
 		const normalizedName = trimmed.toLowerCase();
@@ -537,11 +522,9 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 		const next = rows.map((r) => (r.name === oldName ? { name: trimmed, config: r.config } : r));
 		emit(next);
 	};
-
 	const patchDraftConfig = (patch: Partial<AliasConfig>) => {
 		setDraftRow((r) => ({ ...r, config: { ...r.config, ...patch } }));
 	};
-
 	// Commit the in-progress draft row into the committed list. Called from
 	// blur / Enter / model-selection. No-op when either field is missing — the
 	// inline hint below the draft row warns the user before submit that a
@@ -557,7 +540,6 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 		setDraftRow({ name: "", config: { model_id: "" } });
 		setDraftExpanded(false);
 	};
-
 	const toggleExpanded = (rowId: string) => {
 		setExpanded((prev) => {
 			const next = new Set(prev);
@@ -566,7 +548,6 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 			return next;
 		});
 	};
-
 	return (
 		<div className="overflow-hidden rounded-md border">
 			<div className="bg-muted/50 text-foreground grid h-10 grid-cols-[28px_minmax(0,1fr)_minmax(0,1fr)_28px] items-center gap-2 border-b px-4 text-sm font-medium">
@@ -682,9 +663,7 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 						</div>
 						{(draftRow.name.trim() !== "" || draftRow.config.model_id.trim() !== "") &&
 							!(draftRow.name.trim() && draftRow.config.model_id.trim()) && (
-								<p className="text-muted-foreground px-4 pb-2 text-xs">
-									{t("providers.deployments.draftIncomplete")}
-								</p>
+								<p className="text-muted-foreground px-4 pb-2 text-xs">{t("providers.deployments.draftIncomplete")}</p>
 							)}
 						<CollapsibleContent>
 							<ExpandedConfigPanel config={draftRow.config} onChange={patchDraftConfig} providerName={providerName} disabled={disabled} />

@@ -3,20 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { getErrorMessage, useGetCoreConfigQuery, useUpdateCoreConfigMutation } from "@/lib/store";
 import { CompatConfig, DefaultCoreConfig } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 /** 编辑兼容层转换策略，包括仅推理模型的 Responses 路由。 */
 export default function CompatibilityView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.client_config?.compat;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [localCompatConfig, setLocalCompatConfig] = useState<CompatConfig>(DefaultCoreConfig.compat);
-
 	useEffect(() => {
 		if (config) {
 			setLocalCompatConfig(config);
@@ -24,7 +20,6 @@ export default function CompatibilityView() {
 		}
 		setLocalCompatConfig(DefaultCoreConfig.compat);
 	}, [config]);
-
 	const hasChanges = useMemo(() => {
 		const baseline = config ?? DefaultCoreConfig.compat;
 		return (
@@ -36,17 +31,14 @@ export default function CompatibilityView() {
 			(localCompatConfig.force_reasoning_only_models_to_responses ?? true) !== (baseline.force_reasoning_only_models_to_responses ?? true)
 		);
 	}, [config, localCompatConfig]);
-
 	const handleCompatChange = useCallback((field: keyof CompatConfig, value: boolean) => {
 		setLocalCompatConfig((prev) => ({ ...prev, [field]: value }));
 	}, []);
-
 	const handleSave = useCallback(async () => {
 		if (!bifrostConfig) {
 			toast.error(t("configNotLoaded"));
 			return;
 		}
-
 		try {
 			await updateCoreConfig({
 				...bifrostConfig,
@@ -60,7 +52,6 @@ export default function CompatibilityView() {
 			toast.error(getErrorMessage(error));
 		}
 	}, [bifrostConfig, localCompatConfig, t, updateCoreConfig]);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6">
 			<PageTitle title={t("compatibility.title")}>
@@ -90,7 +81,6 @@ export default function CompatibilityView() {
 						size="md"
 						checked={localCompatConfig.convert_text_to_chat}
 						onCheckedChange={(checked) => handleCompatChange("convert_text_to_chat", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -107,7 +97,6 @@ export default function CompatibilityView() {
 						size="md"
 						checked={localCompatConfig.convert_chat_to_responses}
 						onCheckedChange={(checked) => handleCompatChange("convert_chat_to_responses", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -124,7 +113,6 @@ export default function CompatibilityView() {
 						size="md"
 						checked={localCompatConfig.should_drop_params}
 						onCheckedChange={(checked) => handleCompatChange("should_drop_params", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -141,7 +129,6 @@ export default function CompatibilityView() {
 						size="md"
 						checked={localCompatConfig.should_convert_params}
 						onCheckedChange={(checked) => handleCompatChange("should_convert_params", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -158,7 +145,6 @@ export default function CompatibilityView() {
 						size="md"
 						checked={localCompatConfig.azure_deepseek ?? true}
 						onCheckedChange={(checked) => handleCompatChange("azure_deepseek", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -175,13 +161,12 @@ export default function CompatibilityView() {
 						size="md"
 						checked={localCompatConfig.force_reasoning_only_models_to_responses ?? true}
 						onCheckedChange={(checked) => handleCompatChange("force_reasoning_only_models_to_responses", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 			</div>
 
 			<div className="flex justify-end pt-2">
-				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess} data-testid="compat-save-button">
+				<Button onClick={handleSave} disabled={!hasChanges || isLoading} data-testid="compat-save-button">
 					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>

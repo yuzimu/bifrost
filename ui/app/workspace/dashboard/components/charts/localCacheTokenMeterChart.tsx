@@ -5,22 +5,18 @@ import { ChartErrorBoundary } from "./chartErrorBoundary";
 import { GaugeNeedle, getGaugeGeometry, useGaugeSize } from "./gaugeUtils";
 import { NoChartData } from "./noChartData";
 import { useTranslation } from "react-i18next";
-
 interface LocalCacheTokenMeterChartProps {
 	data: LogStats | null;
 }
-
 // Teal ramp: the two hit kinds are ordered shares of one total.
 const METER_COLORS = {
 	direct: "var(--chart-seq-1)",
 	semantic: "var(--chart-seq-3)",
 	remaining: "var(--chart-seq-5)",
 };
-
 function LocalCacheTokenMeterChartImpl({ data }: LocalCacheTokenMeterChartProps) {
 	const { t } = useTranslation("observability");
 	const { ref, width, height } = useGaugeSize();
-
 	const { percentage, directHits, semanticHits, totalRequests, hasCacheCounters } = useMemo(() => {
 		const hasCacheCounters = data?.direct_cache_hits != null && data?.semantic_cache_hits != null;
 		const direct = data?.direct_cache_hits ?? 0;
@@ -43,10 +39,8 @@ function LocalCacheTokenMeterChartImpl({ data }: LocalCacheTokenMeterChartProps)
 			hasCacheCounters,
 		};
 	}, [data]);
-
 	const gaugeGeometry = useMemo(() => getGaugeGeometry(width, height), [width, height]);
 	const hasData = !!data && hasCacheCounters && totalRequests > 0;
-
 	const rawDirectPct = totalRequests > 0 ? (directHits / totalRequests) * 100 : 0;
 	const rawSemanticPct = totalRequests > 0 ? (semanticHits / totalRequests) * 100 : 0;
 	const directPct = Math.max(0, Math.min(100, rawDirectPct));
@@ -56,7 +50,6 @@ function LocalCacheTokenMeterChartImpl({ data }: LocalCacheTokenMeterChartProps)
 		{ name: "semantic", value: semanticPct },
 		{ name: "remaining", value: Math.max(0, 100 - directPct - semanticPct) },
 	];
-
 	return (
 		<ChartErrorBoundary resetKey={`${directHits}-${semanticHits}-${totalRequests}`}>
 			<div className="grid h-full grid-rows-[104px_auto] items-start overflow-hidden pt-8">
@@ -76,7 +69,7 @@ function LocalCacheTokenMeterChartImpl({ data }: LocalCacheTokenMeterChartProps)
 										outerRadius={gaugeGeometry.outerRadius}
 										dataKey="value"
 										stroke="none"
-										isAnimationActive={false}
+										isAnimationActive
 									>
 										<Cell fill={METER_COLORS.direct} />
 										<Cell fill={METER_COLORS.semantic} />
@@ -116,5 +109,4 @@ function LocalCacheTokenMeterChartImpl({ data }: LocalCacheTokenMeterChartProps)
 		</ChartErrorBoundary>
 	);
 }
-
 export default memo(LocalCacheTokenMeterChartImpl);

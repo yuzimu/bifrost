@@ -3,14 +3,11 @@ import { isRedacted } from "@/lib/utils/validation";
 import { z } from "zod";
 import i18n from "@/lib/i18n";
 import type { TFunction } from "i18next";
-
 /** 在校验时读取当前语言，避免模块加载时冻结错误文案。 */
 export const schemaMessage = (key: string, defaultValue: string, values?: Record<string, unknown>) =>
 	i18n.t(`schemaUi.${key}`, { ns: "models", defaultValue, ...values });
-
 /** 共享配置校验在执行时取文案，不改变各 schema 的输入输出。 */
 const configSchemaMessage = (key: string) => i18n.t(`validation.${key}`, { ns: "config" });
-
 // Global error map - turns Zod's default messages into readable, human-friendly ones.
 // Individual schemas can still override by passing their own message.
 z.config({
@@ -57,36 +54,35 @@ z.config({
 		return undefined;
 	},
 });
-
 // Base Zod schemas matching the TypeScript types
-
 // Known provider schema
 export const knownProviderSchema = z.enum(KnownProvidersNames as unknown as [string, ...string[]]);
-
 // Custom provider name schema (branded type simulation)
 export const customProviderNameSchema = z.string().min(1, { error: () => configSchemaMessage("customProviderName") });
-
 // Model provider name schema (union of known and custom providers)
 export const modelProviderNameSchema = z.union([knownProviderSchema, customProviderNameSchema]);
-
 // SecretVar schema - matches the Go SecretVar type from schemas/secretvar.go
 export const _secretVarBase = z.object({
 	value: z.string().optional(),
 	ref: z.string().optional(),
 	type: z.enum(["plain_text", "env", "vault"]).optional(),
 });
-
 // Extending the base schema
 export const secretVarSchema = Object.assign(_secretVarBase, {
 	required: (message: string) => _secretVarBase.refine((v) => !!v?.value?.trim() || !!v?.ref?.trim(), message),
 });
-
 // Helper to check if a secretVar field has a value or secret reference
-function isSecretVarSet(v: { value?: string; ref?: string } | undefined): boolean {
+function isSecretVarSet(
+	v:
+		| {
+				value?: string;
+				ref?: string;
+		  }
+		| undefined,
+): boolean {
 	if (!v) return false;
 	return !!v.value?.trim() || !!v.ref?.trim();
 }
-
 // Azure key config schema
 export const azureKeyConfigSchema = z
 	.object({
@@ -120,7 +116,6 @@ export const azureKeyConfigSchema = z
 			path: ["client_id"],
 		},
 	);
-
 // Vertex AWS Workload Identity Federation block. The audience is the only mandatory field; the
 // service account, region and role hop are optional refinements of the exchange.
 export const vertexAWSWorkloadIdentitySchema = z.object({
@@ -135,7 +130,6 @@ export const vertexAWSWorkloadIdentitySchema = z.object({
 	aws_region: secretVarSchema.optional(),
 	aws_role_arn: secretVarSchema.optional(),
 });
-
 // Vertex key config schema
 export const vertexKeyConfigSchema = z
 	.object({
@@ -195,18 +189,15 @@ export const vertexKeyConfigSchema = z
 			path: ["auth_credentials"],
 		},
 	);
-
 // S3 bucket configuration for Bedrock batch operations
 export const s3BucketConfigSchema = z.object({
 	bucket_name: z.string().min(1, { error: () => configSchemaMessage("bucketName") }),
 	prefix: z.string().optional(),
 	is_default: z.boolean().optional(),
 });
-
 export const batchS3ConfigSchema = z.object({
 	buckets: z.array(s3BucketConfigSchema).optional(),
 });
-
 // Interface VPC endpoint hosts, one per AWS endpoint service Bifrost dials for Bedrock.
 export const bedrockEndpointsSchema = z.object({
 	runtime: secretVarSchema.optional(),
@@ -215,11 +206,11 @@ export const bedrockEndpointsSchema = z.object({
 	agent_runtime: secretVarSchema.optional(),
 	s3: secretVarSchema.optional(),
 });
-
 // Bedrock key config schema
 export const bedrockKeyConfigSchema = z
 	.object({
 		_auth_type: z.enum(["iam_role", "explicit", "api_key"]).optional(),
+		project_id: secretVarSchema.optional(),
 		access_key: secretVarSchema.optional(),
 		secret_key: secretVarSchema.optional(),
 		session_token: secretVarSchema.optional(),
@@ -229,7 +220,6 @@ export const bedrockKeyConfigSchema = z
 		session_name: secretVarSchema.optional(),
 		batch_role_arn: secretVarSchema.optional(),
 		arn: secretVarSchema.optional(),
-		project_id: secretVarSchema.optional(),
 		batch_s3_config: batchS3ConfigSchema.optional(),
 		endpoints: bedrockEndpointsSchema.optional(),
 	})
@@ -260,11 +250,11 @@ export const bedrockKeyConfigSchema = z
 			path: ["access_key"],
 		},
 	);
-
 // Bedrock Mantle key config schema (SigV4 credentials; no ARN / batch S3 config)
 export const bedrockMantleKeyConfigSchema = z
 	.object({
 		_auth_type: z.enum(["iam_role", "explicit", "api_key"]).optional(),
+		project_id: secretVarSchema.optional(),
 		access_key: secretVarSchema.optional(),
 		secret_key: secretVarSchema.optional(),
 		session_token: secretVarSchema.optional(),
@@ -272,7 +262,6 @@ export const bedrockMantleKeyConfigSchema = z
 		role_arn: secretVarSchema.optional(),
 		external_id: secretVarSchema.optional(),
 		session_name: secretVarSchema.optional(),
-		project_id: secretVarSchema.optional(),
 		endpoints: bedrockEndpointsSchema.optional(),
 	})
 	.refine((data) => isSecretVarSet(data.region), {
@@ -297,7 +286,6 @@ export const bedrockMantleKeyConfigSchema = z
 			path: ["access_key"],
 		},
 	);
-
 // VLLM key config schema
 export const vllmKeyConfigSchema = z
 	.object({
@@ -311,37 +299,56 @@ export const vllmKeyConfigSchema = z
 		error: () => configSchemaMessage("serverUrl"),
 		path: ["url"],
 	});
-
 export const replicateKeyConfigSchema = z.object({
 	use_deployments_endpoint: z.boolean().optional(),
 });
-
 // A secret that resolves elsewhere cannot have its shape judged here, so format checks apply
 // only to literals.
 //
 // Only a non-empty `ref` counts as indirect. The `type` tag alone is not enough: a payload
 // like { value: "not-numeric", ref: "", type: "env" } still carries its value inline, and
 // trusting the tag would let any malformed literal skip every check below.
-const isSecretVarRef = (v: { value?: string; ref?: string; type?: string } | undefined): boolean => !!v?.ref?.trim();
-
+const isSecretVarRef = (
+	v:
+		| {
+				value?: string;
+				ref?: string;
+				type?: string;
+		  }
+		| undefined,
+): boolean => !!v?.ref?.trim();
 // A stored secret comes back from the API masked ("******" or "1234****...****5678"), and the
 // edit form round-trips that mask untouched so the server keeps the original. Judging the
 // mask's shape would fail every edit of a key whose credentials were not all retyped.
 //
 // isRedacted also treats env./vault. prefixes as hidden, but here references live in `ref`.
 // With no ref the server stores an "env.x" value as plain text, so it gets checked like one.
-const isSecretVarMasked = (v: { value?: string; ref?: string; type?: string } | undefined): boolean => {
+const isSecretVarMasked = (
+	v:
+		| {
+				value?: string;
+				ref?: string;
+				type?: string;
+		  }
+		| undefined,
+): boolean => {
 	const value = v?.value ?? "";
 	if (value.startsWith("env.") || value.startsWith("vault.")) return false;
 	return isRedacted(value);
 };
-
-const isLiteralDigits = (v: { value?: string; ref?: string; type?: string } | undefined): boolean => {
+const isLiteralDigits = (
+	v:
+		| {
+				value?: string;
+				ref?: string;
+				type?: string;
+		  }
+		| undefined,
+): boolean => {
 	if (!isSecretVarSet(v)) return true; // presence is checked separately
 	if (isSecretVarRef(v) || isSecretVarMasked(v)) return true;
 	return /^\d+$/.test((v?.value ?? "").trim());
 };
-
 // GitHub issues App keys as PKCS#1 ("RSA PRIVATE KEY"); openssl can convert them to PKCS#8
 // ("PRIVATE KEY"). Nothing else signs an RS256 App JWT, so an EC or passphrase-encrypted key
 // is rejected here rather than at the first inference call.
@@ -351,8 +358,15 @@ const isLiteralDigits = (v: { value?: string; ref?: string; type?: string } | un
 // Literal backslash-n is tolerated because that is how a PEM most often arrives when it has
 // been round-tripped through JSON or an environment variable.
 const PEM_PRIVATE_KEY = /^-----BEGIN (RSA PRIVATE KEY|PRIVATE KEY)-----\s*\n([\s\S]*?)\n\s*-----END \1-----$/;
-
-const isLiteralPEM = (v: { value?: string; ref?: string; type?: string } | undefined): boolean => {
+const isLiteralPEM = (
+	v:
+		| {
+				value?: string;
+				ref?: string;
+				type?: string;
+		  }
+		| undefined,
+): boolean => {
 	if (!isSecretVarSet(v)) return true;
 	if (isSecretVarRef(v) || isSecretVarMasked(v)) return true;
 	const body = (v?.value ?? "").replace(/\\n/g, "\n").trim();
@@ -360,17 +374,29 @@ const isLiteralPEM = (v: { value?: string; ref?: string; type?: string } | undef
 	// The back-reference makes BEGIN and END agree; the body must also carry something.
 	return !!match && match[2].trim().length > 0;
 };
-
 // githubCopilotKeyConfigComplete reports whether all four App credentials are present. It is
 // the check the outer key schema uses to decide whether this block is a real credential.
 export const githubCopilotKeyConfigComplete = (
-	data: { app_id?: unknown; installation_id?: unknown; repository_id?: unknown; private_key?: unknown } | undefined,
+	data:
+		| {
+				app_id?: unknown;
+				installation_id?: unknown;
+				repository_id?: unknown;
+				private_key?: unknown;
+		  }
+		| undefined,
 ): boolean => {
 	if (!data) return false;
-	const d = data as Record<string, { value?: string; ref?: string } | undefined>;
+	const d = data as Record<
+		string,
+		| {
+				value?: string;
+				ref?: string;
+		  }
+		| undefined
+	>;
 	return isSecretVarSet(d.app_id) && isSecretVarSet(d.installation_id) && isSecretVarSet(d.repository_id) && isSecretVarSet(d.private_key);
 };
-
 // GitHub Copilot key config schema. Every field is optional because the whole block is
 // optional: a Copilot API token in `value` is the other valid auth mode. Once the operator
 // starts filling this block in, all four become required together and literals are checked
@@ -390,7 +416,6 @@ export const githubCopilotKeyConfigSchema = z
 			isSecretVarSet(data.repository_id) ||
 			isSecretVarSet(data.private_key);
 		if (!started) return;
-
 		for (const field of ["app_id", "installation_id", "repository_id", "private_key"] as const) {
 			if (!isSecretVarSet(data[field])) {
 				ctx.addIssue({
@@ -422,7 +447,6 @@ export const githubCopilotKeyConfigSchema = z
 			});
 		}
 	});
-
 // Ollama key config schema
 export const ollamaKeyConfigSchema = z
 	.object({
@@ -432,7 +456,6 @@ export const ollamaKeyConfigSchema = z
 		error: () => configSchemaMessage("serverUrl"),
 		path: ["url"],
 	});
-
 // SGL key config schema
 export const sglKeyConfigSchema = z
 	.object({
@@ -442,7 +465,6 @@ export const sglKeyConfigSchema = z
 		error: () => configSchemaMessage("serverUrl"),
 		path: ["url"],
 	});
-
 // Databricks key config schema
 export const databricksKeyConfigSchema = z
 	.object({
@@ -469,7 +491,6 @@ export const databricksKeyConfigSchema = z
 		error: () => configSchemaMessage("clientCredentialsTogether"),
 		path: ["client_secret"],
 	});
-
 // Model family enum schema — must mirror schemas.ModelFamily in Go.
 export const modelFamilySchema = z.enum([
 	"anthropic",
@@ -484,11 +505,11 @@ export const modelFamilySchema = z.enum([
 	"nova",
 	"titan",
 ]);
-
 // AliasConfig schema — mirrors schemas.AliasConfig with the embedded
 // provider sub-configs flattened to top-level optional fields (matches Go's
 // embedded-pointer-struct JSON output).
 const aliasConfigObjectSchema = z.object({
+	project_id: secretVarSchema.optional(),
 	model_id: z
 		.string()
 		.trim()
@@ -501,8 +522,6 @@ const aliasConfigObjectSchema = z.object({
 	api_version: z.string().optional(),
 	anthropic_version: z.string().optional(),
 	endpoint: secretVarSchema.optional(),
-	// Shared per-alias project override (Vertex / Bedrock / Bedrock Mantle)
-	project_id: secretVarSchema.optional(),
 	// Vertex overrides
 	project_number: secretVarSchema.optional(),
 	force_single_region: z.boolean().optional(),
@@ -513,7 +532,6 @@ const aliasConfigObjectSchema = z.object({
 	use_anthropic_endpoints: z.boolean().optional(),
 	use_openai_endpoints: z.boolean().optional(),
 });
-
 // The Go server emits the legacy string wire shape (`{"my-alias": "model-id"}`)
 // for aliases that only carry ModelID — see AliasConfig.MarshalJSON. Accept
 // both shapes here so edit-time validation doesn't reject hydrated state.
@@ -521,7 +539,6 @@ export const aliasConfigSchema = z.preprocess(
 	(value) => (typeof value === "string" ? { model_id: value } : value),
 	aliasConfigObjectSchema,
 );
-
 // Model provider key schema
 export const modelProviderKeySchema = z
 	.object({
@@ -636,7 +653,6 @@ export const modelProviderKeySchema = z
 			path: ["value"],
 		},
 	);
-
 // Network config schema
 export const networkConfigSchema = z
 	.object({
@@ -685,7 +701,6 @@ export const networkConfigSchema = z
 		error: () => configSchemaMessage("backoffFieldsOrder"),
 		path: ["retry_backoff_initial"],
 	});
-
 // Network form schema - more lenient for form inputs
 export const networkFormConfigSchema = z
 	.object({
@@ -750,7 +765,6 @@ export const networkFormConfigSchema = z
 		error: () => configSchemaMessage("backoffOrder"),
 		path: ["retry_backoff_initial"],
 	});
-
 // Concurrency and buffer size schema
 export const concurrencyAndBufferSizeSchema = z.object({
 	concurrency: z
@@ -762,10 +776,8 @@ export const concurrencyAndBufferSizeSchema = z.object({
 		.min(1, { error: () => configSchemaMessage("bufferMin") })
 		.max(1000, { error: () => configSchemaMessage("bufferMax") }),
 });
-
 // Proxy type schema
 export const proxyTypeSchema = z.enum(["none", "http", "socks5", "environment"]);
-
 // Proxy config schema
 export const proxyConfigSchema = z
 	.object({
@@ -806,7 +818,6 @@ export const proxyConfigSchema = z
 			path: ["url"],
 		},
 	);
-
 // Proxy form schema - more lenient for form inputs with conditional validation
 export const proxyFormConfigSchema = z
 	.object({
@@ -856,14 +867,11 @@ export const proxyFormConfigSchema = z
 			path: ["url"],
 		},
 	);
-
 // OpenAI Config tab
 export const openaiConfigFormSchema = z.object({
 	disable_store: z.boolean(),
 });
-
 export type OpenAIConfigFormSchema = z.infer<typeof openaiConfigFormSchema>;
-
 // Prompt cache tab
 export const cacheControlInjectionPointSchema = z
 	.object({
@@ -874,15 +882,12 @@ export const cacheControlInjectionPointSchema = z
 	.refine((p) => p.role !== undefined || p.index !== undefined, {
 		error: () => configSchemaMessage("cacheInjectionPoint"),
 	});
-
 export const promptCacheFormSchema = z.object({
 	auto_inject: z.boolean(),
 	ttl: z.string().optional(),
 	cache_control_injection_points: z.array(cacheControlInjectionPointSchema).optional(),
 });
-
 export type PromptCacheFormSchema = z.infer<typeof promptCacheFormSchema>;
-
 // Allowed requests schema
 export const allowedRequestsSchema = z.object({
 	text_completion: z.boolean(),
@@ -923,7 +928,6 @@ export const allowedRequestsSchema = z.object({
 	realtime: z.boolean(),
 	live: z.boolean().optional(),
 });
-
 // Custom provider config schema
 export const customProviderConfigSchema = z
 	.object({
@@ -946,7 +950,6 @@ export const customProviderConfigSchema = z
 			path: ["is_key_less"],
 		},
 	);
-
 // Form-specific custom provider config schema
 export const formCustomProviderConfigSchema = z
 	.object({
@@ -969,7 +972,6 @@ export const formCustomProviderConfigSchema = z
 			path: ["is_key_less"],
 		},
 	);
-
 // Full model provider config schema
 export const modelProviderConfigSchema = z.object({
 	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
@@ -982,12 +984,10 @@ export const modelProviderConfigSchema = z.object({
 	ignore_provider_cost: z.boolean().optional(),
 	custom_provider_config: customProviderConfigSchema.optional(),
 });
-
 // Model provider schema
 export const modelProviderSchema = modelProviderConfigSchema.extend({
 	name: modelProviderNameSchema,
 });
-
 // Form-specific model provider config schema
 export const formModelProviderConfigSchema = z.object({
 	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
@@ -1000,12 +1000,10 @@ export const formModelProviderConfigSchema = z.object({
 	ignore_provider_cost: z.boolean().optional(),
 	custom_provider_config: formCustomProviderConfigSchema.optional(),
 });
-
 // Flexible model provider schema for form data - allows any string for name
 export const formModelProviderSchema = formModelProviderConfigSchema.extend({
 	name: z.string().min(1, { error: () => configSchemaMessage("providerName") }),
 });
-
 // Add provider request schema
 export const addProviderRequestSchema = z.object({
 	provider: modelProviderNameSchema,
@@ -1021,7 +1019,6 @@ export const addProviderRequestSchema = z.object({
 	openai_config: openaiConfigFormSchema.optional(),
 	prompt_cache: promptCacheFormSchema.optional(),
 });
-
 // Update provider request schema
 export const updateProviderRequestSchema = z.object({
 	keys: z.array(modelProviderKeySchema).min(1, { error: () => configSchemaMessage("oneKey") }),
@@ -1036,7 +1033,6 @@ export const updateProviderRequestSchema = z.object({
 	openai_config: openaiConfigFormSchema.optional(),
 	prompt_cache: promptCacheFormSchema.optional(),
 });
-
 // Cache config schema
 const baseCacheConfigSchema = z.object({
 	ttl: z.number().int().min(1).default(3600),
@@ -1050,14 +1046,12 @@ const baseCacheConfigSchema = z.object({
 	created_at: z.string().optional(),
 	updated_at: z.string().optional(),
 });
-
 const directCacheConfigSchema = baseCacheConfigSchema
 	.extend({
 		dimension: z.literal(1),
 		keys: z.array(modelProviderKeySchema).optional(),
 	})
 	.strict();
-
 const providerBackedCacheConfigSchema = baseCacheConfigSchema
 	.extend({
 		provider: modelProviderNameSchema,
@@ -1069,9 +1063,7 @@ const providerBackedCacheConfigSchema = baseCacheConfigSchema
 			.min(2, { error: () => configSchemaMessage("cacheDimension") }),
 	})
 	.strict();
-
 export const cacheConfigSchema = z.union([directCacheConfigSchema, providerBackedCacheConfigSchema]);
-
 // Core config schema
 export const coreConfigSchema = z.object({
 	drop_excess_requests: z.boolean().default(false),
@@ -1108,7 +1100,6 @@ export const coreConfigSchema = z.object({
 		.optional(),
 	mcp_enable_temp_token_auth: z.boolean().default(false),
 });
-
 // Bifrost config schema
 export const bifrostConfigSchema = z.object({
 	client_config: coreConfigSchema,
@@ -1117,23 +1108,19 @@ export const bifrostConfigSchema = z.object({
 	is_logs_connected: z.boolean(),
 	is_git_available: z.boolean().optional().default(false),
 });
-
 // Network and proxy form schema - combined for the NetworkFormFragment
 export const networkAndProxyFormSchema = z.object({
 	network_config: networkFormConfigSchema.optional(),
 	proxy_config: proxyFormConfigSchema.optional(),
 });
-
 // Proxy-only form schema for the ProxyFormFragment
 export const proxyOnlyFormSchema = z.object({
 	proxy_config: proxyFormConfigSchema.optional(),
 });
-
 // Network-only form schema for the NetworkFormFragment
 export const networkOnlyFormSchema = z.object({
 	network_config: networkFormConfigSchema.optional(),
 });
-
 // Performance form schema for the PerformanceFormFragment (concurrency/buffer only; raw request/response are in Debugging tab)
 export const performanceFormSchema = z.object({
 	concurrency_and_buffer_size: z
@@ -1152,30 +1139,23 @@ export const performanceFormSchema = z.object({
 			path: ["concurrency"],
 		}),
 });
-
 // Debugging tab (raw request/response toggles)
 export const debuggingFormSchema = z.object({
 	send_back_raw_request: z.boolean(),
 	send_back_raw_response: z.boolean(),
 	store_raw_request_response: z.boolean(),
 });
-
 export type DebuggingFormSchema = z.infer<typeof debuggingFormSchema>;
-
 // Pricing tab (provider-reported cost handling)
 export const pricingFormSchema = z.object({
 	ignore_provider_cost: z.boolean(),
 });
-
 export type PricingFormSchema = z.infer<typeof pricingFormSchema>;
-
 // Beta Headers tab
 export const betaHeadersFormSchema = z.object({
 	beta_header_overrides: z.record(z.string(), z.boolean()).optional(),
 });
-
 export type BetaHeadersFormSchema = z.infer<typeof betaHeadersFormSchema>;
-
 // OTEL Configuration Schema
 export const otelConfigSchema = z
 	.object({
@@ -1221,10 +1201,8 @@ export const otelConfigSchema = z
 	.superRefine((data, ctx) => {
 		// A disabled profile is not sent anywhere, so skip all validation for it.
 		if (data.enabled === false) return;
-
 		const protocol = data.protocol;
 		const hostPortRegex = /^(?!https?:\/\/)([a-zA-Z0-9.-]+|\[[0-9a-fA-F:]+\]|\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/;
-
 		// Helper to validate URL format
 		const validateHttpUrl = (url: string, path: string[]) => {
 			try {
@@ -1247,7 +1225,6 @@ export const otelConfigSchema = z
 				return false;
 			}
 		};
-
 		// Helper to validate host:port format
 		const validateHostPort = (value: string, path: string[], example: string) => {
 			const match = value.match(hostPortRegex);
@@ -1270,7 +1247,6 @@ export const otelConfigSchema = z
 			}
 			return true;
 		};
-
 		// collector_url is required and validated only when traces are enabled.
 		if (data.traces_enabled) {
 			if (!isSecretVarSet(data.collector_url)) {
@@ -1280,7 +1256,6 @@ export const otelConfigSchema = z
 					message: schemaMessage("collectorRequired", "Collector address is required"),
 				});
 			}
-
 			// Validate collector_url format — skip format check for env var references
 			const collectorUrl = (data.collector_url?.value || "").trim();
 			if (collectorUrl && (data.collector_url?.type === "plain_text" || !data.collector_url?.type) && protocol === "http") {
@@ -1289,7 +1264,6 @@ export const otelConfigSchema = z
 				validateHostPort(collectorUrl, ["collector_url"], "otel-collector:4317");
 			}
 		}
-
 		// Validate metrics_endpoint when metrics_enabled is true
 		if (data.metrics_enabled) {
 			const metricsEndpoint = (data.metrics_endpoint?.value || "").trim();
@@ -1306,21 +1280,18 @@ export const otelConfigSchema = z
 			}
 		}
 	});
-
 // OTEL form schema for the OtelFormFragment. The plugin itself is gated by `enabled`;
 // it carries one or more export profiles, each independently enable-able.
 export const otelFormSchema = z.object({
 	enabled: z.boolean().default(true),
 	profiles: z.array(otelConfigSchema).min(1, { error: () => configSchemaMessage("oneProfile") }),
 });
-
 // Maxim Configuration Schema
 export const maximConfigSchema = z.object({
 	api_key: z.string().default(""),
 	log_repo_id: z.string().optional(),
 	request_headers: z.array(z.string()).default([]),
 });
-
 // Maxim form schema for the MaximFormFragment
 export const maximFormSchema = z
 	.object({
@@ -1345,7 +1316,6 @@ export const maximFormSchema = z
 			}
 		}
 	});
-
 // Prometheus Push Gateway Configuration Schema
 export const prometheusConfigSchema = z
 	.object({
@@ -1377,7 +1347,6 @@ export const prometheusConfigSchema = z
 				});
 			}
 		}
-
 		// Validate basic auth: if one credential is provided, both must be provided
 		const hasUsername = isSecretVarSet(data.basic_auth_username);
 		const hasPassword = isSecretVarSet(data.basic_auth_password);
@@ -1396,7 +1365,6 @@ export const prometheusConfigSchema = z
 			});
 		}
 	});
-
 // Prometheus form schema for the PrometheusFormFragment.
 export const prometheusFormSchema = z
 	.object({
@@ -1418,7 +1386,6 @@ export const prometheusFormSchema = z
 			}
 		}
 	});
-
 // MCP Client update schema
 export const mcpClientUpdateSchema = z
 	.object({
@@ -1530,24 +1497,6 @@ export const mcpClientUpdateSchema = z
 				resource: z.string().optional(),
 			})
 			.optional(),
-		token_exchange: z
-			.object({
-				audience: z
-					.string()
-					.trim()
-					.min(1, { error: () => configSchemaMessage("audience") }),
-				use_idp_credentials: z.boolean().optional(),
-				client_id: secretVarSchema.optional(),
-				client_secret: secretVarSchema.optional(),
-				authorization_server_url: z
-					.string()
-					.optional()
-					.refine((val) => !val || /^https?:\/\/.+$/.test(val), {
-						error: () => configSchemaMessage("authorizationServerUrl"),
-					}),
-				scopes: z.array(z.string()).optional(),
-			})
-			.optional(),
 		tls_config: z
 			.object({
 				insecure_skip_verify: z.boolean().optional(),
@@ -1567,10 +1516,8 @@ export const mcpClientUpdateSchema = z
 			});
 		}
 	});
-
 // Global proxy type schema
 export const globalProxyTypeSchema = z.enum(["http", "socks5", "tcp"]);
-
 // Global proxy configuration schema
 export const globalProxyConfigSchema = z
 	.object({
@@ -1618,24 +1565,20 @@ export const globalProxyConfigSchema = z
 			path: ["url"],
 		},
 	);
-
 // Global proxy form schema for the ProxyView
 export const globalProxyFormSchema = z.object({
 	proxy_config: globalProxyConfigSchema,
 });
-
 // Global header filter configuration schema
 // Controls which headers with the x-bf-eh-* prefix are forwarded to LLM providers
 export const globalHeaderFilterConfigSchema = z.object({
 	allowlist: z.array(z.string()).optional(), // If non-empty, only these headers are allowed
 	denylist: z.array(z.string()).optional(), // Headers to always block
 });
-
 // Global header filter form schema for the HeaderFilterView
 export const globalHeaderFilterFormSchema = z.object({
 	header_filter_config: globalHeaderFilterConfigSchema,
 });
-
 // Routing rule creation schema
 export const routingRuleSchema = z
 	.object({
@@ -1664,7 +1607,6 @@ export const routingRuleSchema = z
 		error: () => configSchemaMessage("scopeId"),
 		path: ["scope_id"],
 	});
-
 // Budget override form schema (BudgetOverrideDialog)
 /** 可注入界面翻译器；未注入时保留原有英文校验合同。 */
 export const createBudgetOverrideFormSchema = (t?: TFunction) =>
@@ -1683,7 +1625,6 @@ export const createBudgetOverrideFormSchema = (t?: TFunction) =>
 			path: ["cycles"],
 		});
 export const budgetOverrideFormSchema = createBudgetOverrideFormSchema();
-
 // Proof of control for an auth_config change made while dashboard auth is disabled but an
 // admin account exists (SecurityView). PUT /api/config refuses such a change with 403 unless
 // it carries the stored admin password or the operator's setup token, so one of the two must
@@ -1708,7 +1649,6 @@ export const authProofOfControlSchema = z
 			});
 		}
 	});
-
 // Export type inference helpers
 export type SecretVar = z.infer<typeof secretVarSchema>;
 export type AuthProofOfControl = z.infer<typeof authProofOfControlSchema>;
@@ -1741,5 +1681,4 @@ export const setupTokenFormSchema = z.object({
 		.trim()
 		.min(1, { error: () => schemaMessage("setupToken", "Enter the setup token configured for this Bifrost instance") }),
 });
-
 export type SetupTokenFormSchema = z.infer<typeof setupTokenFormSchema>;

@@ -99,30 +99,10 @@ export function providerRejectedTheClient(statusReason?: string): boolean {
 	return !!statusReason && statusReason.toLowerCase().includes("invalid_client");
 }
 
-/**
- * supportsClientReregistration reports whether an auth type has the
- * "Reauthorize with a new client" action: the ones whose OAuth client Bifrost
- * can register for itself, which is also exactly what POST /reregister accepts.
- * token_exchange is OAuth-shaped but not one of them. Its client is configured
- * by hand and its repair is "Re-verify as me".
- *
- * The servers table's menu item and the hint below both read this rather than
- * each spelling the list out, so neither can name an action the other does not
- * offer.
- */
 export function supportsClientReregistration(authType?: MCPAuthType): boolean {
 	return authType === "oauth" || authType === "per_user_oauth";
 }
 
-/**
- * shouldSuggestReplacementClient decides whether a needs_reauth credential
- * gets the extra sentence sending the admin to "Reauthorize with a new client".
- * Both halves matter: the provider has to have disowned the client, and the
- * server has to be of a kind that has that action. A token_exchange credential
- * can carry invalid_client too (the identity provider's error code is kept
- * verbatim in its status reason), and pointing its admin at a menu item that is
- * not there is worse than saying nothing.
- */
 export function shouldSuggestReplacementClient(authType: MCPAuthType | undefined, statusReason?: string): boolean {
 	return supportsClientReregistration(authType) && providerRejectedTheClient(statusReason);
 }

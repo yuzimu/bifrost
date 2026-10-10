@@ -17,7 +17,6 @@ import {
 import { KnownProvider } from "@/lib/types/config";
 import { PeakHoursSchedule, PricingOverrideScopeKind } from "@/lib/types/governance";
 import { formatCharacterPriceFull, formatTokenPriceFull } from "@/lib/utils/numbers";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -26,9 +25,7 @@ import { toast } from "sonner";
 import i18n from "@/lib/i18n";
 import { getPricingFieldLabel, pricingFieldUnit } from "../../custom-pricing/overrides/pricingFields";
 import OverriddenPrice from "./overriddenPrice";
-
 const DEFAULT_PRICING_SOURCE_URL = "https://getbifrost.ai/datasheet";
-
 // Scopes whose overrides can't be resolved from the model catalog alone — they
 // only apply to requests carrying the matching virtual key, user, or provider
 // key, so they are listed here but never change the displayed price.
@@ -41,14 +38,12 @@ const SCOPE_CAVEAT_KINDS = new Set<PricingOverrideScopeKind>([
 	"user_provider",
 	"user_provider_key",
 ]);
-
 interface AttributeSheetProps {
 	model: ModelDetails;
 	/** Overrides referenced by `model.pricing_override_ids`, keyed by ID. */
 	overrides?: Record<string, ModelPricingOverrideSummary>;
 	onClose: () => void;
 }
-
 // Local row type for the extra-attributes editor. We keep these outside any
 // schema because empty rows are valid during editing — we filter them at
 // submit time. The id is a render-stable identifier (not persisted) so React
@@ -58,7 +53,6 @@ interface AttributeRow {
 	key: string;
 	value: string;
 }
-
 let rowIdCounter = 0;
 function newRowId(): string {
 	if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -67,25 +61,21 @@ function newRowId(): string {
 	rowIdCounter += 1;
 	return `row-${rowIdCounter}`;
 }
-
 function rowsFromAttributes(attrs?: Record<string, string>): AttributeRow[] {
 	if (!attrs) return [];
 	return Object.entries(attrs)
 		.filter(([k]) => k !== "description")
 		.map(([key, value]) => ({ id: newRowId(), key, value }));
 }
-
 function isLinkableSource(url: string) {
 	return url.startsWith("http://") || url.startsWith("https://");
 }
-
 function getPricingSourceUrl(configuredUrl: string | undefined, modelName: string) {
 	if (configuredUrl) return configuredUrl;
 	const url = new URL(DEFAULT_PRICING_SOURCE_URL);
 	url.searchParams.set("model", modelName);
 	return url.toString();
 }
-
 // formatPeakHours renders a peak-hours schedule as a compact one-liner, e.g.
 // "Mon-Fri 01:00-04:00, 06:00-10:00 UTC".
 // The patch arrives as parsed API JSON, so the TypeScript type is a claim
@@ -111,7 +101,6 @@ function formatPeakHours(value: PeakHoursSchedule): string {
 	if (rendered.length === 0) return "—";
 	return `${rendered.join("; ")} ${tz}`;
 }
-
 // formatPatchValue renders a patch value in its field's own unit: the way the
 // pricing table does for token-priced fields, as a bare multiplier for the geo
 // and off-peak multipliers, and as a plain dollar amount for everything else
@@ -134,19 +123,14 @@ function formatPatchValue(key: string, value: unknown): string {
 			return `$${value}`;
 	}
 }
-
 export default function AttributeSheet({ model, overrides, onClose }: AttributeSheetProps) {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const [isOpen, setIsOpen] = useState(true);
-	const hasUpdateAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
-
 	const [upsertEntries, { isLoading }] = useUpsertModelCatalogEntriesMutation();
-
 	const initialDescription = model.additional_attributes?.description ?? "";
 	const [description, setDescription] = useState(initialDescription);
-
 	// Overrides arrive as IDs into a response-level index; skip any that went
 	// missing (e.g. deleted in another tab before this list refreshed).
 	const matchingOverrides = useMemo(
@@ -154,33 +138,23 @@ export default function AttributeSheet({ model, overrides, onClose }: AttributeS
 		[model.pricing_override_ids, overrides],
 	);
 	const appliedOverrideName = model.applied_override_id ? overrides?.[model.applied_override_id]?.name : undefined;
-
 	const initialRows = useMemo(() => rowsFromAttributes(model.additional_attributes), [model.additional_attributes]);
 	const stripIds = (rows: AttributeRow[]) => rows.map(({ key, value }) => ({ key, value }));
 	const [initialRowsKey] = useState(() => JSON.stringify(stripIds(initialRows)));
 	const [extraRows, setExtraRows] = useState<AttributeRow[]>(initialRows);
-
 	const rowsDirty = JSON.stringify(stripIds(extraRows)) !== initialRowsKey;
 	const isDirty = description !== initialDescription || rowsDirty;
 	const pricingSourceUrl = getPricingSourceUrl(bifrostConfig?.framework_config?.pricing_url, model.name);
 	const canOpenPricingSource = isLinkableSource(pricingSourceUrl);
-
 	const handleClose = () => {
 		setIsOpen(false);
 		setTimeout(() => onClose(), 150);
 	};
-
 	const handleAddRow = () => setExtraRows((prev) => [...prev, { id: newRowId(), key: "", value: "" }]);
 	const handleRowChange = (id: string, field: "key" | "value", val: string) =>
 		setExtraRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: val } : row)));
 	const handleRemoveRow = (id: string) => setExtraRows((prev) => prev.filter((row) => row.id !== id));
-
 	const handleSubmit = async () => {
-		if (!hasUpdateAccess) {
-			toast.error(t("modelCatalog.noPermission"));
-			return;
-		}
-
 		// Validate that extra rows have non-empty keys when they have any value.
 		// Empty rows are fine — we drop them.
 		const cleaned = extraRows.map((r) => ({ key: r.key.trim(), value: r.value })).filter((r) => r.key !== "" || r.value !== "");
@@ -200,12 +174,10 @@ export default function AttributeSheet({ model, overrides, onClose }: AttributeS
 			toast.error(t("modelCatalog.descriptionReserved"));
 			return;
 		}
-
 		const attributes: Record<string, string> = {};
 		const desc = description.trim();
 		if (desc !== "") attributes.description = desc;
 		for (const r of cleaned) attributes[r.key] = r.value;
-
 		try {
 			await upsertEntries([
 				{
@@ -220,7 +192,6 @@ export default function AttributeSheet({ model, overrides, onClose }: AttributeS
 			toast.error(getErrorMessage(err));
 		}
 	};
-
 	return (
 		<Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
 			<SheetContent
@@ -452,16 +423,10 @@ export default function AttributeSheet({ model, overrides, onClose }: AttributeS
 
 					<div className="bg-card sticky bottom-0 shrink-0 border-t px-4 py-4 md:px-8">
 						<div className="flex items-center justify-end gap-3">
-							{!hasUpdateAccess && <p className="text-destructive text-sm">{t("modelCatalog.noPermission")}</p>}
 							<Button type="button" variant="outline" onClick={handleClose} data-testid="model-catalog-attribute-cancel">
 								{tc("cancel")}
 							</Button>
-							<Button
-								type="button"
-								onClick={handleSubmit}
-								disabled={isLoading || !isDirty || !hasUpdateAccess}
-								data-testid="model-catalog-attribute-submit"
-							>
+							<Button type="button" onClick={handleSubmit} disabled={isLoading || !isDirty} data-testid="model-catalog-attribute-submit">
 								{isLoading ? t("modelCatalog.saving") : t("modelCatalog.saveChanges")}
 							</Button>
 						</div>

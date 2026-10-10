@@ -17,7 +17,6 @@ import {
 import { formatBytes } from "@/lib/utils/strings";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
 // Format nanoseconds to human-readable string
 function formatNs(ns: number): string {
 	if (ns < 1000) return `${ns}ns`;
@@ -25,7 +24,6 @@ function formatNs(ns: number): string {
 	if (ns < 1000000000) return `${(ns / 1000000).toFixed(1)}ms`;
 	return `${(ns / 1000000000).toFixed(2)}s`;
 }
-
 // Format timestamp to HH:MM:SS
 function formatTime(timestamp: string): string {
 	const date = new Date(timestamp);
@@ -36,7 +34,6 @@ function formatTime(timestamp: string): string {
 		second: "2-digit",
 	});
 }
-
 // Truncate function name for display
 function truncateFunction(fn: string): string {
 	const parts = fn.split("/");
@@ -46,7 +43,6 @@ function truncateFunction(fn: string): string {
 	}
 	return last;
 }
-
 // Get category badge color
 function getCategoryColor(category: string): string {
 	switch (category) {
@@ -58,7 +54,6 @@ function getCategoryColor(category: string): string {
 			return "text-zinc-400 bg-zinc-400/10";
 	}
 }
-
 // Extract file path from stack (first line containing .go:)
 function getStackFilePath(stack: string[]): string {
 	for (const line of stack) {
@@ -70,17 +65,14 @@ function getStackFilePath(stack: string[]): string {
 	}
 	return "";
 }
-
 // Generate a stable ID for a goroutine group
 function getGoroutineId(g: GoroutineGroup): string {
 	return `${g.top_func}::${g.state}::${g.count}::${g.wait_minutes ?? 0}`;
 }
-
 // localStorage key for skipped goroutine file paths
 const SKIPPED_GOROUTINE_FILES_KEY = "devProfiler.skippedGoroutineFiles";
 const PROFILER_VISIBLE_KEY = "devProfiler.isVisible";
 const PROFILER_EXPANDED_KEY = "devProfiler.isExpanded";
-
 // Load skipped goroutine file paths from localStorage
 function loadSkippedGoroutineFiles(): Set<string> {
 	if (typeof window === "undefined") return new Set();
@@ -91,7 +83,6 @@ function loadSkippedGoroutineFiles(): Set<string> {
 		return new Set();
 	}
 }
-
 // Save skipped goroutine file paths to localStorage
 function saveSkippedGoroutineFiles(skipped: Set<string>): void {
 	if (typeof window === "undefined") return;
@@ -101,7 +92,6 @@ function saveSkippedGoroutineFiles(skipped: Set<string>): void {
 		// Ignore storage errors
 	}
 }
-
 function loadBooleanFromStorage(key: string, defaultValue: boolean): boolean {
 	if (typeof window === "undefined") return defaultValue;
 	try {
@@ -114,7 +104,6 @@ function loadBooleanFromStorage(key: string, defaultValue: boolean): boolean {
 		return defaultValue;
 	}
 }
-
 function saveBooleanToStorage(key: string, value: boolean): void {
 	if (typeof window === "undefined") return;
 	try {
@@ -123,7 +112,6 @@ function saveBooleanToStorage(key: string, value: boolean): void {
 		// Ignore storage errors
 	}
 }
-
 // Goroutine Health Section subcomponent
 interface GoroutineHealthProps {
 	goroutineData:
@@ -150,7 +138,6 @@ interface GoroutineHealthProps {
 	onSkipGoroutine: (topFunc: string) => void;
 	onClearSkipped: () => void;
 }
-
 function GoroutineHealthSection({
 	goroutineData,
 	goroutineHealth,
@@ -163,9 +150,7 @@ function GoroutineHealthSection({
 	onClearSkipped,
 }: GoroutineHealthProps): React.ReactNode {
 	if (!goroutineData) return null;
-
 	const { summary, total_goroutines } = goroutineData;
-
 	return (
 		<div className="p-3">
 			{/* Header with health status */}
@@ -328,40 +313,32 @@ function GoroutineHealthSection({
 		</div>
 	);
 }
-
 export function DevProfiler(): React.ReactNode {
 	const [isVisible, setIsVisible] = useState<boolean>(() => loadBooleanFromStorage(PROFILER_VISIBLE_KEY, true));
 	const [isExpanded, setIsExpanded] = useState<boolean>(() => loadBooleanFromStorage(PROFILER_EXPANDED_KEY, true));
 	const [isDismissed, setIsDismissed] = useState(false);
 	const [expandedGoroutines, setExpandedGoroutines] = useState<Set<string>>(new Set());
 	const [skippedGoroutines, setSkippedGoroutines] = useState<Set<string>>(() => loadSkippedGoroutineFiles());
-
 	// Sync skipped goroutines to localStorage
 	useEffect(() => {
 		saveSkippedGoroutineFiles(skippedGoroutines);
 	}, [skippedGoroutines]);
-
 	useEffect(() => {
 		saveBooleanToStorage(PROFILER_VISIBLE_KEY, isVisible);
 	}, [isVisible]);
-
 	useEffect(() => {
 		saveBooleanToStorage(PROFILER_EXPANDED_KEY, isExpanded);
 	}, [isExpanded]);
-
 	// Only fetch in development mode and when not dismissed
 	const shouldFetch = isDevelopmentMode() && !isDismissed;
-
 	const { data, isLoading, error } = useGetDevPprofQuery(undefined, {
 		pollingInterval: shouldFetch ? 10000 : 0, // Poll every 10 seconds
 		skip: !shouldFetch,
 	});
-
 	const { data: goroutineData } = useGetDevGoroutinesQuery(undefined, {
 		pollingInterval: shouldFetch ? 10000 : 0, // Poll every 10 seconds
 		skip: !shouldFetch,
 	});
-
 	// Memoize chart data transformation
 	const memoryChartData = useMemo(() => {
 		if (!data?.history) return [];
@@ -371,7 +348,6 @@ export function DevProfiler(): React.ReactNode {
 			heapInuse: point.heap_inuse / (1024 * 1024),
 		}));
 	}, [data?.history]);
-
 	const cpuChartData = useMemo(() => {
 		if (!data?.history) return [];
 		return data.history.map((point) => ({
@@ -380,7 +356,6 @@ export function DevProfiler(): React.ReactNode {
 			goroutines: point.goroutines,
 		}));
 	}, [data?.history]);
-
 	// Detect goroutine count trend (growing = potential leak)
 	const goroutineTrend = useMemo(() => {
 		if (!data?.history || data.history.length < 5 || !data?.runtime) return null;
@@ -391,7 +366,6 @@ export function DevProfiler(): React.ReactNode {
 		const growthPercent = avg > 0 ? ((current - avg) / avg) * 100 : 0;
 		return { isGrowing, growthPercent, avg };
 	}, [data?.history, data?.runtime?.num_goroutine]);
-
 	// Filter problem goroutines (stuck or long-waiting, excluding expected background workers and skipped)
 	const problemGoroutines = useMemo(() => {
 		if (!goroutineData?.groups) return [];
@@ -405,7 +379,6 @@ export function DevProfiler(): React.ReactNode {
 			})
 			.slice(0, 5);
 	}, [goroutineData?.groups, skippedGoroutines]);
-
 	// Get goroutine health status
 	const goroutineHealth = useMemo(() => {
 		if (!goroutineData?.summary) return "healthy";
@@ -414,12 +387,10 @@ export function DevProfiler(): React.ReactNode {
 		if (long_waiting > 0) return "warning";
 		return "healthy";
 	}, [goroutineData?.summary]);
-
 	const handleDismiss = useCallback(() => {
 		setIsDismissed(true);
 		saveBooleanToStorage(PROFILER_VISIBLE_KEY, false);
 	}, []);
-
 	const toggleGoroutineExpand = useCallback((id: string) => {
 		setExpandedGoroutines((prev) => {
 			const next = new Set(prev);
@@ -431,7 +402,6 @@ export function DevProfiler(): React.ReactNode {
 			return next;
 		});
 	}, []);
-
 	const handleSkipGoroutine = useCallback((filePath: string) => {
 		setSkippedGoroutines((prev) => {
 			const next = new Set(prev);
@@ -439,24 +409,19 @@ export function DevProfiler(): React.ReactNode {
 			return next;
 		});
 	}, []);
-
 	const handleClearSkipped = useCallback(() => {
 		setSkippedGoroutines(new Set());
 	}, []);
-
 	const handleToggleExpand = useCallback(() => {
 		setIsExpanded((prev) => !prev);
 	}, []);
-
 	const handleToggleVisible = useCallback(() => {
 		setIsVisible((prev) => !prev);
 	}, []);
-
 	// Don't render in production mode or if dismissed
 	if (!isDevelopmentMode() || isDismissed) {
 		return null;
 	}
-
 	// Minimized state - just show a small button
 	if (!isVisible) {
 		return (
@@ -469,7 +434,6 @@ export function DevProfiler(): React.ReactNode {
 			</button>
 		);
 	}
-
 	return (
 		<div className="fixed right-4 bottom-4 z-50 w-[420px] overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 font-mono text-xs text-zinc-100 shadow-2xl">
 			{/* Header */}
@@ -547,24 +511,17 @@ export function DevProfiler(): React.ReactNode {
 										</linearGradient>
 									</defs>
 									<CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-									<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 9 }} tickLine={false} axisLine={false} />
+									<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 9 }} tickLine axisLine />
 									<YAxis
 										yAxisId="left"
 										tick={{ fill: "#71717a", fontSize: 9 }}
-										tickLine={false}
-										axisLine={false}
+										tickLine
+										axisLine
 										tickFormatter={(v) => `${Number(v).toFixed(0)}%`}
 										width={35}
 										domain={[0, "auto"]}
 									/>
-									<YAxis
-										yAxisId="right"
-										orientation="right"
-										tick={{ fill: "#71717a", fontSize: 9 }}
-										tickLine={false}
-										axisLine={false}
-										width={30}
-									/>
+									<YAxis yAxisId="right" orientation="right" tick={{ fill: "#71717a", fontSize: 9 }} tickLine axisLine width={30} />
 									<Tooltip
 										contentStyle={{
 											backgroundColor: "#18181b",
@@ -627,11 +584,11 @@ export function DevProfiler(): React.ReactNode {
 										</linearGradient>
 									</defs>
 									<CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-									<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 9 }} tickLine={false} axisLine={false} />
+									<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 9 }} tickLine axisLine />
 									<YAxis
 										tick={{ fill: "#71717a", fontSize: 9 }}
-										tickLine={false}
-										axisLine={false}
+										tickLine
+										axisLine
 										tickFormatter={(v) => `${Number(v).toFixed(0)}MB`}
 										width={45}
 									/>

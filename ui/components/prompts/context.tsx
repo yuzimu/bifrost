@@ -21,13 +21,11 @@ import {
 } from "@/lib/store/apis/promptsApi";
 import { useGetModelParametersQuery } from "@/lib/store/apis/providersApi";
 import { Folder, ModelParams, Prompt, PromptSession, PromptVersion } from "@/lib/types/prompts";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { executePrompt, executeToolCall, MCPAuthRequiredError } from "./utils/executor";
-
 interface PromptContextValue {
 	// Data
 	folders: Folder[];
@@ -36,7 +34,6 @@ interface PromptContextValue {
 	sessions: PromptSession[];
 	selectedSession?: PromptSession;
 	selectedVersion?: PromptVersion;
-
 	// Loading states
 	foldersLoading: boolean;
 	promptsLoading: boolean;
@@ -44,13 +41,11 @@ interface PromptContextValue {
 	promptsError: unknown;
 	isLoadingPlayground: boolean;
 	isStreaming: boolean;
-
 	// URL state
 	selectedPromptId: string | null;
 	selectedSessionId: number | null;
 	selectedVersionId: number | null;
 	setUrlState: (state: { promptId?: string | null; sessionId?: number | null; versionId?: number | null }) => void;
-
 	// Playground state
 	messages: Message[];
 	setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -62,42 +57,76 @@ interface PromptContextValue {
 	setModelParams: React.Dispatch<React.SetStateAction<ModelParams>>;
 	apiKeyId: string;
 	setApiKeyId: React.Dispatch<React.SetStateAction<string>>;
-
 	// Jinja2 variables
 	variables: VariableMap;
 	setVariables: React.Dispatch<React.SetStateAction<VariableMap>>;
-
 	// Custom request headers (used to satisfy server-configured required headers)
 	customHeaders: Record<string, string>;
 	setCustomHeaders: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 	requiredHeaders: string[];
-
 	// Sheet states
-	folderSheet: { open: boolean; folder?: Folder };
-	setFolderSheet: React.Dispatch<React.SetStateAction<{ open: boolean; folder?: Folder }>>;
-	promptSheet: { open: boolean; prompt?: Prompt; folderId?: string };
-	setPromptSheet: React.Dispatch<React.SetStateAction<{ open: boolean; prompt?: Prompt; folderId?: string }>>;
-	commitSheet: { open: boolean; session?: PromptSession };
-	setCommitSheet: React.Dispatch<React.SetStateAction<{ open: boolean; session?: PromptSession }>>;
-
+	folderSheet: {
+		open: boolean;
+		folder?: Folder;
+	};
+	setFolderSheet: React.Dispatch<
+		React.SetStateAction<{
+			open: boolean;
+			folder?: Folder;
+		}>
+	>;
+	promptSheet: {
+		open: boolean;
+		prompt?: Prompt;
+		folderId?: string;
+	};
+	setPromptSheet: React.Dispatch<
+		React.SetStateAction<{
+			open: boolean;
+			prompt?: Prompt;
+			folderId?: string;
+		}>
+	>;
+	commitSheet: {
+		open: boolean;
+		session?: PromptSession;
+	};
+	setCommitSheet: React.Dispatch<
+		React.SetStateAction<{
+			open: boolean;
+			session?: PromptSession;
+		}>
+	>;
 	// Delete dialog states
-	deleteFolderDialog: { open: boolean; folder?: Folder };
-	setDeleteFolderDialog: React.Dispatch<React.SetStateAction<{ open: boolean; folder?: Folder }>>;
-	deletePromptDialog: { open: boolean; prompt?: Prompt };
-	setDeletePromptDialog: React.Dispatch<React.SetStateAction<{ open: boolean; prompt?: Prompt }>>;
-
+	deleteFolderDialog: {
+		open: boolean;
+		folder?: Folder;
+	};
+	setDeleteFolderDialog: React.Dispatch<
+		React.SetStateAction<{
+			open: boolean;
+			folder?: Folder;
+		}>
+	>;
+	deletePromptDialog: {
+		open: boolean;
+		prompt?: Prompt;
+	};
+	setDeletePromptDialog: React.Dispatch<
+		React.SetStateAction<{
+			open: boolean;
+			prompt?: Prompt;
+		}>
+	>;
 	// Mutation loading states
 	isDeletingFolder: boolean;
 	isDeletingPrompt: boolean;
-
 	// Model capabilities
 	supportsVision: boolean;
-
 	// Diff detection
 	hasChanges: boolean;
 	hasVersionChanges: boolean;
 	hasSessionChanges: boolean;
-
 	// Handlers
 	handleSelectPrompt: (id: string) => void;
 	handleMovePrompt: (promptId: string, folderId: string | null) => Promise<void>;
@@ -107,18 +136,26 @@ interface PromptContextValue {
 	handleStopStreaming: () => void;
 	handleSubmitToolResult: (afterIndex: number, toolCallId: string, content: string) => Promise<void>;
 	handleExecuteToolCall: (afterIndex: number, toolCall: ToolCall) => Promise<void>;
-	handleSubmitAllToolResults: (afterIndex: number, results: { toolCallId: string; content: string }[]) => Promise<void>;
-	handleExecuteAllToolCalls: (afterIndex: number, toolCalls: ToolCall[]) => Promise<{ toolCallId: string; content: string }[] | undefined>;
+	handleSubmitAllToolResults: (
+		afterIndex: number,
+		results: {
+			toolCallId: string;
+			content: string;
+		}[],
+	) => Promise<void>;
+	handleExecuteAllToolCalls: (
+		afterIndex: number,
+		toolCalls: ToolCall[],
+	) => Promise<
+		| {
+				toolCallId: string;
+				content: string;
+		  }[]
+		| undefined
+	>;
 	fetchToolResult: (toolCall: ToolCall) => Promise<string>;
-
-	// RBAC permissions
-	canCreate: boolean;
-	canUpdate: boolean;
-	canDelete: boolean;
 }
-
 const PromptContext = createContext<PromptContextValue | null>(null);
-
 export function usePromptContext() {
 	const context = useContext(PromptContext);
 	if (!context) {
@@ -126,23 +163,15 @@ export function usePromptContext() {
 	}
 	return context;
 }
-
 export function PromptProvider({ children }: { children: ReactNode }) {
 	const { t } = useTranslation("config");
-	// RBAC permissions
-	const canCreate = useRbac(RbacResource.PromptRepository, RbacOperation.Create);
-	const canUpdate = useRbac(RbacResource.PromptRepository, RbacOperation.Update);
-	const canDelete = useRbac(RbacResource.PromptRepository, RbacOperation.Delete);
-
 	// API queries
 	const { data: foldersData, isLoading: foldersLoading, error: foldersError } = useGetFoldersQuery();
 	const { data: promptsData, isLoading: promptsLoading, error: promptsError } = useGetPromptsQuery();
-
 	// Mutations
 	const [deleteFolder, { isLoading: isDeletingFolder }] = useDeleteFolderMutation();
 	const [deletePrompt, { isLoading: isDeletingPrompt }] = useDeletePromptMutation();
 	const [updatePrompt] = useUpdatePromptMutation();
-
 	// UI state — persisted in URL query params
 	const [{ promptId: selectedPromptId, sessionId: selectedSessionId, versionId: selectedVersionId }, setUrlState] = useQueryStates(
 		{
@@ -152,16 +181,29 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		{ history: "replace" },
 	);
-
 	// Sheet states
-	const [folderSheet, setFolderSheet] = useState<{ open: boolean; folder?: Folder }>({ open: false });
-	const [promptSheet, setPromptSheet] = useState<{ open: boolean; prompt?: Prompt; folderId?: string }>({ open: false });
-	const [commitSheet, setCommitSheet] = useState<{ open: boolean; session?: PromptSession }>({ open: false });
-
+	const [folderSheet, setFolderSheet] = useState<{
+		open: boolean;
+		folder?: Folder;
+	}>({ open: false });
+	const [promptSheet, setPromptSheet] = useState<{
+		open: boolean;
+		prompt?: Prompt;
+		folderId?: string;
+	}>({ open: false });
+	const [commitSheet, setCommitSheet] = useState<{
+		open: boolean;
+		session?: PromptSession;
+	}>({ open: false });
 	// Delete dialog states
-	const [deleteFolderDialog, setDeleteFolderDialog] = useState<{ open: boolean; folder?: Folder }>({ open: false });
-	const [deletePromptDialog, setDeletePromptDialog] = useState<{ open: boolean; prompt?: Prompt }>({ open: false });
-
+	const [deleteFolderDialog, setDeleteFolderDialog] = useState<{
+		open: boolean;
+		folder?: Folder;
+	}>({ open: false });
+	const [deletePromptDialog, setDeletePromptDialog] = useState<{
+		open: boolean;
+		prompt?: Prompt;
+	}>({ open: false });
 	// Playground state
 	const [messages, setMessagesRaw] = useState<Message[]>([Message.system("")]);
 	const setMessages = useCallback<React.Dispatch<React.SetStateAction<Message[]>>>((action) => {
@@ -179,7 +221,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 	const abortRef = useRef<AbortController | null>(null);
 	const [variables, setVariables] = useState<VariableMap>({});
 	const [customHeaders, setCustomHeaders] = useState<Record<string, string>>({});
-
 	// Sync customHeaders keys with the server-configured required_headers list.
 	// Adds new keys (empty), removes keys no longer required, preserves user-entered values.
 	const { data: coreConfig } = useGetCoreConfigQuery({});
@@ -205,19 +246,15 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			return changed ? next : prev;
 		});
 	}, [requiredHeaders]);
-
 	// Fetch model datasheet for capabilities
 	const { data: modelParametersData } = useGetModelParametersQuery(model, { skip: !model });
 	const supportsVision = modelParametersData?.datasheet.supports_vision ?? false;
-
 	// Derived data
 	const folders = useMemo(() => foldersData?.folders ?? [], [foldersData]);
 	const prompts = useMemo(() => promptsData?.prompts ?? [], [promptsData]);
 	const selectedPrompt = useMemo(() => prompts.find((p) => p.id === selectedPromptId), [prompts, selectedPromptId]);
-
 	// Fetch versions and sessions for selected prompt
 	const { data: sessionsData, isLoading: isSessionsLoading } = useGetSessionsQuery(selectedPromptId ?? "", { skip: !selectedPromptId });
-
 	// Filter sessions to current prompt — RTK Query may briefly return stale cached data from the previous prompt
 	const sessions = useMemo(() => {
 		const all = sessionsData?.sessions ?? [];
@@ -225,7 +262,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		return all.filter((s) => s.prompt_id === selectedPromptId);
 	}, [sessionsData, selectedPromptId]);
 	const selectedSession = useMemo(() => sessions.find((s) => s.id === selectedSessionId), [sessions, selectedSessionId]);
-
 	// Fetch full version data (with messages) when a version is selected
 	const {
 		currentData: selectedVersionData,
@@ -235,7 +271,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		skip: !selectedVersionId,
 	});
 	const selectedVersion = selectedVersionData?.version;
-
 	// Show loader only on initial fetch, not on cache refetches (avoids flicker on save)
 	const isLoadingPlayground = !!(
 		selectedPromptId &&
@@ -244,13 +279,11 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			// Sessions loaded but auto-select hasn't happened yet
 			(sessions.length > 0 && !selectedSessionId && !selectedVersionId))
 	);
-
 	// Load session or version data when selection changes
 	useEffect(() => {
 		// Don't reset state while waiting for data that hasn't arrived yet
 		if (selectedSessionId && !selectedSession) return;
 		if (selectedVersionId && !selectedVersion) return;
-
 		const loadFromParams = (params: ModelParams, prov: string, mod: string) => {
 			const { api_key_id, ...rest } = params || ({} as ModelParams);
 			setModelParams({ stream: true, ...rest });
@@ -258,13 +291,11 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			setProvider(prov || "");
 			setModel(mod || "");
 		};
-
 		const loadMessages = (msgs: Message[]) => {
 			setMessages(msgs);
 			const varNames = extractVariablesFromMessages(msgs);
 			setVariables((prev) => mergeVariables(prev, varNames));
 		};
-
 		if (selectedSession) {
 			const raw = (selectedSession.messages ?? []).map((m) => m.message);
 			const loaded = Message.fromLegacyAll(raw);
@@ -319,7 +350,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		isSessionsLoading,
 		sessions.length,
 	]);
-
 	// Auto-select the most recent session when sessions load and none is selected
 	// Sessions take priority over versions for initial loading
 	useEffect(() => {
@@ -327,23 +357,28 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			setUrlState({ sessionId: sessions[0].id });
 		}
 	}, [selectedPromptId, sessions, selectedSessionId, selectedVersionId, setUrlState]);
-
 	// Diff detection helper — compares current playground state against a reference config
 	const diffAgainst = useCallback(
-		(ref: { messages?: any[]; model_params?: ModelParams; provider?: string; model?: string } | undefined) => {
+		(
+			ref:
+				| {
+						messages?: any[];
+						model_params?: ModelParams;
+						provider?: string;
+						model?: string;
+				  }
+				| undefined,
+		) => {
 			if (!ref) return true; // No reference — treat as changed
 			const refMessages = ref.messages ?? [];
 			const refProvider = ref.provider;
 			const refModel = ref.model;
 			const refParams = ref.model_params;
-
 			if (provider !== refProvider) return true;
 			if (model !== refModel) return true;
-
 			const { api_key_id: refApiKeyId, ...refParamsRest } = refParams || ({} as ModelParams);
 			const currentApiKeyId = apiKeyId !== "__auto__" ? apiKeyId : undefined;
 			if (currentApiKeyId !== (refApiKeyId || undefined)) return true;
-
 			// Normalize: treat missing stream as stream: true so legacy params without stream don't appear changed
 			const normalizeParams = (p: ModelParams): ModelParams => {
 				const { stream = true, ...rest } = p;
@@ -356,15 +391,12 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 				JSON.stringify(normalizedRef, Object.keys(normalizedRef).sort())
 			)
 				return true;
-
 			const currentSerialized = Message.serializeAll(messages);
 			if (JSON.stringify(currentSerialized) !== JSON.stringify(refMessages)) return true;
-
 			return false;
 		},
 		[provider, model, modelParams, apiKeyId, messages],
 	);
-
 	// Diff detection — compare current playground state against the loaded session/version
 	const hasChanges = useMemo(() => {
 		// Suppress diff while version data is in flight to avoid flicker
@@ -387,11 +419,9 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		}
 		return true;
 	}, [selectedSession, selectedVersion, diffAgainst, selectedVersionId, isVersionFetching]);
-
 	// Diff against the active version — drives "unpublished changes" badge & commit button
 	// Uses the explicitly selected version if available, otherwise falls back to latest_version
 	const activeVersionRef = selectedVersion ?? selectedPrompt?.latest_version;
-
 	const hasVersionChanges = useMemo(() => {
 		// Suppress diff while version data is in flight or mismatched to avoid flash
 		if (selectedVersionId && (isVersionFetching || selectedVersion?.id !== selectedVersionId)) return false;
@@ -403,7 +433,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			model: activeVersionRef.model,
 		});
 	}, [activeVersionRef, diffAgainst, selectedVersionId, isVersionFetching, selectedVersion?.id]);
-
 	// Diff against the selected session — drives red asterisk indicator
 	const hasSessionChanges = useMemo(() => {
 		if (!selectedSession) return false;
@@ -414,7 +443,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			model: selectedSession.model,
 		});
 	}, [selectedSession, diffAgainst]);
-
 	// Handlers
 	const handleSelectPrompt = useCallback(
 		(id: string) => {
@@ -427,7 +455,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		[setUrlState],
 	);
-
 	const handleMovePrompt = useCallback(
 		async (promptId: string, folderId: string | null) => {
 			try {
@@ -439,10 +466,8 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		[updatePrompt, t],
 	);
-
 	const handleDeleteFolder = useCallback(async () => {
 		if (!deleteFolderDialog.folder) return;
-
 		try {
 			await deleteFolder(deleteFolderDialog.folder.id).unwrap();
 			toast.success(t("promptRepo.toastFolderDeleted"));
@@ -454,10 +479,8 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			toast.error(t("promptRepo.toastDeleteFolderFailed"), { description: getErrorMessage(err) });
 		}
 	}, [deleteFolderDialog.folder, deleteFolder, selectedPrompt, setUrlState, t]);
-
 	const handleDeletePrompt = useCallback(async () => {
 		if (!deletePromptDialog.prompt) return;
-
 		try {
 			await deletePrompt(deletePromptDialog.prompt.id).unwrap();
 			toast.success(t("promptRepo.toastPromptDeleted"));
@@ -469,7 +492,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			toast.error(t("promptRepo.toastDeletePromptFailed"), { description: getErrorMessage(err) });
 		}
 	}, [deletePromptDialog.prompt, deletePrompt, selectedPromptId, setUrlState, t]);
-
 	const handleSendMessage = useCallback(
 		async (pendingMessage?: Message) => {
 			const runToken = Symbol();
@@ -477,7 +499,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			const abortController = new AbortController();
 			abortRef.current = abortController;
 			const isActive = () => activeRunRef.current === runToken;
-
 			setIsStreaming(true);
 			await executePrompt(
 				messages,
@@ -536,7 +557,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		[messages, provider, model, modelParams, apiKeyId, variables, customHeaders],
 	);
-
 	const handleSubmitToolResult = useCallback(
 		async (afterIndex: number, toolCallId: string, content: string) => {
 			const runToken = Symbol();
@@ -544,7 +564,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			const abortController = new AbortController();
 			abortRef.current = abortController;
 			const isActive = () => activeRunRef.current === runToken;
-
 			const toolResultMsg = new Message(uuidv4(), 0, MessageType.ToolResult, {
 				role: MessageRole.TOOL,
 				content,
@@ -558,7 +577,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 			}
 			newMessages.splice(insertAt, 0, toolResultMsg);
 			setMessages(newMessages);
-
 			// Execute with the updated messages
 			setIsStreaming(true);
 			await executePrompt(
@@ -618,7 +636,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		[messages, provider, model, modelParams, apiKeyId, variables, customHeaders],
 	);
-
 	const handleExecuteToolCall = useCallback(
 		async (afterIndex: number, toolCall: ToolCall) => {
 			try {
@@ -633,20 +650,23 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		[apiKeyId, customHeaders, handleSubmitToolResult, t],
 	);
-
 	const handleSubmitAllToolResults = useCallback(
-		async (afterIndex: number, results: { toolCallId: string; content: string }[]) => {
+		async (
+			afterIndex: number,
+			results: {
+				toolCallId: string;
+				content: string;
+			}[],
+		) => {
 			if (results.length === 0) return;
 			if (results.length === 1) {
 				return handleSubmitToolResult(afterIndex, results[0].toolCallId, results[0].content);
 			}
-
 			const runToken = Symbol();
 			activeRunRef.current = runToken;
 			const abortController = new AbortController();
 			abortRef.current = abortController;
 			const isActive = () => activeRunRef.current === runToken;
-
 			const newMessages = [...messages];
 			let insertAt = afterIndex + 1;
 			while (insertAt < newMessages.length && newMessages[insertAt].type === MessageType.ToolResult) {
@@ -662,7 +682,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 				insertAt++;
 			}
 			setMessages(newMessages);
-
 			setIsStreaming(true);
 			await executePrompt(
 				newMessages,
@@ -721,38 +740,54 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		},
 		[messages, provider, model, modelParams, apiKeyId, variables, customHeaders, handleSubmitToolResult],
 	);
-
 	const handleExecuteAllToolCalls = useCallback(
-		async (afterIndex: number, toolCalls: ToolCall[]): Promise<{ toolCallId: string; content: string }[] | undefined> => {
+		async (
+			afterIndex: number,
+			toolCalls: ToolCall[],
+		): Promise<
+			| {
+					toolCallId: string;
+					content: string;
+			  }[]
+			| undefined
+		> => {
 			if (toolCalls.length === 0) return undefined;
 			if (toolCalls.length === 1) {
 				await handleExecuteToolCall(afterIndex, toolCalls[0]);
 				return undefined;
 			}
-
 			const settled = await Promise.allSettled(
 				toolCalls.map(async (tc) => {
 					const content = await executeToolCall(tc, { apiKeyId, customHeaders });
 					return { toolCallId: tc.id, content };
 				}),
 			);
-
 			const successes = settled
-				.filter((r): r is PromiseFulfilledResult<{ toolCallId: string; content: string }> => r.status === "fulfilled")
+				.filter(
+					(
+						r,
+					): r is PromiseFulfilledResult<{
+						toolCallId: string;
+						content: string;
+					}> => r.status === "fulfilled",
+				)
 				.map((r) => r.value);
-
 			const failures = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => getErrorMessage(r.reason));
-
 			if (failures.length > 0) {
 				const detail =
 					failures.length <= 3
 						? failures.join("; ")
 						: `${failures.slice(0, 2).join("; ")} ${t("promptRepo.andMore", { count: failures.length - 2 })}`;
-				toast.error(t("promptRepo.toolExecutionsFailed", { failed: failures.length, total: toolCalls.length }), {
-					description: failures.length === toolCalls.length ? detail : t("promptRepo.successfulKept", { detail }),
-				});
+				toast.error(
+					t("promptRepo.toolExecutionsFailed", {
+						failed: failures.length,
+						total: toolCalls.length,
+					}),
+					{
+						description: failures.length === toolCalls.length ? detail : t("promptRepo.successfulKept", { detail }),
+					},
+				);
 			}
-
 			if (successes.length === toolCalls.length) {
 				try {
 					await handleSubmitAllToolResults(afterIndex, successes);
@@ -763,26 +798,22 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 				}
 				return undefined;
 			}
-
 			return successes.length > 0 ? successes : undefined;
 		},
 		[apiKeyId, customHeaders, handleExecuteToolCall, handleSubmitAllToolResults, t],
 	);
-
 	const handleStopStreaming = useCallback(() => {
 		abortRef.current?.abort();
 		abortRef.current = null;
 		activeRunRef.current = null;
 		setIsStreaming(false);
 	}, []);
-
 	const fetchToolResult = useCallback(
 		async (toolCall: ToolCall): Promise<string> => {
 			return executeToolCall(toolCall, { apiKeyId, customHeaders });
 		},
 		[apiKeyId, customHeaders],
 	);
-
 	const value: PromptContextValue = {
 		folders,
 		prompts,
@@ -842,10 +873,6 @@ export function PromptProvider({ children }: { children: ReactNode }) {
 		handleSubmitAllToolResults,
 		handleExecuteAllToolCalls,
 		fetchToolResult,
-		canCreate,
-		canUpdate,
-		canDelete,
 	};
-
 	return <PromptContext.Provider value={value}>{children}</PromptContext.Provider>;
 }

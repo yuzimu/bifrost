@@ -1,13 +1,9 @@
-import { CustomDropdown } from "./dropdown";
-import { SearchableDropdown } from "./searchableDropdown";
-import type { DropdownGroupOption, DropdownItemOption, DropdownOption, DropdownOptionBase, FlattenedDropdownOption } from "./types";
-
+export { CustomDropdown } from "./dropdown";
+export { SearchableDropdown } from "./searchableDropdown";
 export {
-	CustomDropdown,
-	SearchableDropdown,
 	type DropdownGroupOption,
 	type DropdownItemOption,
 	type DropdownOption,
 	type DropdownOptionBase,
 	type FlattenedDropdownOption,
-};
+} from "./types";

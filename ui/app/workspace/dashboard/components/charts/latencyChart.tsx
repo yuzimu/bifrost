@@ -7,21 +7,17 @@ import { barShape } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import type { ChartType } from "./chartTypeToggle";
 import { NoChartData } from "./noChartData";
-
 interface LatencyChartProps {
 	data: LatencyHistogramResponse | null;
 	chartType: ChartType;
 	startTime: number;
 	endTime: number;
 }
-
 function CustomTooltip({ active, payload }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -62,87 +58,82 @@ function CustomTooltip({ active, payload }: any) {
 		</div>
 	);
 }
-
 function LatencyChartImpl({ data, chartType, startTime, endTime }: LatencyChartProps) {
 	const { i18n } = useTranslation("observability");
 	const chartData = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return [];
 		}
-
 		return data.buckets.map((bucket, index) => ({
 			...bucket,
 			index,
 			formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 		}));
 	}, [data, i18n.resolvedLanguage]);
-
 	if (!data?.buckets || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	const commonProps = {
 		data: chartData,
 		margin: { top: 6, right: 4, left: 4, bottom: 0 },
 	};
-
 	return (
 		<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}`}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				{chartType === "bar" ? (
 					<BarChart {...commonProps} barCategoryGap={1}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={55}
 							tickFormatter={formatLatency}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip content={<CustomTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
-						<Bar isAnimationActive={false} dataKey="avg_latency" fill={LATENCY_COLORS.avg} fillOpacity={0.9} barSize={8} shape={barShape} />
-						<Bar isAnimationActive={false} dataKey="p90_latency" fill={LATENCY_COLORS.p90} fillOpacity={0.9} barSize={8} shape={barShape} />
-						<Bar isAnimationActive={false} dataKey="p95_latency" fill={LATENCY_COLORS.p95} fillOpacity={0.9} barSize={8} shape={barShape} />
-						<Bar isAnimationActive={false} dataKey="p99_latency" fill={LATENCY_COLORS.p99} fillOpacity={0.9} barSize={8} shape={barShape} />
+						<Bar isAnimationActive dataKey="avg_latency" fill={LATENCY_COLORS.avg} fillOpacity={0.9} barSize={8} shape={barShape} />
+						<Bar isAnimationActive dataKey="p90_latency" fill={LATENCY_COLORS.p90} fillOpacity={0.9} barSize={8} shape={barShape} />
+						<Bar isAnimationActive dataKey="p95_latency" fill={LATENCY_COLORS.p95} fillOpacity={0.9} barSize={8} shape={barShape} />
+						<Bar isAnimationActive dataKey="p99_latency" fill={LATENCY_COLORS.p99} fillOpacity={0.9} barSize={8} shape={barShape} />
 					</BarChart>
 				) : (
 					<AreaChart {...commonProps}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={55}
 							tickFormatter={formatLatency}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip content={<CustomTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
 						{/* Render P99 first (behind), then overlay in descending order so Avg is in front */}
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="p99_latency"
 							stroke={LATENCY_COLORS.p99}
@@ -150,7 +141,7 @@ function LatencyChartImpl({ data, chartType, startTime, endTime }: LatencyChartP
 							fillOpacity={0.15}
 						/>
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="p95_latency"
 							stroke={LATENCY_COLORS.p95}
@@ -158,7 +149,7 @@ function LatencyChartImpl({ data, chartType, startTime, endTime }: LatencyChartP
 							fillOpacity={0.2}
 						/>
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="p90_latency"
 							stroke={LATENCY_COLORS.p90}
@@ -166,7 +157,7 @@ function LatencyChartImpl({ data, chartType, startTime, endTime }: LatencyChartP
 							fillOpacity={0.25}
 						/>
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="avg_latency"
 							stroke={LATENCY_COLORS.avg}

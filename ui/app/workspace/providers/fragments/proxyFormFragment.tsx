@@ -9,7 +9,6 @@ import { ModelProvider } from "@/lib/types/config";
 import { proxyOnlyFormSchema, type SecretVar, type ProxyOnlyFormSchema } from "@/lib/types/schemas";
 import { cn } from "@/lib/utils";
 import { toSecretVarFormValue, toOptionalSecretVarPayload } from "@/lib/utils/secretVarForm";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Info } from "lucide-react";
 import { useEffect } from "react";
@@ -17,15 +16,12 @@ import { useForm } from "react-hook-form";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface ProxyFormFragmentProps {
 	provider: ModelProvider;
 }
-
 export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const form = useForm<ProxyOnlyFormSchema>({
 		resolver: zodResolver(proxyOnlyFormSchema),
@@ -41,11 +37,9 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 			},
 		},
 	});
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	useEffect(() => {
 		form.reset({
 			proxy_config: {
@@ -57,9 +51,7 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 			},
 		});
 	}, [form, provider.name, provider.proxy_config]);
-
 	const watchedProxyType = form.watch("proxy_config.type");
-
 	const onSubmit = (data: ProxyOnlyFormSchema) => {
 		updateProvider(
 			buildProviderUpdatePayload(provider, {
@@ -83,16 +75,13 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4 md:px-6">
 				{/* Proxy Configuration */}
 				<Alert>
 					<Info className="h-4 w-4" />
-					<AlertDescription>
-						{t("providers.proxyAlert")}
-					</AlertDescription>
+					<AlertDescription>{t("providers.proxyAlert")}</AlertDescription>
 				</Alert>
 				<div className="space-y-4">
 					<div className="space-y-4">
@@ -102,11 +91,7 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>{t("providers.proxyType")}</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										value={field.value === "none" ? "" : field.value}
-										disabled={!hasUpdateProviderAccess}
-									>
+									<Select onValueChange={field.onChange} value={field.value === "none" ? "" : field.value}>
 										<FormControl>
 											<SelectTrigger className="w-48">
 												<SelectValue placeholder={t("providers.selectType")} />
@@ -141,7 +126,6 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 													placeholder={t("providers.proxyUrlPlaceholder")}
 													{...field}
 													value={field.value}
-													disabled={!hasUpdateProviderAccess}
 													data-testid="env-var-proxy-url"
 												/>
 											</FormControl>
@@ -161,7 +145,6 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 														placeholder={t("providers.proxyUsernamePlaceholder")}
 														{...field}
 														value={field.value}
-														disabled={!hasUpdateProviderAccess}
 														data-testid="env-var-proxy-username"
 													/>
 												</FormControl>
@@ -183,7 +166,6 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 														redactNonEnvValue
 														{...field}
 														value={field.value}
-														disabled={!hasUpdateProviderAccess}
 														data-testid="env-var-proxy-password"
 													/>
 												</FormControl>
@@ -208,7 +190,6 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 													redactNonEnvValue
 													{...field}
 													value={field.value}
-													disabled={!hasUpdateProviderAccess}
 													data-testid="env-var-proxy-ca-cert-pem"
 												/>
 											</FormControl>
@@ -232,15 +213,11 @@ export function ProxyFormFragment({ provider }: ProxyFormFragmentProps) {
 						onClick={() => {
 							onSubmit({ proxy_config: { type: "none" } });
 						}}
-						disabled={!hasUpdateProviderAccess || isUpdatingProvider || !provider.proxy_config || provider.proxy_config.type === "none"}
+						disabled={isUpdatingProvider || !provider.proxy_config || provider.proxy_config.type === "none"}
 					>
 						{t("providers.removeConfiguration")}
 					</Button>
-					<Button
-						type="submit"
-						disabled={!form.formState.isDirty || !hasUpdateProviderAccess || isUpdatingProvider}
-						isLoading={isUpdatingProvider}
-					>
+					<Button type="submit" disabled={!form.formState.isDirty || isUpdatingProvider} isLoading={isUpdatingProvider}>
 						{t("providers.saveProxyConfig")}
 					</Button>
 				</div>

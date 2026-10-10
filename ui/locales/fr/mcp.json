@@ -781,16 +781,6 @@
 			"searchUsers": "Rechercher par nom ou e-mail"
 		}
 	},
-	"toolGroups": {
-		"title": "Groupes d’outils MCP",
-		"description": "Configurez des groupes d’outils pour les serveurs MCP afin d’organiser et de gouverner les outils.",
-		"unlockTitle": "Débloquez les groupes d’outils MCP",
-		"unlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Configurez des groupes d’outils pour les serveurs MCP afin d’organiser vos outils MCP et de les gouverner dans toute votre organisation."
-	},
-	"authConfig": {
-		"unlockTitle": "Débloquez la configuration d’auth. MCP",
-		"unlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Configurez l’authentification des serveurs MCP pour sécuriser vos connexions MCP."
-	},
 	"credentials": {
 		"justNow": "à l’instant",
 		"minutesAgo": "il y a {{minutes}} min",

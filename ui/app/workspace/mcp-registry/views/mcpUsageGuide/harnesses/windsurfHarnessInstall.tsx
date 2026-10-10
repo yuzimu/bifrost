@@ -4,7 +4,6 @@ import { buildWindsurfConfig } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { HarnessInstallProps } from "../types";
 import { getRegistrationLabel, getUserHomePrefix } from "../utils";
-
 export function WindsurfHarnessInstall({
 	canGenerateCommand,
 	clientConfig,
@@ -16,7 +15,6 @@ export function WindsurfHarnessInstall({
 }: HarnessInstallProps) {
 	const { t } = useTranslation("mcp");
 	const configPath = `${getUserHomePrefix(platform)}/.codeium/windsurf/mcp_config.json`;
-
 	const config = useMemo(
 		() =>
 			buildWindsurfConfig({
@@ -26,12 +24,11 @@ export function WindsurfHarnessInstall({
 			}),
 		[clientConfig, headers, selectedServers, serverScope],
 	);
-
 	return (
 		<HarnessCommandSection
 			canCopyCommand={canGenerateCommand}
 			command={config}
-			controls={null}
+			controls
 			copySuccessMessage={t("common.configCopied")}
 			emptyMessage={emptyMessage}
 			harnessName="Windsurf (Devin)"

@@ -29,31 +29,26 @@ import { ModelConfig } from "@/lib/types/governance";
 import { cn } from "@/lib/utils";
 import { formatBudgetResetDuration, formatCurrency } from "@/lib/utils/governance";
 import { getScopeLabel } from "@/lib/utils/labels";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Edit, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ModelLimitSheet from "./modelLimitSheet";
 import { ModelLimitsEmptyState } from "./modelLimitsEmptyState";
-// Side-effect import: pull in downstream scope registrations (enterprise
+
 // "user" deep-link, etc.). No-op for OSS builds.
 import { PIN_SHADOW_RIGHT } from "@/components/table/columnPinning";
-import "@enterprise/lib/registrations/modelLimitScopes";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-
 // Helper to format reset duration for display
 const formatResetDuration = (duration: string) => {
 	return resetDurationLabels[duration] || duration;
 };
-
 const toTestIdPart = (value: string) =>
 	value
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-|-$/g, "");
-
 /** 展示模型限制操作，托管与权限判断保持不变。 */
 function ModelLimitActionsMenu({
 	config,
@@ -71,11 +66,10 @@ function ModelLimitActionsMenu({
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const [isOpen, setIsOpen] = useState(false);
-	// A readOnly-registered scope (e.g. enterprise's access_profile) can only be
+
 	// changed by editing its owner — no delete here, and "Edit" just opens the
 	// sheet's read-only view instead of a form.
 	const isManaged = getModelLimitScope(config.scope ?? "global")?.readOnly === true;
-
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -126,11 +120,9 @@ function ModelLimitActionsMenu({
 		</DropdownMenu>
 	);
 }
-
 // The filter spells "no provider filter" as a sentinel, since the control needs a value to
 // show for it. Module level so its identity is stable across renders.
 const ALL_PROVIDERS_VALUE = "all";
-
 interface ModelLimitsTableProps {
 	modelConfigs: ModelConfig[];
 	totalCount: number;
@@ -146,7 +138,6 @@ interface ModelLimitsTableProps {
 	onOffsetChange: (offset: number) => void;
 	isLoading?: boolean;
 }
-
 /** 本地化模型限制表格和作用域标签，保留限制、托管与分页规则。 */
 export default function ModelLimitsTable({
 	modelConfigs,
@@ -173,15 +164,12 @@ export default function ModelLimitsTable({
 	const [editParam, setEditParam] = useQueryState("edit");
 	const [isCreatingModelLimit, setIsCreatingModelLimit] = useState(false);
 	const [deleteModelConfigId, setDeleteModelConfigId] = useState<string | null>(null);
-
-	const editingModelConfigId = editParam?.trim() || null;
-
+	const editingModelConfigId = editParam?.trim();
 	// Prefer the row from props so it stays in sync with RTK cache updates
 	const editingModelConfigInList = useMemo(
 		() => (editingModelConfigId ? (modelConfigs.find((mc) => mc.id === editingModelConfigId) ?? null) : null),
 		[editingModelConfigId, modelConfigs],
 	);
-
 	// The linked config may not be on the current page/filter, so fetch it by id as a fallback.
 	const needsEditFetch = !!editingModelConfigId && !editingModelConfigInList;
 	const {
@@ -190,7 +178,6 @@ export default function ModelLimitsTable({
 		isLoading: isFetchingEditingModelConfig,
 	} = useGetModelConfigQuery(editingModelConfigId ?? "", { skip: !needsEditFetch });
 	const editingModelConfig = editingModelConfigInList ?? (needsEditFetch ? (fetchedModelConfigData?.model_config ?? null) : null);
-
 	const handledFetchError = useRef<unknown>(undefined);
 	// 每个加载错误只通知一次，切换语言不重复触发通知或导航。
 	useEffect(() => {
@@ -203,22 +190,14 @@ export default function ModelLimitsTable({
 		toast.error(t("modelLimits.failedLoadLimit", { message: getErrorMessage(fetchedModelConfigError) }));
 		void setEditParam(null);
 	}, [fetchedModelConfigError, setEditParam, t]);
-
 	// Don't flash the sheet in "create" mode while a linked config is loading.
 	const isResolvingEditParam = needsEditFetch && (isFetchingEditingModelConfig || (!editingModelConfig && !fetchedModelConfigError));
 	const isSheetOpen = (isCreatingModelLimit || !!editingModelConfigId) && !isResolvingEditParam;
-
 	const deletingModelConfig = useMemo(
 		() => (deleteModelConfigId ? (modelConfigs.find((mc) => mc.id === deleteModelConfigId) ?? null) : null),
 		[deleteModelConfigId, modelConfigs],
 	);
-
-	const hasCreateAccess = useRbac(RbacResource.Governance, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Governance, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.Governance, RbacOperation.Delete);
-
 	const [deleteModelConfig, { isLoading: isDeleting }] = useDeleteModelConfigMutation();
-
 	const handleDelete = async (id: string) => {
 		try {
 			await deleteModelConfig(id).unwrap();
@@ -228,29 +207,23 @@ export default function ModelLimitsTable({
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const handleAddModelLimit = () => {
 		void setEditParam(null);
 		setIsCreatingModelLimit(true);
 	};
-
 	const handleEditModelLimit = (config: ModelConfig) => {
 		setIsCreatingModelLimit(false);
 		void setEditParam(config.id);
 	};
-
 	const closeModelLimitSheet = () => {
 		setIsCreatingModelLimit(false);
 		void setEditParam(null);
 	};
-
 	const hasActiveFilters = debouncedSearch || scope || provider;
-
 	// Rendered on the empty branch too, not just the populated one: PageTitle
 	// draws nothing inline, and leaving it out drops the topbar to the
 	// route-derived fallback, which for this route reads "Model Limits".
 	const pageTitle = <PageTitle title={t("modelLimits.title")}>{t("modelLimits.titleDescription")}</PageTitle>;
-
 	// True empty state: no model limits at all (not just filtered to zero).
 	// Suppress while the initial load is in flight so we don't flash the empty
 	// state before the API responds.
@@ -259,11 +232,10 @@ export default function ModelLimitsTable({
 			<>
 				{pageTitle}
 				{isSheetOpen && <ModelLimitSheet modelConfig={editingModelConfig} onSave={closeModelLimitSheet} onCancel={closeModelLimitSheet} />}
-				<ModelLimitsEmptyState onAddClick={handleAddModelLimit} canCreate={hasCreateAccess} />
+				<ModelLimitsEmptyState onAddClick={handleAddModelLimit} canCreate={true} />
 			</>
 		);
 	}
-
 	return (
 		<>
 			{isSheetOpen && <ModelLimitSheet modelConfig={editingModelConfig} onSave={closeModelLimitSheet} onCancel={closeModelLimitSheet} />}
@@ -352,13 +324,8 @@ export default function ModelLimitsTable({
 						</Button>
 					)}
 
-					<DisabledReason reason={actionDisabledReason(hasCreateAccess, "create", "model limits")} className="ml-auto">
-						<Button
-							className="ml-auto h-9"
-							onClick={handleAddModelLimit}
-							disabled={!hasCreateAccess}
-							data-testid="model-limits-button-create"
-						>
+					<DisabledReason reason={actionDisabledReason(true, "create", "model limits")} className="ml-auto">
+						<Button className="ml-auto h-9" onClick={handleAddModelLimit} data-testid="model-limits-button-create">
 							<Plus className="h-4 w-4" />
 							{t("modelLimits.addLimit")}
 						</Button>
@@ -400,7 +367,6 @@ export default function ModelLimitsTable({
 											config.rate_limit.request_max_limit > 0 &&
 											config.rate_limit.request_current_usage >= config.rate_limit.request_max_limit);
 									const isExhausted = isBudgetExhausted || isRateLimitExhausted;
-
 									// Compute safe percentages to avoid division by zero
 									const tokenPercentage =
 										config.rate_limit?.token_max_limit && config.rate_limit.token_max_limit > 0
@@ -410,7 +376,6 @@ export default function ModelLimitsTable({
 										config.rate_limit?.request_max_limit && config.rate_limit.request_max_limit > 0
 											? Math.min((config.rate_limit.request_current_usage / config.rate_limit.request_max_limit) * 100, 100)
 											: 0;
-
 									return (
 										<TableRow
 											key={config.id}
@@ -612,8 +577,8 @@ export default function ModelLimitsTable({
 												<div className="flex items-center justify-center">
 													<ModelLimitActionsMenu
 														config={config}
-														hasUpdateAccess={hasUpdateAccess}
-														hasDeleteAccess={hasDeleteAccess}
+														hasUpdateAccess={true}
+														hasDeleteAccess={true}
 														onEdit={handleEditModelLimit}
 														onDelete={setDeleteModelConfigId}
 													/>

@@ -8,7 +8,6 @@ import { parseAsSafeString } from "@/lib/queryParamsParser";
 import { getErrorMessage, useGetMCPClientsQuery, useGetMCPLibraryQuery } from "@/lib/store";
 import type { MCPLibraryEntry } from "@/lib/types/mcp";
 import { cn } from "@/lib/utils";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ChevronLeft, ChevronRight, LayoutGrid, Library, List, Plus, Search, Settings } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -19,11 +18,9 @@ import { MCPLibraryInstallSheet, sanitizeServerName } from "./views/mcpLibraryIn
 import { MCPLibraryServerCard, MCPLibraryServerCardSkeleton } from "./views/mcpLibraryServerCard";
 import { MCPLibraryServersTable, MCPLibraryServersTableSkeleton } from "./views/mcpLibraryServersTable";
 import { MCPLibrarySettingsSheet } from "./views/mcpLibrarySettingsSheet";
-
 const PAGE_SIZE = 24;
 const VIEW_MODE_STORAGE_KEY = "mcp-library-view-mode";
 type MCPLibraryViewMode = "grid" | "table";
-
 function getInitialViewMode(): MCPLibraryViewMode {
 	if (typeof window === "undefined") return "table";
 	try {
@@ -33,19 +30,14 @@ function getInitialViewMode(): MCPLibraryViewMode {
 		return "table";
 	}
 }
-
 export default function MCPLibraryPage() {
 	const { t } = useTranslation("mcp");
 	const { t: tCommon } = useTranslation("common");
-	const hasCreateMCPClientAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Create);
-	const hasDeleteMCPLibraryAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Delete);
-	const hasSettingsAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const [selectedServer, setSelectedServer] = useState<MCPLibraryEntry | null>(null);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [addServerOpen, setAddServerOpen] = useState(false);
 	const [viewMode, setViewMode] = useState<MCPLibraryViewMode>(getInitialViewMode);
 	const { toast } = useToast();
-
 	// URL state management with nuqs — search, filters, pagination all in query params
 	const [urlState, setUrlState] = useQueryStates(
 		{
@@ -60,9 +52,7 @@ export default function MCPLibraryPage() {
 		// pagination opts into push per-call so back/forward steps by page.
 		{ history: "replace" },
 	);
-
 	const debouncedSearch = useDebouncedValue(urlState.search, 300);
-
 	// Derive filters object for the sidebar
 	const filters: MCPLibraryFilters = useMemo(
 		() => ({
@@ -73,7 +63,6 @@ export default function MCPLibraryPage() {
 		}),
 		[urlState.categories, urlState.connection_types, urlState.auth_types, urlState.tags],
 	);
-
 	const setFilters = useCallback(
 		(newFilters: MCPLibraryFilters) => {
 			setUrlState({
@@ -86,7 +75,6 @@ export default function MCPLibraryPage() {
 		},
 		[setUrlState],
 	);
-
 	const queryParams = useMemo(
 		() => ({
 			search: debouncedSearch || undefined,
@@ -99,15 +87,14 @@ export default function MCPLibraryPage() {
 		}),
 		[debouncedSearch, filters, urlState.offset],
 	);
-
 	const { data: libraryData, error: libraryError, isFetching, refetch } = useGetMCPLibraryQuery(queryParams);
-
 	const servers = useMemo(() => libraryData?.servers || [], [libraryData?.servers]);
 	const totalCount = libraryData?.total_count || 0;
-
 	// Installed-detection: match on connection_url or name (case-insensitive)
-	const { data: mcpClientsData, error: mcpClientsError } = useGetMCPClientsQuery({ limit: 100, offset: 0 });
-
+	const { data: mcpClientsData, error: mcpClientsError } = useGetMCPClientsQuery({
+		limit: 100,
+		offset: 0,
+	});
 	useEffect(() => {
 		if (!libraryError && !mcpClientsError) return;
 		const err = libraryError || mcpClientsError;
@@ -116,7 +103,6 @@ export default function MCPLibraryPage() {
 		if (message.toLowerCase().includes("mcp is not configured in this bifrost instance")) return;
 		toast({ title: tCommon("error"), description: message, variant: "destructive" });
 	}, [libraryError, mcpClientsError, toast]);
-
 	const installedServerSlugs = useMemo(() => {
 		const clients = mcpClientsData?.clients || [];
 		return new Set(
@@ -135,11 +121,9 @@ export default function MCPLibraryPage() {
 				.map((server) => server.slug),
 		);
 	}, [mcpClientsData?.clients, servers]);
-
 	const handleInstalled = useCallback(async () => {
 		await refetch();
 	}, [refetch]);
-
 	const handleViewModeChange = useCallback((mode: MCPLibraryViewMode) => {
 		setViewMode(mode);
 		try {
@@ -148,15 +132,12 @@ export default function MCPLibraryPage() {
 			// Keep the in-memory preference when browser storage is unavailable.
 		}
 	}, []);
-
 	// Pagination
 	const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 	const currentPage = Math.floor(urlState.offset / PAGE_SIZE) + 1;
-
 	const hasActiveFilters =
 		filters.categories.length > 0 || filters.connection_types.length > 0 || filters.auth_types.length > 0 || filters.tags.length > 0;
 	const isCatalogEmpty = !isFetching && totalCount === 0 && !debouncedSearch && !hasActiveFilters;
-
 	return (
 		<div className="dark:bg-card no-padding-parent no-border-parent min-h-full md:h-[calc(var(--app-content-viewport)_-_var(--app-bottom-padding))]">
 			<div className="bg-background flex min-h-full w-full grow gap-3 md:h-full">
@@ -222,18 +203,18 @@ export default function MCPLibraryPage() {
 								</>
 							)}
 							<div className="flex items-center gap-2 sm:ml-auto">
-								{hasCreateMCPClientAccess && (
+								{
 									<Button size="sm" onClick={() => setAddServerOpen(true)} data-testid="mcp-library-add-server-btn">
 										<Plus className="h-4 w-4" />
 										{t("library.addToLibrary")}
 									</Button>
-								)}
-								{hasSettingsAccess && (
+								}
+								{
 									<Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} data-testid="mcp-library-settings-btn">
 										<Settings className="h-4 w-4" />
 										{t("common.settings")}
 									</Button>
-								)}
+								}
 							</div>
 						</div>
 
@@ -270,7 +251,7 @@ export default function MCPLibraryPage() {
 										<div className="text-muted-foreground mx-auto mt-2 w-full max-w-[600px] text-sm font-normal">
 											{isCatalogEmpty ? t("library.emptyDescription") : t("library.noResultsDescription")}
 										</div>
-										{isCatalogEmpty && hasSettingsAccess && (
+										{isCatalogEmpty && (
 											<div className="mx-auto mt-6 flex flex-row flex-wrap items-center justify-center gap-2">
 												<Button onClick={() => setSettingsOpen(true)} data-testid="mcp-library-empty-settings-btn">
 													<Settings className="h-4 w-4" />
@@ -295,8 +276,8 @@ export default function MCPLibraryPage() {
 															key={server.slug}
 															server={server}
 															isInstalled={isInstalled}
-															canCreateMCPClient={hasCreateMCPClientAccess}
-															canDelete={hasDeleteMCPLibraryAccess}
+															canCreateMCPClient={true}
+															canDelete={true}
 															onInstall={setSelectedServer}
 														/>
 													);
@@ -307,8 +288,8 @@ export default function MCPLibraryPage() {
 										<MCPLibraryServersTable
 											servers={servers}
 											installedServerSlugs={installedServerSlugs}
-											canCreateMCPClient={hasCreateMCPClientAccess}
-											canDelete={hasDeleteMCPLibraryAccess}
+											canCreateMCPClient={true}
+											canDelete={true}
 											onInstall={setSelectedServer}
 										/>
 									)}

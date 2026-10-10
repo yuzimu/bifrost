@@ -2,10 +2,8 @@ import { readStoredWarpModelKey, storeWarpModelKey } from "@/components/warp/war
 import type { WarpQuestion, WarpUsage } from "@/components/warp/warpStream.utils";
 import { WarpStreamSession } from "@/components/warp/warpStreamSession";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { FEATURE_FLAGS } from "@/lib/constants/featureFlags";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-
 /** One turn in an Warp conversation. */
 export interface WarpTurn {
 	role: "user" | "assistant";
@@ -53,7 +51,6 @@ export interface WarpTurn {
 	 */
 	question?: WarpQuestion;
 }
-
 export interface WarpTurnToolCall {
 	id: string;
 	name: string;
@@ -68,7 +65,6 @@ export interface WarpTurnToolCall {
 	 */
 	textOffset?: number;
 }
-
 interface WarpContextValue {
 	isOpen: boolean;
 	open: () => void;
@@ -118,9 +114,7 @@ interface WarpContextValue {
 	selectedModelKey: string | null;
 	selectModel: (key: string) => void;
 }
-
 const WarpContext = createContext<WarpContextValue | null>(null);
-
 /**
  * Holds Warp's cross-view state: whether the dock is open, and the conversation
  * so far.
@@ -144,10 +138,7 @@ const WarpContext = createContext<WarpContextValue | null>(null);
  */
 export function WarpProvider({ children }: { children: React.ReactNode }) {
 	const isWarpFlagOn = useFeatureFlag(FEATURE_FLAGS.warp);
-	const hasWarpSessionAccess = useRbac(RbacResource.WarpSession, RbacOperation.View);
-	// The panel reads GET /api/warp/config to tell "not set up" from "ready", which is gated on Warp View.
-	const hasWarpConfigReadAccess = useRbac(RbacResource.Warp, RbacOperation.View);
-	const isWarpEnabled = isWarpFlagOn && hasWarpSessionAccess && hasWarpConfigReadAccess;
+	const isWarpEnabled = isWarpFlagOn;
 	const [isOpen, setIsOpen] = useState(false);
 	const [turns, setTurns] = useState<WarpTurn[]>([]);
 	const [conversationId, setConversationIdState] = useState("");
@@ -169,7 +160,6 @@ export function WarpProvider({ children }: { children: React.ReactNode }) {
 	);
 	// Through the session, so its own copy - what send() files under - moves too.
 	const setConversationId = stream.setConversationId;
-
 	const open = useCallback(() => setIsOpen(true), []);
 	const close = useCallback(() => setIsOpen(false), []);
 	const toggle = useCallback(() => setIsOpen((current) => !current), []);
@@ -190,7 +180,6 @@ export function WarpProvider({ children }: { children: React.ReactNode }) {
 		// context that made it a sensible question.
 		setQuestion(null);
 	}, [stream]);
-
 	const value = useMemo(
 		() => ({
 			isOpen,
@@ -228,7 +217,6 @@ export function WarpProvider({ children }: { children: React.ReactNode }) {
 	);
 	return <WarpContext.Provider value={isWarpEnabled ? value : null}>{children}</WarpContext.Provider>;
 }
-
 /**
  * Read/write access to the dock.
  *

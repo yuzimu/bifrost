@@ -1,11 +1,7 @@
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import { useGetCoreConfigQuery } from "@/lib/store";
-import { useGetModelConfigsQuery, useGetVirtualKeysQuery } from "@/lib/store/apis/governanceApi";
 import { useGetAllKeysQuery } from "@/lib/store/apis/providersApi";
-import { useGetSCIMProvidersQuery } from "@enterprise/lib/store/apis/scimApi";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
 export const METADATA_DISMISSED_KEY = "onboarding_dismissed";
 export const METADATA_SKIPPED_KEY = "onboarding_skipped";
 // "Remind me later" snoozes the widget by setting this cookie's expiry to the
@@ -16,9 +12,7 @@ export const REMIND_LATER_COOKIE = "bifrost_onboarding_remind_at";
 // constants (not just widget-local) so the sidebar's "resume setup" promo
 // card can read the same hidden/snoozed state the floating widget uses.
 export const HIDDEN_UNTIL_NAV_COOKIE = "bifrost_onboarding_hidden_until_nav";
-
 export type OnboardingSection = "Security" | "Provider Setup" | "Everything Else";
-
 export interface OnboardingStep {
 	id: string;
 	title: string;
@@ -26,51 +20,36 @@ export interface OnboardingStep {
 	complete: boolean;
 	section: OnboardingSection;
 }
-
 export const parseSkippedIds = (raw: unknown) => (Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : []);
-
-const authValueSet = (secretVar: { value?: string; ref?: string; type?: string } | undefined) => {
+const authValueSet = (
+	secretVar:
+		| {
+				value?: string;
+				ref?: string;
+				type?: string;
+		  }
+		| undefined,
+) => {
 	if (!secretVar) return false;
 	return !!secretVar.value || !!secretVar.ref;
 };
-
 /** 按当前语言生成共享初始化步骤，保留完成条件、步骤标识和权限查询。 */
-export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}) {
+export function useOnboardingChecklist({
+	skip = false,
+}: {
+	skip?: boolean;
+} = {}) {
 	const { t, i18n } = useTranslation("shell");
 	const { data: bifrostConfig } = useGetCoreConfigQuery({}, { skip });
 	const isDismissedForAll = bifrostConfig?.metadata?.[METADATA_DISMISSED_KEY] === true;
 	const shouldSkipChecklistQueries = skip || isDismissedForAll;
-
 	const { data: allKeys } = useGetAllKeysQuery(undefined, { skip: shouldSkipChecklistQueries });
-	const { data: vksResponse } = useGetVirtualKeysQuery(undefined, {
-		skip: shouldSkipChecklistQueries || !IS_ENTERPRISE,
-	});
-	const { data: modelConfigsResponse } = useGetModelConfigsQuery(undefined, {
-		skip: shouldSkipChecklistQueries || !IS_ENTERPRISE,
-	});
-	const { data: scimProviders } = useGetSCIMProvidersQuery(undefined, {
-		skip: shouldSkipChecklistQueries || !IS_ENTERPRISE,
-	});
-
-	const checklistReady =
-		bifrostConfig !== undefined &&
-		allKeys !== undefined &&
-		(!IS_ENTERPRISE || (vksResponse !== undefined && modelConfigsResponse !== undefined && scimProviders !== undefined));
-
+	const checklistReady = bifrostConfig !== undefined && allKeys !== undefined;
 	const skippedIds = useMemo<string[]>(() => {
 		return parseSkippedIds(bifrostConfig?.metadata?.[METADATA_SKIPPED_KEY]);
 	}, [bifrostConfig?.metadata]);
-
 	const authConfig = bifrostConfig?.auth_config;
 	const clientConfig = bifrostConfig?.client_config;
-	// Enterprise SSO satisfies dashboard auth on its own. An identity-provider
-	// record holds the OIDC credentials (clientId/clientSecret/tenantId), and the
-	// server installs SCIMController.Middleware() in place of the OSS
-	// AuthMiddleware whenever one is enabled, so admin_username/admin_password
-	// are never set on these deployments and would strand this step forever.
-	// Mirrors the server's own gate: SCIMConfig != nil && SCIMConfig.Enabled.
-	const ssoGatesDashboard = IS_ENTERPRISE && (scimProviders?.some((provider) => provider.enabled) ?? false);
-
 	const steps: OnboardingStep[] = useMemo(() => {
 		// Order: 1) Security, 2) Provider Setup, 3) Everything Else.
 		// Security comes first so admins lock down access before exposing keys.
@@ -88,9 +67,7 @@ export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}
 				title: t("onboarding.steps.dashboard-auth"),
 				route: "/workspace/config/security",
 				section: "Security",
-				complete:
-					ssoGatesDashboard ||
-					(!!authConfig?.is_enabled && authValueSet(authConfig?.admin_username) && authValueSet(authConfig?.admin_password)),
+				complete: !!authConfig?.is_enabled && authValueSet(authConfig?.admin_username) && authValueSet(authConfig?.admin_password),
 			},
 			{
 				id: "enforce-inference-auth",
@@ -107,33 +84,7 @@ export function useOnboardingChecklist({ skip = false }: { skip?: boolean } = {}
 				complete: (allKeys?.length ?? 0) > 0,
 			},
 		];
-		const enterprise: OnboardingStep[] = IS_ENTERPRISE
-			? [
-					{
-						id: "scim",
-						title: t("onboarding.steps.scim"),
-						route: "/workspace/scim",
-						section: "Everything Else",
-						complete: (scimProviders?.length ?? 0) > 0,
-					},
-					{
-						id: "models",
-						title: t("onboarding.steps.models"),
-						route: "/workspace/model-catalog",
-						section: "Everything Else",
-						complete: (modelConfigsResponse?.total_count ?? 0) > 0,
-					},
-					{
-						id: "virtual-keys",
-						title: t("onboarding.steps.virtual-keys"),
-						route: "/workspace/virtual-keys",
-						section: "Everything Else",
-						complete: (vksResponse?.total_count ?? 0) > 0,
-					},
-				]
-			: [];
-		return [...common, ...enterprise];
-	}, [allKeys, clientConfig, authConfig, ssoGatesDashboard, scimProviders, modelConfigsResponse, vksResponse, t, i18n.language]);
-
+		return common;
+	}, [allKeys, clientConfig, authConfig, t, i18n.language]);
 	return { bifrostConfig, steps, skippedIds, checklistReady, isDismissedForAll };
 }

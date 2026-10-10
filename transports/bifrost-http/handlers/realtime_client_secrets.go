@@ -107,6 +107,10 @@ func (h *RealtimeClientSecretsHandler) handleRequest(ctx *fasthttp.RequestCtx) {
 		SendBifrostError(ctx, bifrostErr)
 		return
 	}
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, nil, nil)); gateErr != nil {
+		SendBifrostError(ctx, gateErr)
+		return
+	}
 
 	provider := h.client.GetProviderByKey(providerKey)
 	if provider == nil {
@@ -147,6 +151,10 @@ func (h *RealtimeClientSecretsHandler) handleRequest(ctx *fasthttp.RequestCtx) {
 		normalizedBody = rewritten
 	}
 
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, nil, nil)); gateErr != nil {
+		SendBifrostError(ctx, gateErr)
+		return
+	}
 	sessionProvider, ok := provider.(schemas.RealtimeSessionProvider)
 	if !ok {
 		SendBifrostError(ctx, realtimeSessionNotSupportedError(providerKey, provider))

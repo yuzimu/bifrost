@@ -16,15 +16,12 @@ import { ModelProvider } from "@/lib/types/config";
 import type { VirtualKey } from "@/lib/types/governance";
 import { ModelParams } from "@/lib/types/prompts";
 import { cn } from "@/lib/utils";
-import { PromptDeploymentsAccordionItem } from "@enterprise/components/prompt-deployments/promptDeploymentsAccordionItem";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiKeySelectorView } from "../components/apiKeySelectorView";
 import { VariablesTableView } from "../components/variablesTableView";
 import { usePromptContext } from "../context";
-
 const VIRTUAL_KEY_PAGE_SIZE = 20;
-
 export function SettingsPanel() {
 	const { t } = useTranslation("config");
 	const {
@@ -43,7 +40,6 @@ export function SettingsPanel() {
 		requiredHeaders,
 		selectedPromptId,
 	} = usePromptContext();
-
 	const onProviderChange = useCallback(
 		(p: string) => {
 			setProvider(p);
@@ -53,7 +49,6 @@ export function SettingsPanel() {
 		},
 		[setProvider, setApiKeyId, onModelChange, onModelParamsChange],
 	);
-
 	const onApiKeyIdChange = useCallback(
 		(id: string) => {
 			setApiKeyId(id);
@@ -62,7 +57,6 @@ export function SettingsPanel() {
 	);
 	// Dynamic providers
 	const { data: providers, isLoading: isLoadingProviders } = useGetProvidersQuery();
-
 	// Virtual keys are searched server-side and capped at one page — calling this
 	// with no params at all makes the handler return every key, fully hydrated.
 	const [vkSearch, setVkSearch] = useState("");
@@ -75,9 +69,7 @@ export function SettingsPanel() {
 	const enforceVirtualKeys = coreConfig?.client_config?.enforce_auth_on_inference ?? false;
 	// Keys for the API Key selector (from /api/keys endpoint, provider-filtered)
 	const { data: allKeys, isSuccess: hasLoadedAllKeys } = useGetAllKeysQuery();
-
 	const isInitialLoading = isLoadingProviders;
-
 	// Only a provider you could actually send a request to: one with a key of its own, or one
 	// an active virtual key covers.
 	const isUsableProvider = useCallback(
@@ -91,16 +83,19 @@ export function SettingsPanel() {
 		},
 		[virtualKeysData, allKeys, hasLoadedAllKeys],
 	);
-
 	// A saved provider still names something the filter above drops, or the providers query has
 	// not landed yet. Either way the trigger has to say what the prompt is actually set to.
 	const savedProviderOption = useMemo(() => {
 		if (!provider || (providers ?? []).some((p) => p.name === provider)) return undefined;
-		return [{ value: provider, label: getProviderLabel(provider), iconKey: resolveProviderIconKey(provider) }];
+		return [
+			{
+				value: provider,
+				label: getProviderLabel(provider),
+				iconKey: resolveProviderIconKey(provider),
+			},
+		];
 	}, [providers, provider]);
-
 	const providerKeys = useMemo(() => (allKeys ?? []).filter((k) => k.provider === provider), [allKeys, provider]);
-
 	// Virtual keys filtered by selected provider
 	const providerVirtualKeys = useMemo(() => {
 		const vks = virtualKeysData?.virtual_keys ?? [];
@@ -112,14 +107,12 @@ export function SettingsPanel() {
 			return vk.provider_configs.some((pc) => pc.provider === provider);
 		});
 	}, [virtualKeysData, provider]);
-
 	useEffect(() => {
 		if (!enforceVirtualKeys) return;
 		if (providerKeys.some((k) => k.key_id === apiKeyId)) {
 			setApiKeyId("__auto__");
 		}
 	}, [apiKeyId, enforceVirtualKeys, providerKeys, setApiKeyId]);
-
 	// Only one page of virtual keys is loaded, so the selected key can fall out of
 	// the list as the search narrows. Pin it once resolved — model filtering below
 	// reads its id, and losing it would silently widen the model list.
@@ -131,7 +124,6 @@ export function SettingsPanel() {
 			return prev?.value === apiKeyId ? prev : null;
 		});
 	}, [apiKeyId, providerVirtualKeys]);
-
 	// Separate keys/vks to pass to model fetch for filtering.
 	const filterKeys = useMemo(() => {
 		if (enforceVirtualKeys) return undefined;
@@ -141,25 +133,19 @@ export function SettingsPanel() {
 		// Auto: pass all provider key IDs
 		return providerKeys.map((k) => k.key_id);
 	}, [apiKeyId, enforceVirtualKeys, providerKeys, selectedVirtualKey]);
-
 	const filterVks = useMemo(() => (selectedVirtualKey ? [selectedVirtualKey.id] : undefined), [selectedVirtualKey]);
-
 	// A search that matches nothing must not unmount the picker in enforce mode —
 	// that would take the search box away with it.
 	const hasVirtualKeysForProvider = providerVirtualKeys.length > 0 || !!selectedVirtualKey || !!vkSearch;
-
 	const handleModelParamsChange = useCallback(
 		(params: Record<string, unknown>) => {
 			onModelParamsChange(params as ModelParams);
 		},
 		[onModelParamsChange],
 	);
-
 	const hasModel = Boolean(model);
-
 	type SettingsSection = "parameters" | "deployments";
 	const [openSection, setOpenSection] = useState<SettingsSection | undefined>("parameters");
-
 	if (isInitialLoading) {
 		return (
 			<div className="flex h-full flex-col">
@@ -176,7 +162,6 @@ export function SettingsPanel() {
 			</div>
 		);
 	}
-
 	return (
 		<div className="flex h-full min-h-0 flex-col">
 			<div className="flex min-h-0 flex-1 flex-col px-3 pt-2 pb-4">
@@ -264,9 +249,7 @@ export function SettingsPanel() {
 										<Separator />
 										<div className="flex flex-col gap-2" data-testid="settings-required-headers">
 											<Label className="text-muted-foreground text-xs font-medium uppercase">{t("promptRepo.requiredHeaders")}</Label>
-											<p className="text-muted-foreground text-xs">
-												{t("promptRepo.requiredHeadersHelp")}
-											</p>
+											<p className="text-muted-foreground text-xs">{t("promptRepo.requiredHeadersHelp")}</p>
 											<div className="flex flex-col gap-2">
 												{requiredHeaders.map((name) => (
 													<div key={name} className="flex items-center gap-2">
@@ -298,7 +281,7 @@ export function SettingsPanel() {
 							</div>
 						</AccordionContent>
 					</AccordionItem>
-					{selectedPromptId && <PromptDeploymentsAccordionItem activeSection={openSection} />}
+					{selectedPromptId && <></>}
 				</Accordion>
 			</div>
 		</div>

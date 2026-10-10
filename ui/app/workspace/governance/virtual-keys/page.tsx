@@ -3,26 +3,20 @@ import FullPageLoader from "@/components/fullPageLoader";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 import { parseAsSafeString } from "@/lib/queryParamsParser";
 import { getErrorMessage, useGetVirtualKeysQuery } from "@/lib/store";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 const POLLING_INTERVAL = 5000;
 const PAGE_SIZE = 25;
-
 export default function GovernanceVirtualKeysPage() {
 	const { t } = useTranslation("governance");
-	const hasVirtualKeysAccess = useRbac(RbacResource.VirtualKeys, RbacOperation.View);
 	const shownErrorsRef = useRef(new Set<string>());
-
 	const [urlState, setUrlState] = useQueryStates(
 		{
 			search: parseAsSafeString.withDefault(""),
 			customer_id: parseAsString.withDefault(""),
 			team_id: parseAsString.withDefault(""),
-			user_id: parseAsString.withDefault(""),
 			offset: parseAsInteger.withDefault(0),
 			sort_by: parseAsString.withDefault(""),
 			order: parseAsString.withDefault(""),
@@ -30,9 +24,7 @@ export default function GovernanceVirtualKeysPage() {
 		},
 		{ history: "push" },
 	);
-
 	const debouncedSearch = useDebouncedValue(urlState.search, 300);
-
 	const {
 		data: virtualKeysData,
 		error: vkError,
@@ -44,18 +36,15 @@ export default function GovernanceVirtualKeysPage() {
 			search: debouncedSearch || undefined,
 			customer_id: urlState.customer_id || undefined,
 			team_id: urlState.team_id || undefined,
-			user_id: urlState.user_id || undefined,
 			sort_by: (urlState.sort_by as "name" | "budget_spent" | "created_at" | "status") || undefined,
 			order: (urlState.order as "asc" | "desc") || undefined,
 		},
 		{
-			skip: !hasVirtualKeysAccess,
+			skip: false,
 			pollingInterval: POLLING_INTERVAL,
 		},
 	);
-
 	const vkTotal = virtualKeysData?.total_count ?? 0;
-
 	// Snap offset back when total shrinks past current page (e.g. delete last item on last page)
 	useEffect(() => {
 		if (!virtualKeysData || urlState.offset < vkTotal) return;
@@ -63,9 +52,7 @@ export default function GovernanceVirtualKeysPage() {
 			offset: vkTotal === 0 ? 0 : Math.floor((vkTotal - 1) / PAGE_SIZE) * PAGE_SIZE,
 		});
 	}, [vkTotal, urlState.offset]);
-
 	const isLoading = vkLoading;
-
 	useEffect(() => {
 		if (!vkError) {
 			shownErrorsRef.current.clear();
@@ -76,49 +63,43 @@ export default function GovernanceVirtualKeysPage() {
 		shownErrorsRef.current.add(errorKey);
 		toast.error(t("virtualKeys.loadFailed", { message: getErrorMessage(vkError) }));
 	}, [vkError]);
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	const handleSearchChange = (value: string) => {
-		setUrlState({ search: value || null, offset: 0 });
+		setUrlState({ search: value, offset: 0 });
 	};
-
 	const handleCustomerFilterChange = (value: string) => {
-		setUrlState({ customer_id: value || null, offset: 0 });
+		setUrlState({ customer_id: value, offset: 0 });
 	};
-
 	const handleTeamFilterChange = (value: string) => {
-		setUrlState({ team_id: value || null, offset: 0 });
+		setUrlState({ team_id: value, offset: 0 });
 	};
-
-	const handleUserFilterChange = (value: string) => {
-		setUrlState({ user_id: value || null, offset: 0 });
-	};
-
+	const handleUserFilterChange = (value: string) => {};
 	const handleOffsetChange = (newOffset: number) => {
 		setUrlState({ offset: newOffset });
 	};
-
 	const handleSortChange = (newSortBy: string, newOrder: string) => {
 		setUrlState({
-			sort_by: newSortBy || null,
-			order: newOrder || null,
+			sort_by: newSortBy,
+			order: newOrder,
 			offset: 0,
 		});
 	};
-
-	const handleSelectedVkChange = (id: string, options?: { offset?: number }) => {
+	const handleSelectedVkChange = (
+		id: string,
+		options?: {
+			offset?: number;
+		},
+	) => {
 		const update: Record<string, string | number | null> = {
-			selected_vk: id || null,
+			selected_vk: id,
 		};
 		if (options?.offset !== undefined) {
 			update.offset = options.offset;
 		}
 		setUrlState(update);
 	};
-
 	return (
 		<div className="no-padding-parent mx-auto flex h-[calc(var(--app-content-viewport)_-_var(--app-bottom-padding))] min-h-0 w-full flex-col overflow-hidden p-4">
 			<VirtualKeysTable
@@ -131,8 +112,6 @@ export default function GovernanceVirtualKeysPage() {
 				onCustomerFilterChange={handleCustomerFilterChange}
 				teamFilter={urlState.team_id}
 				onTeamFilterChange={handleTeamFilterChange}
-				userFilter={urlState.user_id}
-				onUserFilterChange={handleUserFilterChange}
 				offset={urlState.offset}
 				limit={PAGE_SIZE}
 				onOffsetChange={handleOffsetChange}

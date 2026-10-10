@@ -1,5 +1,4 @@
 "use client";
-
 import PageTitle from "@/components/pageTitle";
 import FullPageLoader from "@/components/fullPageLoader";
 import { PIN_SHADOW_RIGHT } from "@/components/table/columnPinning";
@@ -31,7 +30,6 @@ import {
 import { AllSkillsVersionBump, SkillListItem } from "@/lib/types/skills";
 import { cn } from "@/lib/utils";
 import { getApiBaseUrl, getExampleBaseUrl } from "@/lib/utils/port";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -57,17 +55,13 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PAGE_SIZE, formatDateShort, useDebouncedValue } from "./helpers";
-
 const SKILLS_REPOSITORY_DOCS_URL = "https://docs.getbifrost.ai/features/skills-repository";
-
 // ---------- MarketplacePopover ----------
-
 function MarketplacePopover() {
 	const { t } = useTranslation("config");
 	const [copiedKey, setCopiedKey] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
 	const marketplaceBaseUrl = `${getExampleBaseUrl()}/api`;
-
 	const items = [
 		{
 			key: "claude-desktop",
@@ -88,7 +82,6 @@ function MarketplacePopover() {
 			ariaLabel: t("skillsRepo.copyCodex"),
 		},
 	];
-
 	const handleCopy = (key: string, text: string) => {
 		navigator.clipboard
 			.writeText(text)
@@ -102,7 +95,6 @@ function MarketplacePopover() {
 				toast.error(t("skillsRepo.copyFailed"));
 			});
 	};
-
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
@@ -140,12 +132,9 @@ function MarketplacePopover() {
 		</Popover>
 	);
 }
-
 // ---------- SortableHeader ----------
-
 type SortColumn = "name" | "updated_at";
 type SortOrder = "asc" | "desc";
-
 function SortableHeader({
 	column,
 	label,
@@ -177,9 +166,7 @@ function SortableHeader({
 		</Button>
 	);
 }
-
 // ---------- SkillActionsMenu ----------
-
 function SkillActionsMenu({
 	skill,
 	hasEditAccess,
@@ -200,7 +187,6 @@ function SkillActionsMenu({
 	const [isOpen, setIsOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [isDownloading, setIsDownloading] = useState(false);
-
 	const handleDownload = async () => {
 		setIsDownloading(true);
 		let url: string | undefined;
@@ -222,7 +208,6 @@ function SkillActionsMenu({
 			setIsDownloading(false);
 		}
 	};
-
 	return (
 		<>
 			<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -291,9 +276,7 @@ function SkillActionsMenu({
 		</>
 	);
 }
-
 // ---------- SkillsListView ----------
-
 export function SkillsListView({
 	onSelectSkill,
 	onCreateNew,
@@ -303,22 +286,17 @@ export function SkillsListView({
 }) {
 	const { t: tc } = useTranslation("common");
 	const { t } = useTranslation("config");
-	const hasCreateAccess = useRbac(RbacResource.SkillsRepository, RbacOperation.Create);
-	const hasEditAccess = useRbac(RbacResource.SkillsRepository, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.SkillsRepository, RbacOperation.Delete);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({});
 	const isGitAvailable = bifrostConfig?.is_git_available ?? false;
 	const [deleteSkill, { isLoading: isDeleting }] = useDeleteSkillMutation();
 	const { data: allSkillsVersionData, refetch: refetchAllSkillsVersion } = useGetAllSkillsVersionQuery();
 	const [bumpAllSkillsVersion, { isLoading: isBumpingAllSkillsVersion }] = useBumpAllSkillsVersionMutation();
-
 	const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 	const [search, setSearch] = useState("");
 	const debouncedSearch = useDebouncedValue(search, 300);
 	const [offset, setOffset] = useState(0);
 	const [sortBy, setSortBy] = useState<SortColumn | null>(null);
 	const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-
 	const { data, isLoading, isFetching, isError, refetch } = useListSkillsQuery({
 		limit: PAGE_SIZE,
 		offset,
@@ -326,11 +304,9 @@ export function SkillsListView({
 		sort_by: sortBy || undefined,
 		order: sortBy ? sortOrder : undefined,
 	});
-
 	const skills = data?.skills || [];
 	const total = data?.total || 0;
 	const isSearchSettling = search !== debouncedSearch;
-
 	const toggleSort = (column: SortColumn) => {
 		setOffset(0);
 		if (sortBy === column) {
@@ -345,7 +321,6 @@ export function SkillsListView({
 			setSortOrder("asc");
 		}
 	};
-
 	const handleDeleteSkill = async (id: string) => {
 		try {
 			await deleteSkill(id).unwrap();
@@ -356,7 +331,6 @@ export function SkillsListView({
 			});
 		}
 	};
-
 	const handleBumpAllSkillsVersion = async (bump: AllSkillsVersionBump) => {
 		try {
 			const result = await bumpAllSkillsVersion({ bump }).unwrap();
@@ -368,11 +342,9 @@ export function SkillsListView({
 			});
 		}
 	};
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	if (isError) {
 		return (
 			<div className="flex flex-col items-center justify-center gap-3 py-20">
@@ -383,7 +355,6 @@ export function SkillsListView({
 			</div>
 		);
 	}
-
 	// True empty state: no skills at all (not just filtered to zero)
 	if (total === 0 && !search && !debouncedSearch && !isFetching) {
 		return (
@@ -406,20 +377,19 @@ export function SkillsListView({
 								window.open(`${SKILLS_REPOSITORY_DOCS_URL}?utm_source=bfd`, "_blank", "noopener,noreferrer");
 							}}
 						>
-							{t("enterprise.readMore")} <ArrowUpRight className="text-muted-foreground h-3 w-3" />
+							{tc("readMore")} <ArrowUpRight className="text-muted-foreground h-3 w-3" />
 						</Button>
-						{hasCreateAccess && (
+						{
 							<Button aria-label={t("skillsRepo.createFirstAria")} data-testid="skill-create-btn" onClick={onCreateNew}>
 								<Plus className="h-4 w-4" />
 								{t("skillsRepo.newSkill")}
 							</Button>
-						)}
+						}
 					</div>
 				</div>
 			</div>
 		);
 	}
-
 	return (
 		<div className="flex w-full min-w-0 flex-1 flex-col">
 			{/* Header */}
@@ -452,7 +422,7 @@ export function SkillsListView({
 						</TooltipContent>
 					</Tooltip>
 					<span className="text-muted-foreground whitespace-nowrap">{t("skillsRepo.allSkillsVersion")}</span>
-					{hasEditAccess ? (
+					{
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<button
@@ -485,11 +455,7 @@ export function SkillsListView({
 								))}
 							</DropdownMenuContent>
 						</DropdownMenu>
-					) : (
-						<Badge variant="secondary" className="font-mono text-xs">
-							{allSkillsVersionData?.version ?? "0.0.0"}
-						</Badge>
-					)}
+					}
 				</div>
 				<div className="flex shrink-0 items-center gap-2 md:ml-auto">
 					<div className="grid grid-cols-3 items-center gap-2 md:flex">
@@ -547,7 +513,7 @@ export function SkillsListView({
 							{isDownloadingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
 							<span className="hidden md:inline">{isDownloadingAll ? t("skillsRepo.downloading") : t("skillsRepo.downloadAll")}</span>
 						</Button>
-						{hasCreateAccess && (
+						{
 							<Button
 								data-testid="skill-create-btn"
 								onClick={onCreateNew}
@@ -558,7 +524,7 @@ export function SkillsListView({
 								<Plus className="h-4 w-4" />
 								<span className="hidden md:inline">{t("skillsRepo.newSkill")}</span>
 							</Button>
-						)}
+						}
 					</div>
 				</div>
 			</div>
@@ -595,7 +561,7 @@ export function SkillsListView({
 									<div className="flex flex-col items-center gap-2">
 										<FileText className="text-muted-foreground h-8 w-8" />
 										<p className="text-muted-foreground text-sm">{search ? t("skillsRepo.emptySearch") : t("skillsRepo.empty")}</p>
-										{!search && hasCreateAccess && (
+										{!search && (
 											<Button variant="outline" size="sm" onClick={onCreateNew} className="mt-2">
 												<Plus className="h-3.5 w-3.5" />
 												{t("skillsRepo.createFirstAria")}
@@ -607,7 +573,6 @@ export function SkillsListView({
 						) : (
 							skills.map((skill) => {
 								const fileCount = skill.file_count ?? 0;
-
 								return (
 									<TableRow
 										key={skill.id}
@@ -654,8 +619,8 @@ export function SkillsListView({
 										>
 											<SkillActionsMenu
 												skill={skill}
-												hasEditAccess={hasEditAccess}
-												hasDeleteAccess={hasDeleteAccess}
+												hasEditAccess={true}
+												hasDeleteAccess={true}
 												isDeleting={isDeleting}
 												onEdit={(id) => onSelectSkill(id, true)}
 												onDelete={handleDeleteSkill}

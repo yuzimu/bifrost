@@ -125,7 +125,6 @@
 		"bookDemo": "Book a demo",
 		"bookDemoAria": "Book a demo (opens Calendly in new tab)"
 	},
-	"unlockSharedDescription": "This feature is a part of the Bifrost enterprise license. We would love to know more about your use case and how we can help you.",
 	"customers": {
 		"title": "Customers",
 		"description": "Manage customer accounts with their own teams, budgets, and access controls.",
@@ -475,52 +474,8 @@
 			"searchWebhooks": "Search webhooks..."
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "Unlock alerting channels for proactive monitoring",
-		"channelsUnlockDescription": "This feature is a part of the Bifrost enterprise license. Configure Slack, PagerDuty, OpsGenie, and webhook alerts to stay ahead of budget and performance issues.",
-		"rulesUnlockTitle": "Unlock alerting rules for proactive monitoring",
-		"rulesUnlockDescription": "This feature is a part of the Bifrost enterprise license. Define alerting rules to catch budget, latency, and degradation issues before they become incidents.",
-		"historyUnlockTitle": "Unlock alerting history for proactive monitoring",
-		"historyUnlockDescription": "This feature is a part of the Bifrost enterprise license. Review alert delivery outcomes, failures, and resolution events in one place."
-	},
 	"guardrails": {
 		"unlockTitle": "Unlock guardrails for better security"
-	},
-	"auditLogs": {
-		"unlockTitle": "Unlock audit logs for better compliance"
-	},
-	"rbac": {
-		"unlockTitle": "Unlock roles and permissions for better security"
-	},
-	"projects": {
-		"unlockTitle": "Unlock projects for scoped access and spend",
-		"unlockDescription": "This feature is a part of the Bifrost enterprise license. A project is something a request opts into: it grants access alongside what the caller already holds, and decides whose ledger the spend lands on."
-	},
-	"userRankings": {
-		"unlockTitle": "Unlock user rankings for better visibility"
-	},
-	"promptDeployments": {
-		"unlockTitle": "Unlock prompt deployments for better prompt versioning and A/B testing."
-	},
-	"connectorsUnlock": {
-		"splunk": "Unlock native Splunk data ingestion for better observability",
-		"pubsub": "Unlock Google Cloud Pub/Sub trace streaming",
-		"datadog": "Unlock native Datadog data ingestion for better observability",
-		"bigquery": "Unlock native BigQuery data ingestion for analytics",
-		"kafka": "Unlock native Kafka log streaming for real-time observability",
-		"kafkaDescription": "This feature is a part of the Bifrost enterprise license. Stream completed request traces as JSON to a Kafka topic for real-time analytics, alerting, and downstream processing."
-	},
-	"accessProfiles": {
-		"unlockTitle": "Unlock access profiles for better performance",
-		"unlockDescription": "This feature is a part of the Bifrost enterprise license. Create access profiles to control access to your resources."
-	},
-	"users": {
-		"unlockTitle": "Unlock users & user governance",
-		"unlockDescription": "Manage users, set per-user budgets and rate limits, and control access with enterprise-grade governance. This feature is part of the Bifrost enterprise license."
-	},
-	"businessUnits": {
-		"unlockTitle": "Unlock business units & advanced governance",
-		"unlockDescription": "Manage users, business units with our enterprise-grade governance. This feature is part of the Bifrost enterprise license."
 	},
 	"sheet": {
 		"saving": "Saving...",

@@ -12,10 +12,8 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { MCPLibraryDeleteDialog } from "./mcpLibraryDeleteDialog";
-
 const MAX_VISIBLE_TAGS = 3;
 export const MCP_ICON_FALLBACK = "/images/mcp.svg";
-
 /** Map connection_type to a human-friendly transport label. */
 export function transportLabel(connectionType: string): string {
 	switch (connectionType) {
@@ -27,7 +25,6 @@ export function transportLabel(connectionType: string): string {
 			return "HTTP";
 	}
 }
-
 /** Map connection_type to an icon for the compact transport badge. */
 export function transportIcon(connectionType: string) {
 	switch (connectionType) {
@@ -39,7 +36,6 @@ export function transportIcon(connectionType: string) {
 			return <Globe className="size-4" />;
 	}
 }
-
 export function authLabel(authType?: string): string {
 	switch (authType) {
 		case "headers":
@@ -50,13 +46,10 @@ export function authLabel(authType?: string): string {
 			return i18n.t("library.auth.userHeaders", { ns: "mcp" });
 		case "per_user_oauth":
 			return i18n.t("library.auth.userOauth", { ns: "mcp" });
-		case "token_exchange":
-			return i18n.t("library.auth.tokenExchange", { ns: "mcp" });
 		default:
 			return i18n.t("library.auth.noAuth", { ns: "mcp" });
 	}
 }
-
 interface MCPLibraryServerCardProps {
 	server: MCPLibraryEntry;
 	isInstalled: boolean;
@@ -64,13 +57,11 @@ interface MCPLibraryServerCardProps {
 	canDelete: boolean;
 	onInstall: (server: MCPLibraryEntry) => void;
 }
-
 export function MCPLibraryServerCard({ server, isInstalled, canCreateMCPClient, canDelete, onInstall }: MCPLibraryServerCardProps) {
 	const { t } = useTranslation("mcp");
 	const [deleteEntry, { isLoading: isDeleting }] = useDeleteMCPLibraryEntryMutation();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const isCustom = server.source === "custom";
-
 	const handleDelete = async () => {
 		try {
 			await deleteEntry(server.id).unwrap();
@@ -119,13 +110,19 @@ export function MCPLibraryServerCard({ server, isInstalled, canCreateMCPClient, 
 									{server.category}
 								</Badge>
 							)}
-							{server.publisher && <span className="text-muted-foreground min-w-0 truncate text-xs">{t("library.card.byPublisher", { publisher: server.publisher })}</span>}
+							{server.publisher && (
+								<span className="text-muted-foreground min-w-0 truncate text-xs">
+									{t("library.card.byPublisher", { publisher: server.publisher })}
+								</span>
+							)}
 						</div>
 					</div>
 				</div>
 			</CardHeader>
 			<CardContent className="flex flex-1 flex-col gap-3 px-4 py-3">
-				<CardDescription className="line-clamp-2 min-h-10 leading-5">{server.description || t("library.card.noDescription")}</CardDescription>
+				<CardDescription className="line-clamp-2 min-h-10 leading-5">
+					{server.description || t("library.card.noDescription")}
+				</CardDescription>
 				{server.tags && server.tags.length > 0 && (
 					<div className="flex min-w-0 flex-wrap items-center gap-1.5">
 						{server.tags.slice(0, MAX_VISIBLE_TAGS).map((tag) => (
@@ -226,7 +223,6 @@ export function MCPLibraryServerCard({ server, isInstalled, canCreateMCPClient, 
 		</Card>
 	);
 }
-
 /** Skeleton placeholder mirroring the card layout while the library catalog loads. */
 export function MCPLibraryServerCardSkeleton() {
 	return (

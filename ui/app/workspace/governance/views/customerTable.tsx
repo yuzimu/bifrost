@@ -24,9 +24,6 @@ import { getErrorMessage, useDeleteCustomerMutation } from "@/lib/store";
 import { Customer } from "@/lib/types/governance";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/governance";
-import { useEntityProfileLimits } from "@enterprise/components/access-profiles/fragments/entityAccessProfileSection";
-import { CustomerDetailSheet } from "@enterprise/components/user-groups/sheets/customerDetailSheet";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Edit, MoreHorizontal, Plus, ScrollText, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -34,14 +31,11 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CustomersEmptyState } from "./customersEmptyState";
 import CustomerSheet from "./customerSheet";
-
 // Helper to format reset duration for display
 const formatResetDuration = (duration: string) => {
 	return resetDurationLabels[duration] || duration;
 };
-
 const ACTIONS_COLUMN_CLASS = `sticky right-0 z-10 w-[56px] min-w-[56px] text-right ${PIN_SHADOW_RIGHT}`;
-
 interface CustomerActionsMenuProps {
 	customer: Customer;
 	canUpdate: boolean;
@@ -49,12 +43,10 @@ interface CustomerActionsMenuProps {
 	onEdit: (customer: Customer) => void;
 	onDelete: (customer: Customer) => void;
 }
-
 /** 本地化客户操作标签，保留操作权限与菜单行为。 */
 function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete }: CustomerActionsMenuProps) {
 	const { t } = useTranslation("governance");
 	const [isOpen, setIsOpen] = useState(false);
-
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild>
@@ -119,7 +111,6 @@ function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete 
 		</DropdownMenu>
 	);
 }
-
 interface CustomersTableProps {
 	customers: Customer[];
 	totalCount: number;
@@ -132,7 +123,6 @@ interface CustomersTableProps {
 	/** Lets the page pause background polling while an edit sheet is open. */
 	onSheetOpenChange?: (open: boolean) => void;
 }
-
 /** 展示客户用量和分页，显示文案随界面语言更新。 */
 export default function CustomersTable({
 	customers,
@@ -150,22 +140,12 @@ export default function CustomersTable({
 	const [showCustomerSheet, setShowCustomerSheet] = useState(false);
 	const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 	const [confirmDeleteCustomer, setConfirmDeleteCustomer] = useState<Customer | null>(null);
-	const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
-
-	const hasCreateAccess = useRbac(RbacResource.Customers, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Customers, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.Customers, RbacOperation.Delete);
-	// The profile limits of the customers that hold an access profile (enterprise; empty otherwise).
-	const profileLimits = useEntityProfileLimits("customer", true);
-
 	const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
-
 	// Derived from the single source of truth rather than each open/close call
 	// site, so the two can never drift apart.
 	useEffect(() => {
 		onSheetOpenChange?.(showCustomerSheet);
 	}, [showCustomerSheet, onSheetOpenChange]);
-
 	const handleDelete = async (customerId: string) => {
 		try {
 			await deleteCustomer(customerId).unwrap();
@@ -176,34 +156,27 @@ export default function CustomersTable({
 			setConfirmDeleteCustomer(null);
 		}
 	};
-
 	const handleAddCustomer = () => {
 		setEditingCustomer(null);
 		setShowCustomerSheet(true);
 	};
-
 	const handleEditCustomer = (customer: Customer) => {
 		setEditingCustomer(customer);
 		setShowCustomerSheet(true);
 	};
-
 	const handleCustomerSaved = () => {
 		setShowCustomerSheet(false);
 		setEditingCustomer(null);
 	};
-
 	const hasActiveFilters = debouncedSearch;
-
 	const [hasLoadedRows, setHasLoadedRows] = useState(false);
 	useEffect(() => {
 		if (totalCount > 0) setHasLoadedRows(true);
 	}, [totalCount]);
-
 	// Hoisted above the empty/populated branch: PageTitle draws nothing inline,
 	// and leaving it out of either branch drops the topbar to the route-derived
 	// fallback.
 	const pageTitle = <PageTitle title={t("customers.title")}>{t("customers.description")}</PageTitle>;
-
 	// True empty state: no customers at all (not just filtered to zero). Rendered
 	// as a branch *inside* the tree rather than an early return with a different
 	// shape, because a shape change here made React remount CustomerSheet and wipe
@@ -212,7 +185,6 @@ export default function CustomersTable({
 	// the layout every few seconds on a genuinely empty page, while the latch still
 	// suppresses the empty card during the uncached fetch of a later page.
 	const isTrulyEmpty = totalCount === 0 && !hasActiveFilters && !hasLoadedRows;
-
 	return (
 		<>
 			{pageTitle}
@@ -227,15 +199,9 @@ export default function CustomersTable({
 					onSuccess={handleCustomerSaved}
 				/>
 
-				<CustomerDetailSheet
-					open={!!viewingCustomer}
-					onOpenChange={(open) => {
-						if (!open) setViewingCustomer(null);
-					}}
-					customer={viewingCustomer}
-				/>
+				<></>
 
-				{isTrulyEmpty && <CustomersEmptyState onAddClick={handleAddCustomer} canCreate={hasCreateAccess} />}
+				{isTrulyEmpty && <CustomersEmptyState onAddClick={handleAddCustomer} canCreate={true} />}
 
 				{!isTrulyEmpty && (
 					<div className="flex grow flex-col">
@@ -251,13 +217,8 @@ export default function CustomersTable({
 									data-testid="customers-search-input"
 								/>
 							</div>
-							<DisabledReason reason={actionDisabledReason(hasCreateAccess, "create", "customers")} className="ml-auto">
-								<Button
-									className="ml-auto h-9"
-									data-testid="customer-button-create"
-									onClick={handleAddCustomer}
-									disabled={!hasCreateAccess}
-								>
+							<DisabledReason reason={actionDisabledReason(true, "create", "customers")} className="ml-auto">
+								<Button className="ml-auto h-9" data-testid="customer-button-create" onClick={handleAddCustomer}>
 									<Plus className="h-4 w-4" />
 									{t("customers.add")}
 								</Button>
@@ -288,15 +249,11 @@ export default function CustomersTable({
 											const teamCount = customer.team_count ?? 0;
 											const vkCount = customer.virtual_key_count ?? 0;
 
-											// A customer governed by an access profile has no limits of its own; its
 											// row shows the profile's.
-											const profile = profileLimits[customer.id];
-											const rateLimit = profile ? profile.rateLimit : customer.rate_limit;
-
+											const rateLimit = customer.rate_limit;
 											// Budget calculations (most-exhausted budget drives the row highlight)
-											const budgets = profile ? profile.budgets : (customer.budgets ?? []);
+											const budgets = customer.budgets ?? [];
 											const isBudgetExhausted = budgets.some((b) => b.max_limit > 0 && b.current_usage >= b.max_limit);
-
 											// Rate limit calculations
 											const isTokenLimitExhausted =
 												rateLimit?.token_max_limit &&
@@ -315,9 +272,7 @@ export default function CustomersTable({
 												rateLimit?.request_max_limit && rateLimit.request_max_limit > 0
 													? Math.min((rateLimit.request_current_usage / rateLimit.request_max_limit) * 100, 100)
 													: 0;
-
 											const isExhausted = isBudgetExhausted || isRateLimitExhausted;
-
 											return (
 												<TableRow
 													key={customer.id}
@@ -328,12 +283,12 @@ export default function CustomersTable({
 													)}
 													role="button"
 													tabIndex={0}
-													onClick={() => setViewingCustomer(customer)}
+													onClick={() => handleEditCustomer(customer)}
 													onKeyDown={(e) => {
 														if (e.target !== e.currentTarget) return;
 														if (e.key === "Enter" || e.key === " ") {
 															e.preventDefault();
-															setViewingCustomer(customer);
+															handleEditCustomer(customer);
 														}
 													}}
 												>
@@ -508,8 +463,8 @@ export default function CustomersTable({
 													>
 														<CustomerActionsMenu
 															customer={customer}
-															canUpdate={hasUpdateAccess}
-															canDelete={hasDeleteAccess}
+															canUpdate={true}
+															canDelete={true}
 															onEdit={handleEditCustomer}
 															onDelete={setConfirmDeleteCustomer}
 														/>

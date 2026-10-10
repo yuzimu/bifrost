@@ -1,5 +1,4 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -9,7 +8,6 @@ import { PluginSpanFilter } from "@/lib/types/config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Trans, useTranslation } from "react-i18next";
-
 interface PluginTracingSheetProps {
 	open: boolean;
 	onClose: () => void;
@@ -24,14 +22,12 @@ interface PluginTracingSheetProps {
 	/** Show the overhead-spans toggle. Connectors that don't honor it (BigQuery) pass false. */
 	showOverheadToggle?: boolean;
 }
-
 function resolveToggleState(filter: PluginSpanFilter | null | undefined, allPlugins: string[]): Record<string, boolean> {
 	const state: Record<string, boolean> = {};
 	for (const name of allPlugins) {
 		state[name] = true;
 	}
 	if (!filter) return state;
-
 	if (filter.mode === "exclude") {
 		for (const name of filter.plugins) {
 			state[name] = false;
@@ -43,7 +39,6 @@ function resolveToggleState(filter: PluginSpanFilter | null | undefined, allPlug
 	}
 	return state;
 }
-
 function buildFilter(toggles: Record<string, boolean>): PluginSpanFilter | null {
 	const excluded = Object.entries(toggles)
 		.filter(([, on]) => !on)
@@ -51,7 +46,6 @@ function buildFilter(toggles: Record<string, boolean>): PluginSpanFilter | null 
 	if (excluded.length === 0) return null;
 	return { mode: "exclude", plugins: excluded };
 }
-
 function PluginRow({ name, checked, onChange }: { name: string; checked: boolean; onChange: (v: boolean) => void }) {
 	return (
 		<div className="flex items-center justify-between rounded-md border px-3 py-2.5">
@@ -62,20 +56,17 @@ function PluginRow({ name, checked, onChange }: { name: string; checked: boolean
 		</div>
 	);
 }
-
 export default function PluginTracingSheet({ open, onClose, pluginName, destination, showOverheadToggle = true }: PluginTracingSheetProps) {
 	const { t } = useTranslation("observability");
-	// All currently loaded plugins (built-in, enterprise, custom, and auto-loaded) that can
+
 	// emit spans, named to match the connector's span filter. One flat list — the backend
 	// already returns the complete set, so there's no built-in/custom split to maintain.
 	const { data: allPlugins = [], isLoading: isLoadingLoadedPlugins } = useGetLoadedPluginsQuery();
 	const { data: targetPlugin } = useGetPluginQuery(pluginName);
 	const [updatePlugin, { isLoading }] = useUpdatePluginMutation();
-	const hasUpdateAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
 	const [toggles, setToggles] = useState<Record<string, boolean>>({});
 	const [exportOverheadSpans, setExportOverheadSpans] = useState(false);
 	const wasOpenRef = useRef(false);
-
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
 			if (!targetPlugin) return; // wait until persisted config is available
@@ -87,11 +78,9 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 		}
 		if (!open) wasOpenRef.current = false;
 	}, [open, targetPlugin, allPlugins, isLoadingLoadedPlugins]);
-
 	const setToggle = useCallback((name: string, value: boolean) => {
 		setToggles((prev) => ({ ...prev, [name]: value }));
 	}, []);
-
 	const handleSave = useCallback(async () => {
 		if (!wasOpenRef.current) {
 			// Toggles haven't been initialized from persisted config yet (e.g. the plugin list
@@ -123,15 +112,12 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 			toast.error(getErrorMessage(error));
 		}
 	}, [t, toggles, exportOverheadSpans, showOverheadToggle, targetPlugin, updatePlugin, onClose, pluginName, destination]);
-
 	return (
 		<Sheet open={open} onOpenChange={onClose}>
 			<SheetContent className="flex w-full flex-col overflow-hidden p-4 md:p-8">
 				<SheetHeader className="flex flex-col items-start p-0">
 					<SheetTitle>{t("connectors.configurePluginTracing")}</SheetTitle>
-					<SheetDescription>
-						{t("connectors.tracing.sheetDescription", { destination })}
-					</SheetDescription>
+					<SheetDescription>{t("connectors.tracing.sheetDescription", { destination })}</SheetDescription>
 				</SheetHeader>
 
 				<div className="mt-4 flex-1 overflow-y-auto">
@@ -201,8 +187,8 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 						</Button>
 						<Button
 							onClick={handleSave}
-							disabled={isLoading || !wasOpenRef.current || !hasUpdateAccess}
-							title={hasUpdateAccess ? undefined : t("mcp:connectorForm.noPermission")}
+							disabled={isLoading || !wasOpenRef.current}
+							title={undefined}
 							isLoading={isLoading}
 							data-testid="plugin-tracing-save-button"
 							type="button"

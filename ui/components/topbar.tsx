@@ -13,22 +13,18 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdownMenu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import { useDescriptionSlotRef, useMobileFilterSlotRef, useTopbarTitle } from "@/lib/contexts/topbarContext";
 import type { TopbarTitleValue } from "@/lib/contexts/topbarContext.utils";
 import { useBranding } from "@/lib/hooks/useBranding";
 import { useAppDispatch, useGetCoreConfigQuery, useGetVersionQuery, useLogoutMutation } from "@/lib/store";
 import { baseApi } from "@/lib/store/apis/baseApi";
 import { cn } from "@/lib/utils";
-import type { UserInfo } from "@enterprise/lib/store/utils/tokenManager";
-import { getUserInfo } from "@enterprise/lib/store/utils/tokenManager";
 import { BooksIcon, DiscordLogoIcon, GithubLogoIcon } from "@phosphor-icons/react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { BugIcon, ChevronDown, LogOut, Menu, User } from "lucide-react";
+import { BugIcon, LogOut, Menu } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
 /** 优先采用页面标题，其余固定路由按当前语言显示导航标题。 */
 function usePageTitle() {
 	const { t } = useTranslation("shell");
@@ -43,7 +39,6 @@ function usePageTitle() {
 	}
 	return derived;
 }
-
 /**
  * Renders the topbar heading — either a plain title or a breadcrumb trail.
  *
@@ -53,11 +48,9 @@ function usePageTitle() {
  */
 function TopbarHeading({ title }: { title: TopbarTitleValue }) {
 	const navigate = useNavigate();
-
 	if (!Array.isArray(title)) {
 		return <h1 className="hidden truncate text-base font-semibold md:block">{title}</h1>;
 	}
-
 	return (
 		<h1 className="hidden min-w-0 items-center gap-1.5 text-base font-semibold md:flex" data-testid="topbar-breadcrumbs">
 			{title.map((crumb, index) => {
@@ -84,7 +77,6 @@ function TopbarHeading({ title }: { title: TopbarTitleValue }) {
 		</h1>
 	);
 }
-
 /**
  * Topbar renders the strip above the inset content card. It deliberately
  * carries no background of its own so it reads as the same surface as the
@@ -111,24 +103,9 @@ export default function Topbar() {
 	const { data: version } = useGetVersionQuery();
 	const { resolvedTheme } = useTheme();
 	const { logoSrc, logoAlt } = useBranding(resolvedTheme === "dark");
-
-	// Enterprise SCIM/OAuth stashes the profile in localStorage. Read it after
-	// mount so SSR/first paint doesn't diverge from the hydrated tree.
-	const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-	useEffect(() => {
-		if (IS_ENTERPRISE) {
-			setUserInfo(getUserInfo());
-		}
-	}, []);
-
-	const isAuthEnabled = coreConfig?.auth_config?.is_enabled || false;
-	const showUserPill = IS_ENTERPRISE && !!userInfo;
-	const canLogout = showUserPill || isAuthEnabled;
-
-	const displayName = userInfo?.name || userInfo?.email || userInfo?.preferred_username || t("topbar.userFallback");
-	// Only show the email as a second line when it isn't already the headline.
-	const secondaryLine = userInfo?.email && userInfo.email !== displayName ? userInfo.email : undefined;
-
+	useEffect(() => {}, []);
+	const isAuthEnabled = coreConfig?.auth_config?.is_enabled;
+	const canLogout = isAuthEnabled;
 	const externalLinks = useMemo(
 		() => [
 			{
@@ -156,7 +133,6 @@ export default function Topbar() {
 		],
 		[t],
 	);
-
 	const handleLogout = async () => {
 		try {
 			await logout().unwrap();
@@ -169,23 +145,22 @@ export default function Topbar() {
 		await navigate({ to: "/login" });
 		dispatch(baseApi.util.resetApiState());
 	};
-
 	return (
 		<header className="flex h-13 w-full shrink-0 items-center gap-2 px-3 pt-1 md:pr-3 md:pl-0" data-testid="topbar-container-root">
 			<div className="flex min-w-0 flex-1 items-center gap-2">
 				<SidebarTrigger className="shrink-0 md:hidden" />
 				<img className="h-[22px] w-auto max-w-[120px] object-contain md:hidden" src={logoSrc} alt={logoAlt} width={70} height={70} />
 				{/* text-base font-semibold, which is the size this heading has actually
-				    rendered at: Tailwind has no --text-md token, so the text-md it used
-				    to carry emitted no font-size rule and it simply inherited 0.95rem. */}
+            rendered at: Tailwind has no --text-md token, so the text-md it used
+            to carry emitted no font-size rule and it simply inherited 0.95rem. */}
 				<TopbarHeading title={title} />
 				{/* Anchor for <PageTitle>'s description popover. Pages portal into
-				    this node, so the topbar never has to know their content. */}
+            this node, so the topbar never has to know their content. */}
 				<span ref={setDescriptionSlot} className="hidden shrink-0 items-center gap-2 md:flex" />
 			</div>
 
 			{/* Theme stays a first-class topbar control rather than a menu entry —
-			    it's a display preference, not an account action. */}
+                it's a display preference, not an account action. */}
 			<span ref={setMobileFilterSlot} className="flex shrink-0 items-center md:hidden" />
 			<NotificationCenter />
 			<LanguageSwitcher />
@@ -194,24 +169,7 @@ export default function Topbar() {
 
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					{showUserPill ? (
-						<button
-							type="button"
-							data-testid="topbar-user-pill"
-							aria-label={t("topbar.accountMenu")}
-							className="text-muted-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-card data-[state=open]:text-accent-foreground md:border-border md:bg-card md:text-foreground flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors data-[state=open]:border md:h-8 md:w-auto md:max-w-[220px] md:min-w-0 md:gap-1.5 md:rounded-full md:border md:py-0 md:pr-2 md:pl-1"
-						>
-							<span className="bg-muted text-muted-foreground hidden size-6 shrink-0 items-center justify-center rounded-full md:flex">
-								<User className="size-3.5" strokeWidth={2} />
-							</span>
-							<User className="size-4 md:hidden" strokeWidth={2} />
-							{/* min-w-0 + truncate is what keeps a 200-character display
-							    name from stretching the pill and pushing the page title
-							    out of the topbar. */}
-							<span className="hidden min-w-0 truncate text-sm font-medium md:block">{displayName}</span>
-							<ChevronDown className="text-muted-foreground hidden size-3.5 shrink-0 md:block" strokeWidth={2} />
-						</button>
-					) : (
+					{
 						<button
 							type="button"
 							data-testid="topbar-menu-btn"
@@ -220,20 +178,10 @@ export default function Topbar() {
 						>
 							<Menu className="size-4" strokeWidth={2} />
 						</button>
-					)}
+					}
 				</DropdownMenuTrigger>
 
 				<DropdownMenuContent align="end" sideOffset={2} className="w-60">
-					{showUserPill && (
-						<>
-							<DropdownMenuLabel className="flex min-w-0 flex-col gap-0.5 py-2">
-								<span className="truncate text-sm font-medium">{displayName}</span>
-								{secondaryLine && <span className="text-muted-foreground truncate text-xs font-normal">{secondaryLine}</span>}
-							</DropdownMenuLabel>
-							<DropdownMenuSeparator />
-						</>
-					)}
-
 					<DropdownMenuGroup>
 						{externalLinks.map((item) => (
 							<DropdownMenuItem key={item.title} asChild>
@@ -256,7 +204,7 @@ export default function Topbar() {
 					)}
 
 					{/* Informational tail row: a Label, not an Item, so it never takes
-					    keyboard focus, highlights, or closes the menu on click. */}
+        keyboard focus, highlights, or closes the menu on click. */}
 					{version && (
 						<>
 							<DropdownMenuSeparator />

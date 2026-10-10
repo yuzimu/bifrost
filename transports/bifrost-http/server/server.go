@@ -25,6 +25,7 @@ import (
 	"github.com/maximhq/bifrost/framework/configstore"
 	"github.com/maximhq/bifrost/framework/configstore/tables"
 	"github.com/maximhq/bifrost/framework/encrypt"
+	"github.com/maximhq/bifrost/framework/guardrails"
 	"github.com/maximhq/bifrost/framework/logstore"
 	"github.com/maximhq/bifrost/framework/modelcatalog"
 	dynamicPlugins "github.com/maximhq/bifrost/framework/plugins"
@@ -61,13 +62,6 @@ const (
 	DefaultLogLevel       = string(schemas.LogLevelInfo)
 	DefaultLogOutputStyle = string(schemas.LoggerOutputTypeJSON)
 )
-
-var enterprisePlugins = []string{
-	"datadog",
-	"bigquery",
-	"pubsub",
-	"kafka",
-}
 
 // ServerCallbacks is a interface that defines the callbacks for the server.
 type ServerCallbacks interface {
@@ -250,8 +244,10 @@ type BifrostHTTPServer struct {
 	// the global proxy for their purpose and follow proxy changes live.
 	HTTPClientFactory *network.HTTPClientFactory
 
-	Server *fasthttp.Server
-	Router *router.Router
+	Server           *fasthttp.Server
+	Router           *router.Router
+	pluginChangeMu   sync.Mutex
+	ossPluginManager *ossPluginManager
 
 	// ShellRewriter lets a build rewrite the pre-hydration HTML shell before it
 	// is served — the enterprise build uses it to swap in a custom logo.
@@ -362,12 +358,33 @@ type GovernanceInMemoryStore struct {
 	Config *lib.Config
 }
 
-// GetConfiguredProviders returns the configured provider map.
+// GetConfiguredProviders 返回锁内构造的独立 map 与自定义 provider 元数据副本。
 func (s *GovernanceInMemoryStore) GetConfiguredProviders() map[schemas.ModelProvider]configstore.ProviderConfig {
-	// Use read lock for thread-safe access - no need to copy on hot path
 	s.Config.Mu.RLock()
 	defer s.Config.Mu.RUnlock()
-	return s.Config.Providers
+	out := make(map[schemas.ModelProvider]configstore.ProviderConfig, len(s.Config.Providers))
+	for provider, cfg := range s.Config.Providers {
+		if cfg.CustomProviderConfig != nil {
+			custom := *cfg.CustomProviderConfig
+			cfg.CustomProviderConfig = &custom
+		}
+		out[provider] = cfg
+	}
+	return out
+}
+
+// GetProviderKeylessCapabilities 只在配置锁内读取无密钥能力，不把 provider map 暴露给请求。
+func (s *GovernanceInMemoryStore) GetProviderKeylessCapabilities() map[schemas.ModelProvider]bool {
+	s.Config.Mu.RLock()
+	defer s.Config.Mu.RUnlock()
+	out := make(map[schemas.ModelProvider]bool, len(s.Config.Providers))
+	for provider, cfg := range s.Config.Providers {
+		out[provider] = provider == schemas.Ollama
+		if custom := cfg.CustomProviderConfig; custom != nil {
+			out[provider] = custom.IsKeyLess && custom.BaseProviderType != schemas.Bedrock
+		}
+	}
+	return out
 }
 
 // GetConfiguredProviderNames builds the name slice under the lock, because provider edits write to
@@ -1199,6 +1216,9 @@ func (s *BifrostHTTPServer) syncIgnoreProviderCost(provider schemas.ModelProvide
 
 // RemoveProvider removes a provider from the in-memory store
 func (s *BifrostHTTPServer) RemoveProvider(ctx context.Context, provider schemas.ModelProvider) error {
+	if s.ossPluginManager != nil {
+		s.ossPluginManager.runtime.Load().InvalidateProvider(provider)
+	}
 	err := s.Client.RemoveProvider(provider)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		logger.Error("failed to remove provider from client: %v", err)
@@ -1255,6 +1275,9 @@ func (s *BifrostHTTPServer) OnKeyAdded(ctx context.Context, provider schemas.Mod
 // changed even when Value didn't), refreshes the keyconfig, then refetches
 // for just that key. 2 calls regardless of N keys on the provider.
 func (s *BifrostHTTPServer) OnKeyUpdated(ctx context.Context, provider schemas.ModelProvider, key schemas.Key) error {
+	if s.ossPluginManager != nil {
+		s.ossPluginManager.runtime.Load().InvalidateKey(provider, key.ID)
+	}
 	if s.Config == nil || s.Config.ModelCatalog == nil {
 		return fmt.Errorf("model catalog not found")
 	}
@@ -1281,6 +1304,9 @@ func (s *BifrostHTTPServer) OnKeyUpdated(ctx context.Context, provider schemas.M
 // keyconfig. No list-models calls — the provider's remaining keys' cached
 // entries stay valid.
 func (s *BifrostHTTPServer) OnKeyDeleted(ctx context.Context, provider schemas.ModelProvider, keyID string) error {
+	if s.ossPluginManager != nil {
+		s.ossPluginManager.runtime.Load().InvalidateKey(provider, keyID)
+	}
 	if s.Config == nil || s.Config.ModelCatalog == nil {
 		return fmt.Errorf("model catalog not found")
 	}
@@ -2375,6 +2401,11 @@ func (s *BifrostHTTPServer) GetLoadedPluginNames() []string {
 // by name in the ConfigMarshallers cache and calls MarshalConfigForStorage if found.
 // Returns nil, nil when the plugin is not loaded or does not implement ConfigMarshallerPlugin.
 func (s *BifrostHTTPServer) NormalizePluginConfig(name string, config map[string]any) (map[string]any, error) {
+	if name == "guardrails" && s.ossPluginManager != nil {
+		if p := s.ossPluginManager.guardrails.Load(); p != nil {
+			return p.MarshalConfigForStorage(config)
+		}
+	}
 	if m := s.Config.ConfigMarshallers.Load(); m != nil {
 		if cm, ok := (*m)[name]; ok {
 			return cm.MarshalConfigForStorage(config)
@@ -2387,6 +2418,12 @@ func (s *BifrostHTTPServer) NormalizePluginConfig(name string, config map[string
 // by name in the ConfigMarshallers cache and calls RedactConfig if found.
 // Returns nil, nil when the plugin is not loaded or does not implement ConfigMarshallerPlugin.
 func (s *BifrostHTTPServer) ExpandPluginConfigForAPI(name string, config map[string]any) (map[string]any, error) {
+	if name == "guardrails" && s.ossPluginManager != nil {
+		if p := s.ossPluginManager.guardrails.Load(); p != nil {
+			return p.RedactConfig(config)
+		}
+		return nil, fmt.Errorf("guardrail configuration redactor is unavailable")
+	}
 	if m := s.Config.ConfigMarshallers.Load(); m != nil {
 		if cm, ok := (*m)[name]; ok {
 			return cm.RedactConfig(config)
@@ -2407,6 +2444,11 @@ func (s *BifrostHTTPServer) updatePluginErrorStatus(name, step string, originalE
 
 // SyncLoadedPlugin syncs a loaded plugin to the Bifrost client and updates the plugin status
 func (s *BifrostHTTPServer) SyncLoadedPlugin(ctx context.Context, name string, plugin schemas.BasePlugin, placement *schemas.PluginPlacement, order *int) error {
+	if configuration, ok := plugin.(*resilienceConfigurationPlugin); ok {
+		if err := s.applyResilienceSection(configuration, true); err != nil {
+			return err
+		}
+	}
 	// 2. Register (replaces old version atomically)
 	if err := s.Config.ReloadPlugin(plugin); err != nil {
 		return s.updatePluginErrorStatus(plugin.GetName(), "registering", err)
@@ -2435,6 +2477,9 @@ func (s *BifrostHTTPServer) SyncLoadedPlugin(ctx context.Context, name string, p
 	// 5. Update plugin status
 	s.Config.UpdatePluginOverallStatus(plugin.GetName(), name, schemas.PluginStatusActive,
 		[]string{fmt.Sprintf("plugin %s reloaded successfully", name)}, InferPluginTypes(plugin))
+	if guardrail, ok := plugin.(*hostGuardrailPlugin); ok {
+		s.publishGuardrailManagement(guardrail.Plugin)
+	}
 	return nil
 }
 
@@ -2446,8 +2491,13 @@ func (s *BifrostHTTPServer) ReloadPlugin(ctx context.Context, name string, path 
 	// 1. Instantiate new version
 	plugin, err := InstantiatePlugin(ctx, name, path, pluginConfig, s.Config)
 	if err != nil {
-		return s.updatePluginErrorStatus(name, "loading", err)
+		return err
 	}
+	return s.reloadPluginInstance(ctx, name, plugin, placement, order)
+}
+
+// reloadPluginInstance 绑定已校验实例的运行时依赖，再同步到现有插件生命周期。
+func (s *BifrostHTTPServer) reloadPluginInstance(ctx context.Context, name string, plugin schemas.BasePlugin, placement *schemas.PluginPlacement, order *int) error {
 	// Wire the embedding executor on the new instance before syncing.
 	if semanticCachePlugin, ok := plugin.(*semanticcache.Plugin); ok {
 		semanticCachePlugin.SetEmbeddingRequestExecutor(s.Client.EmbeddingRequest)
@@ -2494,6 +2544,28 @@ func (s *BifrostHTTPServer) ReloadPlugin(ctx context.Context, name string, path 
 // RemovePlugin removes a plugin from the server.
 // The plugin is removed from both LLM and MCP arrays independently if it exists in them.
 func (s *BifrostHTTPServer) RemovePlugin(ctx context.Context, displayName string) error {
+	if displayName == "guardrails" {
+		cfg := &guardrails.Config{}
+		if s.Config.ConfigStore != nil {
+			if row, err := s.Config.ConfigStore.GetPlugin(ctx, displayName); err == nil {
+				cfg, err = guardrails.DecodeConfig(row.Config)
+				if err != nil {
+					return err
+				}
+				cfg.Enabled = false
+			}
+		}
+		disabled, err := s.instantiateGuardrails(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		s.publishGuardrailManagement(disabled.(*hostGuardrailPlugin).Plugin)
+	}
+	if displayName == adaptivePluginName || displayName == circuitPluginName {
+		if err := s.applyResilienceSection(&resilienceConfigurationPlugin{name: displayName}, false); err != nil {
+			return err
+		}
+	}
 	// Get the actual plugin name from the display name
 	name, ok := s.Config.GetPluginNameByDisplayName(displayName)
 	if !ok {
@@ -2904,8 +2976,9 @@ func (s *BifrostHTTPServer) RegisterAPIRoutes(ctx context.Context, callbacks Ser
 	configHandler.RegisterRoutes(s.Router, middlewares...)
 	oauthHandler.RegisterRoutes(s.Router, middlewares...)
 	if pluginsHandler != nil {
-		pluginsHandler.RegisterRoutes(s.Router, middlewares...)
+		pluginsHandler.RegisterRoutes(s.Router, append(middlewares, requireOSSManagementAuth)...)
 	}
+	s.registerOSSManagementRoutes(middlewares...)
 	if sessionHandler != nil {
 		sessionHandler.RegisterRoutes(s.Router, middlewares...)
 	}
@@ -3224,6 +3297,9 @@ func (s *BifrostHTTPServer) Bootstrap(ctx context.Context) error {
 		s.AsyncJobCleaner.StartCleanupRoutine()
 	}
 	// Load all plugins
+	if err := s.initializeOSSPluginManager(ctx); err != nil {
+		return err
+	}
 	if err := s.LoadPlugins(ctx); err != nil {
 		return fmt.Errorf("failed to instantiate plugins: %v", err)
 	}
@@ -3278,6 +3354,8 @@ func (s *BifrostHTTPServer) Bootstrap(ctx context.Context) error {
 		Logger:             logger,
 		KVStore:            s.Config.KVStore,
 		ModelCatalog:       s.Config.ModelCatalog,
+		KeyPoolFilter:      s.ossPluginManager.filterKeys,
+		KeySelector:        s.ossPluginManager.selectKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to initialize bifrost: %v", err)
@@ -3369,13 +3447,9 @@ func (s *BifrostHTTPServer) Bootstrap(ctx context.Context) error {
 			}
 			return fmt.Errorf("failed to initialize auth middleware: %v", err)
 		}
-		if ctx.Value(schemas.BifrostContextKeyIsEnterprise) == nil {
-			// OSS only: lock /api behind the setup token while dashboard auth is not
-			// active. It must run before APIMiddleware, whose auth-off branch lets
-			// every request through.
-			apiMiddlewares = append(apiMiddlewares, s.AuthMiddleware.SetupLockMiddleware(), s.AuthMiddleware.APIMiddleware())
-			s.setupLockInstalled = true
-		}
+		// 未启用管理认证时，先通过 setup token 门禁。
+		apiMiddlewares = append(apiMiddlewares, s.AuthMiddleware.SetupLockMiddleware(), s.AuthMiddleware.APIMiddleware())
+		s.setupLockInstalled = true
 	}
 	// Add semantic cache plugin embedding request executor if it exists
 	semanticCachePlugin, err := lib.FindPluginAs[*semanticcache.Plugin](s.Config, semanticcache.PluginName)
@@ -3442,7 +3516,7 @@ func (s *BifrostHTTPServer) Bootstrap(ctx context.Context) error {
 	// supply or translate the credentials they read (see schemas.HTTPTransportPreAuthHook).
 	// Skipped entirely when no transport plugin is loaded.
 	inferenceMiddlewares = append(inferenceMiddlewares, handlers.TransportPreAuthInterceptorMiddleware(s.Config))
-	if ctx.Value(schemas.BifrostContextKeyIsEnterprise) == nil && s.AuthMiddleware != nil {
+	if s.AuthMiddleware != nil {
 		inferenceMiddlewares = append(inferenceMiddlewares, s.AuthMiddleware.InferenceMiddleware())
 	}
 	// Once auth is done we will first add the Tracing middleware

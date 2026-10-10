@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BudgetUsageResetDialog from "@/components/ui/budgetUsageResetDialog";
 import { useBudgetUsageResetPrompt } from "@/hooks/useBudgetUsageResetPrompt";
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import MultiBudgetLines, { BudgetLineEntry } from "@/components/ui/multibudgets";
 import NumberAndSelect from "@/components/ui/numberAndSelect";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -24,19 +23,16 @@ import { resetDurationOptions, supportsCalendarAlignment } from "@/lib/constants
 import { getErrorMessage, useCreateCustomerMutation, useUpdateCustomerMutation } from "@/lib/store";
 import { CreateBudgetRequest, CreateCustomerRequest, Customer, UpdateCustomerRequest } from "@/lib/types/governance";
 import { Validator } from "@/lib/utils/validation";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import isEqual from "lodash.isequal";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 interface CustomerSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	customer?: Customer | null;
 	onSuccess?: () => void;
 }
-
 interface CustomerFormData {
 	name: string;
 	budgets: BudgetLineEntry[];
@@ -47,7 +43,6 @@ interface CustomerFormData {
 	calendarAligned: boolean;
 	isDirty: boolean;
 }
-
 const createInitialState = (customer?: Customer | null): Omit<CustomerFormData, "isDirty"> => {
 	return {
 		name: customer?.name || "",
@@ -64,15 +59,12 @@ const createInitialState = (customer?: Customer | null): Omit<CustomerFormData, 
 		calendarAligned: customer?.calendar_aligned ?? false,
 	};
 };
-
 export default function CustomerSheet({ open, onOpenChange, customer, onSuccess }: CustomerSheetProps) {
-	// Enterprise governs a customer's keys with an access profile, so a customer's own budgets and
 	// rate limits are the legacy system: not offered to a customer that has none, since the way to
 	// fund a new one is a profile. A customer that already has them keeps them editable here - the
 	// deployment is running on them, and taking editing away would leave it able only to migrate or
 	// delete, with no way back.
 	const hasLegacyLimits = !!customer && ((customer.budgets?.length ?? 0) > 0 || !!customer.rate_limit);
-	const editsLimits = !IS_ENTERPRISE || hasLegacyLimits;
 	const { t } = useTranslation("governance");
 	const { t: tCommon } = useTranslation("common");
 	const isEditing = !!customer;
@@ -82,19 +74,13 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 		isDirty: false,
 	});
 	const [nameError, setNameError] = useState<string | null>(null);
-
 	const [showCalendarAlignWarning, setShowCalendarAlignWarning] = useState(false);
 	// Defers the save until the operator says whether to clear accumulated spend.
 	const resetPrompt = useBudgetUsageResetPrompt<boolean>();
-
-	const hasCreateAccess = useRbac(RbacResource.Customers, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Customers, RbacOperation.Update);
-	const hasPermission = isEditing ? hasUpdateAccess : hasCreateAccess;
-
+	const hasPermission = isEditing ? true : true;
 	const [createCustomer, { isLoading: isCreating }] = useCreateCustomerMutation();
 	const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation();
 	const loading = isCreating || isUpdating;
-
 	// Keyed on the customer *id*, not the object: the list behind this sheet is
 	// polled, so an unchanged customer still arrives as a fresh object and an
 	// identity-keyed reset would discard whatever the operator had typed.
@@ -106,7 +92,6 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 		setNameError(null);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open, customer?.id]);
-
 	const handleCalendarAlignedChange = (checked: boolean) => {
 		if (checked && isEditing && !initialState.calendarAligned) {
 			setShowCalendarAlignWarning(true);
@@ -114,7 +99,6 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 			updateField("calendarAligned", checked);
 		}
 	};
-
 	useEffect(() => {
 		const currentData = {
 			name: formData.name,
@@ -139,7 +123,6 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 		formData.calendarAligned,
 		initialState,
 	]);
-
 	const canCalendarAlign = useMemo(() => {
 		const hasAlignableBudget = formData.budgets.some(
 			(b) => b.max_limit !== undefined && b.max_limit !== null && supportsCalendarAlignment(b.reset_duration),
@@ -151,7 +134,6 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 				supportsCalendarAlignment(formData.requestResetDuration));
 		return hasAlignableBudget || hasAlignableRateLimit;
 	}, [formData.budgets, formData.tokenMaxLimit, formData.tokenResetDuration, formData.requestMaxLimit, formData.requestResetDuration]);
-
 	// Reset calendarAligned when no duration supports alignment,
 	// so a hidden toggle doesn't silently submit calendar_aligned: true.
 	useEffect(() => {
@@ -160,10 +142,8 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 			updateField("calendarAligned", false);
 		}
 	}, [canCalendarAlign, formData.calendarAligned]);
-
 	const tokenMaxLimitNum = formData.tokenMaxLimit;
 	const requestMaxLimitNum = formData.requestMaxLimit;
-
 	const hasDuplicateDuration = useMemo(() => {
 		const seen = new Set<string>();
 		return formData.budgets
@@ -174,47 +154,41 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 				return false;
 			});
 	}, [formData.budgets]);
-
 	const validator = useMemo(
 		() =>
 			new Validator([
 				Validator.required(formData.name.trim(), t("customers.nameRequired")),
 				Validator.custom(formData.isDirty, t("sheet.noChanges")),
-				// Limits are only editable here when this build owns them. In enterprise they are the
-				// access profile's, the fields are hidden, and the form still carries whatever the
+
 				// customer already has - validating that would block an unrelated rename behind a
 				// legacy value the operator cannot reach.
-				...(editsLimits
-					? [
-							Validator.custom(!hasDuplicateDuration, t("sheet.uniqueResetPeriod")),
-							...(formData.budgets.some((b) => b.max_limit !== undefined && b.max_limit !== null && b.max_limit < 0.01)
-								? [Validator.custom(false, t("sheet.budgetMaxLimit"))]
-								: []),
-							...(formData.tokenMaxLimit !== undefined && formData.tokenMaxLimit !== null
-								? [
-										Validator.minValue(tokenMaxLimitNum ?? 0, 1, t("sheet.tokenMaxLimit")),
-										Validator.required(formData.tokenResetDuration, t("sheet.tokenResetRequired")),
-									]
-								: []),
-							...(formData.requestMaxLimit !== undefined && formData.requestMaxLimit !== null
-								? [
-										Validator.minValue(requestMaxLimitNum ?? 0, 1, t("sheet.requestMaxLimit")),
-										Validator.required(formData.requestResetDuration, t("sheet.requestResetRequired")),
-									]
-								: []),
-						]
-					: []),
+				...[
+					Validator.custom(!hasDuplicateDuration, t("sheet.uniqueResetPeriod")),
+					...(formData.budgets.some((b) => b.max_limit !== undefined && b.max_limit !== null && b.max_limit < 0.01)
+						? [Validator.custom(false, t("sheet.budgetMaxLimit"))]
+						: []),
+					...(formData.tokenMaxLimit !== undefined && formData.tokenMaxLimit !== null
+						? [
+								Validator.minValue(tokenMaxLimitNum ?? 0, 1, t("sheet.tokenMaxLimit")),
+								Validator.required(formData.tokenResetDuration, t("sheet.tokenResetRequired")),
+							]
+						: []),
+					...(formData.requestMaxLimit !== undefined && formData.requestMaxLimit !== null
+						? [
+								Validator.minValue(requestMaxLimitNum ?? 0, 1, t("sheet.requestMaxLimit")),
+								Validator.required(formData.requestResetDuration, t("sheet.requestResetRequired")),
+							]
+						: []),
+				],
 			]),
-		[editsLimits, formData, hasDuplicateDuration, tokenMaxLimitNum, requestMaxLimitNum, t],
+		[formData, hasDuplicateDuration, tokenMaxLimitNum, requestMaxLimitNum, t],
 	);
-
 	const updateField = <K extends keyof CustomerFormData>(field: K, value: CustomerFormData[K]) => {
 		if (field === "name") {
 			setNameError(null);
 		}
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
-
 	// A budget config change on an existing customer is when clearing accumulated
 	// spend becomes a meaningful choice; creating one has no usage to reset.
 	const budgetsChanged = () => {
@@ -223,7 +197,9 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 			rows: {
 				max_limit?: number | null;
 				reset_duration?: string;
-				reset_config?: { quarter_start_month?: number };
+				reset_config?: {
+					quarter_start_month?: number;
+				};
 			}[],
 		) =>
 			[...rows]
@@ -233,22 +209,18 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 		const next = formData.budgets.filter((b) => b.max_limit !== undefined && b.max_limit !== null);
 		return signature(next) !== signature(customer.budgets ?? []);
 	};
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-
 		if (!validator.isValid()) {
 			toast.error(validator.getFirstError());
 			return;
 		}
-
-		if (editsLimits && budgetsChanged()) {
+		if (budgetsChanged()) {
 			resetPrompt.ask(true);
 			return;
 		}
 		await saveCustomer(false);
 	};
-
 	const saveCustomer = async (resetBudgetUsage: boolean) => {
 		const budgetRequests: CreateBudgetRequest[] = formData.budgets
 			.filter((b) => b.max_limit !== undefined && b.max_limit !== null)
@@ -258,12 +230,8 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 				reset_duration: b.reset_duration,
 				reset_config: b.reset_config,
 			}));
-
 		try {
-			if (isEditing && customer && !editsLimits) {
-				await updateCustomer({ customerId: customer.id, data: { name: formData.name } }).unwrap();
-				toast.success(t("customers.updated"));
-			} else if (isEditing && customer) {
+			if (isEditing && customer) {
 				const updateData: UpdateCustomerRequest = {
 					name: formData.name,
 					calendar_aligned: formData.calendarAligned,
@@ -271,7 +239,6 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 					// Only sent when the operator explicitly chose to clear spend.
 					reset_budget_usage: resetBudgetUsage || undefined,
 				};
-
 				const hadRateLimit = !!customer.rate_limit;
 				const hasRateLimit =
 					(tokenMaxLimitNum !== undefined && tokenMaxLimitNum !== null) ||
@@ -287,22 +254,17 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 				} else if (hadRateLimit) {
 					updateData.rate_limit = {} as UpdateCustomerRequest["rate_limit"];
 				}
-
 				await updateCustomer({ customerId: customer.id, data: updateData }).unwrap();
 				toast.success(t("customers.updated"));
 			} else {
-				const createData: CreateCustomerRequest = editsLimits
-					? {
-							name: formData.name,
-							calendar_aligned: formData.calendarAligned,
-							budgets: budgetRequests,
-						}
-					: { name: formData.name };
-
+				const createData: CreateCustomerRequest = {
+					name: formData.name,
+					calendar_aligned: formData.calendarAligned,
+					budgets: budgetRequests,
+				};
 				if (
-					editsLimits &&
-					((tokenMaxLimitNum !== undefined && tokenMaxLimitNum !== null) ||
-						(requestMaxLimitNum !== undefined && requestMaxLimitNum !== null))
+					(tokenMaxLimitNum !== undefined && tokenMaxLimitNum !== null) ||
+					(requestMaxLimitNum !== undefined && requestMaxLimitNum !== null)
 				) {
 					createData.rate_limit = {
 						token_max_limit: tokenMaxLimitNum,
@@ -312,11 +274,9 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 							requestMaxLimitNum !== undefined && requestMaxLimitNum !== null ? formData.requestResetDuration : undefined,
 					};
 				}
-
 				await createCustomer(createData).unwrap();
 				toast.success(t("customers.created"));
 			}
-
 			onOpenChange(false);
 			onSuccess?.();
 		} catch (error: any) {
@@ -327,17 +287,13 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const isSubmitDisabled = loading || !validator.isValid() || !hasPermission;
-
 	const getTooltipMessage = () => {
 		if (!hasPermission) return t("sheet.noPermission");
 		if (loading) return t("sheet.saving");
 		return validator.getFirstError() || t("sheet.fixValidation");
 	};
-
 	const showCalendarAlignToggle = canCalendarAlign;
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent className="max-w-[900px] p-0 pt-4 sm:max-w-2xl" data-testid="customer-dialog-content">
@@ -368,7 +324,7 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 								</div>
 							</div>
 
-							{editsLimits && (
+							{
 								<>
 									<MultiBudgetLines
 										data-testid="customer-budgets"
@@ -416,7 +372,7 @@ export default function CustomerSheet({ open, onOpenChange, customer, onSuccess 
 										</div>
 									)}
 								</>
-							)}
+							}
 
 							<AlertDialog open={showCalendarAlignWarning} onOpenChange={setShowCalendarAlignWarning}>
 								<AlertDialogContent>

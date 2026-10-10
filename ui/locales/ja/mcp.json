@@ -781,16 +781,6 @@
 			"searchUsers": "名前またはメールで検索"
 		}
 	},
-	"toolGroups": {
-		"title": "MCP ツールグループ",
-		"description": "ツールを整理・管理するために、MCPサーバー向けのツールグループを構成します。",
-		"unlockTitle": "MCP ツールグループのロックを解除",
-		"unlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。MCP ツールを整理し、組織全体でガバナンスするためのツールグループを MCP サーバーに構成します。"
-	},
-	"authConfig": {
-		"unlockTitle": "MCP 認証設定をアンロック",
-		"unlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。MCP 接続を保護するため、MCP サーバーの認証を構成します。"
-	},
 	"credentials": {
 		"justNow": "たった今",
 		"minutesAgo": "{{minutes}} 分前",

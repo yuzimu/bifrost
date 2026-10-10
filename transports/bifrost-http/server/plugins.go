@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"slices"
 
 	"github.com/maximhq/bifrost/core/schemas"
 	"github.com/maximhq/bifrost/plugins/compat"
@@ -56,6 +55,11 @@ func InstantiatePlugin(ctx context.Context, name string, path *string, pluginCon
 // loadBuiltinPlugin instantiates a built-in plugin by name
 func loadBuiltinPlugin(ctx context.Context, name string, pluginConfig any, bifrostConfig *lib.Config) (schemas.BasePlugin, error) {
 	switch name {
+	case "guardrails", "adaptive-routing", "circuit-breaker":
+		if bifrostConfig.HostPluginFactory == nil {
+			return nil, fmt.Errorf("host plugin manager is not initialized")
+		}
+		return bifrostConfig.HostPluginFactory(ctx, name, pluginConfig)
 	case telemetry.PluginName:
 		telConfig := &telemetry.Config{
 			CustomLabels: bifrostConfig.ClientConfig.PrometheusLabels,
@@ -95,7 +99,11 @@ func loadBuiltinPlugin(ctx context.Context, name string, pluginConfig any, bifro
 			loggingConfig.ObjectStorageEnabled = bifrostConfig.LogsStoreConfig != nil &&
 				bifrostConfig.LogsStoreConfig.ObjectStorage != nil
 		}
-		return logging.Init(ctx, loggingConfig, logger, bifrostConfig.LogsStore,
+		store := bifrostConfig.LogsStore
+		if bifrostConfig.HostLogStore != nil && store != nil {
+			store = bifrostConfig.HostLogStore(store)
+		}
+		return logging.Init(ctx, loggingConfig, logger, store,
 			bifrostConfig.ConfigStore, bifrostConfig.ModelCatalog, bifrostConfig.MCPCatalog)
 
 	case governance.PluginName:
@@ -197,6 +205,8 @@ func (s *BifrostHTTPServer) LoadPlugins(ctx context.Context) error {
 
 // getPluginConfig retrieves a plugin's config from PluginConfigs by name
 func (s *BifrostHTTPServer) getPluginConfig(name string) *schemas.PluginConfig {
+	s.Config.Mu.RLock()
+	defer s.Config.Mu.RUnlock()
 	for _, cfg := range s.Config.PluginConfigs {
 		if cfg.Name == name {
 			return cfg
@@ -208,6 +218,9 @@ func (s *BifrostHTTPServer) getPluginConfig(name string) *schemas.PluginConfig {
 // loadBuiltinPlugins loads required built-in plugins in specific order
 func (s *BifrostHTTPServer) loadBuiltinPlugins(ctx context.Context) error {
 	builtinPlacement := schemas.Ptr(schemas.PluginPlacementBuiltin)
+	if err := s.loadOSSPlugins(ctx); err != nil {
+		return err
+	}
 
 	// 1. Telemetry (always first - tracks everything).
 	// Default-on: absent PluginConfig entry is treated as enabled, matching pre-#3269 behavior
@@ -224,8 +237,8 @@ func (s *BifrostHTTPServer) loadBuiltinPlugins(ctx context.Context) error {
 	}
 	s.Config.SetPluginOrderInfo(telemetry.PluginName, builtinPlacement, schemas.Ptr(1))
 
-	// 2. Prompts (requires config store for prompt repository; disabled in enterprise)
-	if s.Config.ConfigStore != nil && ctx.Value(schemas.BifrostContextKeyIsEnterprise) == nil {
+	// 2. Prompts requires the persistent prompt repository.
+	if s.Config.ConfigStore != nil {
 		s.registerPluginWithStatus(ctx, prompts.PluginName, nil, nil, false)
 	} else {
 		s.markPluginDisabled(prompts.PluginName)
@@ -248,17 +261,13 @@ func (s *BifrostHTTPServer) loadBuiltinPlugins(ctx context.Context) error {
 	}
 	s.Config.SetPluginOrderInfo(logging.PluginName, builtinPlacement, schemas.Ptr(3))
 
-	// 4. Governance (if enabled and not enterprise)
-	if ctx.Value(schemas.BifrostContextKeyIsEnterprise) == nil {
-		config := &governance.Config{
-			IsVkMandatory:         &s.Config.ClientConfig.EnforceAuthOnInference,
-			RequiredHeaders:       &s.Config.ClientConfig.RequiredHeaders,
-			DisableAutoToolInject: &s.Config.ClientConfig.MCPDisableAutoToolInject,
-		}
-		s.registerPluginWithStatus(ctx, governance.PluginName, nil, config, false)
-	} else {
-		s.markPluginDisabled(governance.PluginName)
+	// 4. Governance enforces inference authentication and quota ownership.
+	config := &governance.Config{
+		IsVkMandatory:         &s.Config.ClientConfig.EnforceAuthOnInference,
+		RequiredHeaders:       &s.Config.ClientConfig.RequiredHeaders,
+		DisableAutoToolInject: &s.Config.ClientConfig.MCPDisableAutoToolInject,
 	}
+	s.registerPluginWithStatus(ctx, governance.PluginName, nil, config, false)
 	s.Config.SetPluginOrderInfo(governance.PluginName, builtinPlacement, schemas.Ptr(4))
 
 	// 5. Routing rules. Runs after governance so rules evaluate against a fully stamped
@@ -315,7 +324,7 @@ func (s *BifrostHTTPServer) loadBuiltinPlugins(ctx context.Context) error {
 	s.Config.SetPluginOrderInfo(maxim.PluginName, builtinPlacement, schemas.Ptr(9))
 
 	// 10. ModelCatalogResolver (last routing layer — fills req.Provider from catalog only when
-	// no earlier routing plugin (governance routing rules, governance VK LB, enterprise LB)
+	// no earlier routing plugin (routing rules or governance provider selection)
 	// already set one. CEL rules can still match on provider == "" because this runs last.
 	// Requires a model catalog; only register when one is configured.
 	if s.Config.ModelCatalog != nil {
@@ -324,8 +333,7 @@ func (s *BifrostHTTPServer) loadBuiltinPlugins(ctx context.Context) error {
 		s.markPluginDisabled(modelcatalogresolver.PluginName)
 	}
 	// Place it in post_builtin with a max order so it runs after every other routing plugin,
-	// including post_builtin ones like the enterprise load balancer (which would otherwise run
-	// after this builtin and never get a chance to pick the provider first).
+	// including post_builtin routing plugins.
 	s.Config.SetPluginOrderInfo(modelcatalogresolver.PluginName, schemas.Ptr(schemas.PluginPlacementPostBuiltin), schemas.Ptr(math.MaxInt))
 
 	return nil
@@ -362,10 +370,6 @@ func (s *BifrostHTTPServer) loadCustomPlugins(ctx context.Context) error {
 		// Plugin is enabled - instantiate it
 		plugin, err := InstantiatePlugin(ctx, cfg.Name, cfg.Path, cfg.Config, s.Config)
 		if err != nil {
-			// Skip enterprise plugins silently
-			if slices.Contains(enterprisePlugins, cfg.Name) {
-				continue
-			}
 			logger.Error("failed to load plugin %s: %v", cfg.Name, err)
 			// Use cfg.Name since plugin may be nil when InstantiatePlugin returns an error
 			s.Config.UpdatePluginOverallStatus(cfg.Name, cfg.Name, schemas.PluginStatusError,

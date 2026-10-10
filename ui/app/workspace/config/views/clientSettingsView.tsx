@@ -7,16 +7,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { getErrorMessage, useGetCoreConfigQuery, useGetDroppedRequestsQuery, useUpdateCoreConfigMutation } from "@/lib/store";
 import { CoreConfig, DefaultCoreConfig, DefaultGlobalHeaderFilterConfig, GlobalHeaderFilterConfig } from "@/lib/types/config";
 import { cn } from "@/lib/utils";
-import LargePayloadSettingsFragment from "@enterprise/components/large-payload/largePayloadSettingsFragment";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import { useGetLargePayloadConfigQuery, useUpdateLargePayloadConfigMutation } from "@enterprise/lib/store/apis/largePayloadApi";
-import { DefaultLargePayloadConfig, LargePayloadConfig } from "@enterprise/lib/types/largePayload";
 import { Info, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import UserAgentMappingsView from "./userAgentMappingsView";
-
 // Security headers that cannot be configured in allowlist/denylist
 // These headers are always blocked for security reasons regardless of configuration
 const SECURITY_HEADERS = [
@@ -31,7 +26,6 @@ const SECURITY_HEADERS = [
 	"x-bf-api-key",
 	"x-bf-vk",
 ];
-
 // Helper to check if a header is a security header
 function isSecurityHeader(header: string): boolean {
 	const h = header.toLowerCase().trim();
@@ -39,57 +33,34 @@ function isSecurityHeader(header: string): boolean {
 	if (h.includes("*")) return false;
 	return SECURITY_HEADERS.includes(h);
 }
-
 // Helper to compare header filter configs
 function headerFilterConfigEqual(a?: GlobalHeaderFilterConfig, b?: GlobalHeaderFilterConfig): boolean {
 	const aAllowlist = a?.allowlist || [];
 	const bAllowlist = b?.allowlist || [];
 	const aDenylist = a?.denylist || [];
 	const bDenylist = b?.denylist || [];
-
 	if (aAllowlist.length !== bAllowlist.length || aDenylist.length !== bDenylist.length) {
 		return false;
 	}
-
 	return aAllowlist.every((v, i) => v === bAllowlist[i]) && aDenylist.every((v, i) => v === bDenylist[i]);
 }
-
-// Helper to compare large payload configs
-function largePayloadConfigEqual(a: LargePayloadConfig, b: LargePayloadConfig): boolean {
-	return (
-		a.enabled === b.enabled &&
-		a.request_threshold_bytes === b.request_threshold_bytes &&
-		a.response_threshold_bytes === b.response_threshold_bytes &&
-		a.prefetch_size_bytes === b.prefetch_size_bytes &&
-		a.max_payload_bytes === b.max_payload_bytes &&
-		a.truncated_log_bytes === b.truncated_log_bytes
-	);
-}
-
 export default function ClientSettingsView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const [droppedRequests, setDroppedRequests] = useState<number>(0);
 	const { data: droppedRequestsData } = useGetDroppedRequestsQuery();
-	const { data: bifrostConfig, isLoading: isCoreConfigLoading } = useGetCoreConfigQuery({ fromDB: true });
+	const { data: bifrostConfig, isLoading: isCoreConfigLoading } = useGetCoreConfigQuery({
+		fromDB: true,
+	});
 	const config = bifrostConfig?.client_config;
 	const [updateCoreConfig, { isLoading: isSavingCoreConfig }] = useUpdateCoreConfigMutation();
 	const [localConfig, setLocalConfig] = useState<CoreConfig>(DefaultCoreConfig);
-
-	// Large payload config state
-	const { data: serverLargePayloadConfig, isLoading: isLargePayloadConfigLoading } = useGetLargePayloadConfigQuery();
-	const [updateLargePayloadConfig, { isLoading: isSavingLargePayload }] = useUpdateLargePayloadConfigMutation();
-	const [localLargePayloadConfig, setLocalLargePayloadConfig] = useState<LargePayloadConfig>(DefaultLargePayloadConfig);
-
-	const isQueriesLoading = isCoreConfigLoading || isLargePayloadConfigLoading;
-	const isLoading = isSavingCoreConfig || isSavingLargePayload;
-
+	const isQueriesLoading = isCoreConfigLoading;
+	const isLoading = isSavingCoreConfig;
 	useEffect(() => {
 		if (droppedRequestsData) {
 			setDroppedRequests(droppedRequestsData.dropped_requests);
 		}
 	}, [droppedRequestsData]);
-
 	useEffect(() => {
 		if (config) {
 			setLocalConfig({
@@ -98,13 +69,6 @@ export default function ClientSettingsView() {
 			});
 		}
 	}, [config]);
-
-	useEffect(() => {
-		if (serverLargePayloadConfig) {
-			setLocalLargePayloadConfig(serverLargePayloadConfig);
-		}
-	}, [serverLargePayloadConfig]);
-
 	const hasCoreConfigChanges = useMemo(() => {
 		if (!config) return false;
 		return (
@@ -115,14 +79,7 @@ export default function ClientSettingsView() {
 			!headerFilterConfigEqual(localConfig.header_filter_config, config.header_filter_config)
 		);
 	}, [config, localConfig]);
-
-	const hasLargePayloadChanges = useMemo(() => {
-		const baseline = serverLargePayloadConfig ?? DefaultLargePayloadConfig;
-		return !largePayloadConfigEqual(localLargePayloadConfig, baseline);
-	}, [serverLargePayloadConfig, localLargePayloadConfig]);
-
-	const hasChanges = hasCoreConfigChanges || hasLargePayloadChanges;
-
+	const hasChanges = hasCoreConfigChanges;
 	// Detect security headers in allowlist/denylist
 	const invalidSecurityHeaders = useMemo(() => {
 		const allowlist = localConfig.header_filter_config?.allowlist || [];
@@ -131,49 +88,16 @@ export default function ClientSettingsView() {
 		const invalidInDenylist = denylist.filter((h) => h && isSecurityHeader(h));
 		return [...new Set([...invalidInAllowlist, ...invalidInDenylist])];
 	}, [localConfig.header_filter_config]);
-
 	const hasSecurityHeaderError = invalidSecurityHeaders.length > 0;
-
 	const handleConfigChange = useCallback((field: keyof CoreConfig, value: boolean | number | string[] | GlobalHeaderFilterConfig) => {
 		setLocalConfig((prev) => ({ ...prev, [field]: value }));
 	}, []);
-
-	const handleLargePayloadConfigChange = useCallback((newConfig: LargePayloadConfig) => {
-		setLocalLargePayloadConfig(newConfig);
-	}, []);
-
 	const handleSave = useCallback(async () => {
 		// Defense in depth - don't save if security headers are present
 		if (hasSecurityHeaderError) {
 			return;
 		}
-
-		// Validate large payload config if it has changes
-		if (hasLargePayloadChanges) {
-			const minBytes = 1024;
-			if (
-				localLargePayloadConfig.request_threshold_bytes < minBytes ||
-				localLargePayloadConfig.response_threshold_bytes < minBytes ||
-				localLargePayloadConfig.prefetch_size_bytes < minBytes ||
-				localLargePayloadConfig.max_payload_bytes < minBytes ||
-				localLargePayloadConfig.truncated_log_bytes < minBytes
-			) {
-				toast.error(t("clientSettings.toastMinBytes"));
-				return;
-			}
-			if (localLargePayloadConfig.max_payload_bytes < localLargePayloadConfig.request_threshold_bytes) {
-				toast.error(t("clientSettings.toastMaxVsRequest"));
-				return;
-			}
-			if (localLargePayloadConfig.max_payload_bytes < localLargePayloadConfig.response_threshold_bytes) {
-				toast.error(t("clientSettings.toastMaxVsResponse"));
-				return;
-			}
-		}
-
 		let coreConfigSaved = false;
-		let largePayloadSaved = false;
-
 		// Save core config if changed
 		if (hasCoreConfigChanges) {
 			if (!bifrostConfig) {
@@ -188,7 +112,6 @@ export default function ClientSettingsView() {
 					denylist: (localConfig.header_filter_config?.denylist || []).filter((h) => h && h.trim().length > 0),
 				},
 			};
-
 			try {
 				await updateCoreConfig({
 					...bifrostConfig!,
@@ -203,40 +126,12 @@ export default function ClientSettingsView() {
 				);
 			}
 		}
-
-		// Save large payload config if changed
-		if (hasLargePayloadChanges) {
-			try {
-				await updateLargePayloadConfig(localLargePayloadConfig).unwrap();
-				largePayloadSaved = true;
-			} catch (error) {
-				toast.error(
-					t("clientSettings.toastSaveLargePayloadFailed", {
-						error: getErrorMessage(error),
-					}),
-				);
-			}
-		}
-
-		if (coreConfigSaved || largePayloadSaved) {
-			if (largePayloadSaved) {
-				toast.success(t("clientSettings.toastSavedWithRestart"));
-			} else {
+		if (coreConfigSaved) {
+			{
 				toast.success(t("clientSettings.toastSaved"));
 			}
 		}
-	}, [
-		bifrostConfig,
-		hasSecurityHeaderError,
-		hasCoreConfigChanges,
-		hasLargePayloadChanges,
-		localConfig,
-		localLargePayloadConfig,
-		t,
-		updateCoreConfig,
-		updateLargePayloadConfig,
-	]);
-
+	}, [bifrostConfig, hasSecurityHeaderError, hasCoreConfigChanges, localConfig, t, updateCoreConfig]);
 	// Header filter list handlers
 	const handleAddAllowlistHeader = useCallback(() => {
 		setLocalConfig((prev) => ({
@@ -247,7 +142,6 @@ export default function ClientSettingsView() {
 			},
 		}));
 	}, []);
-
 	const handleRemoveAllowlistHeader = useCallback((index: number) => {
 		setLocalConfig((prev) => ({
 			...prev,
@@ -257,7 +151,6 @@ export default function ClientSettingsView() {
 			},
 		}));
 	}, []);
-
 	const handleAllowlistChange = useCallback((index: number, value: string) => {
 		const lowerValue = value.toLowerCase();
 		setLocalConfig((prev) => ({
@@ -268,7 +161,6 @@ export default function ClientSettingsView() {
 			},
 		}));
 	}, []);
-
 	const handleAddDenylistHeader = useCallback(() => {
 		setLocalConfig((prev) => ({
 			...prev,
@@ -278,7 +170,6 @@ export default function ClientSettingsView() {
 			},
 		}));
 	}, []);
-
 	const handleRemoveDenylistHeader = useCallback((index: number) => {
 		setLocalConfig((prev) => ({
 			...prev,
@@ -288,7 +179,6 @@ export default function ClientSettingsView() {
 			},
 		}));
 	}, []);
-
 	const handleDenylistChange = useCallback((index: number, value: string) => {
 		const lowerValue = value.toLowerCase();
 		setLocalConfig((prev) => ({
@@ -299,7 +189,6 @@ export default function ClientSettingsView() {
 			},
 		}));
 	}, []);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6">
 			<PageTitle title={t("clientSettings.title")}>{t("clientSettings.description")}</PageTitle>
@@ -329,7 +218,6 @@ export default function ClientSettingsView() {
 						size="md"
 						checked={localConfig.drop_excess_requests}
 						onCheckedChange={(checked) => handleConfigChange("drop_excess_requests", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -346,7 +234,6 @@ export default function ClientSettingsView() {
 						size="md"
 						checked={localConfig.disable_db_pings_in_health}
 						onCheckedChange={(checked) => handleConfigChange("disable_db_pings_in_health", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -364,7 +251,6 @@ export default function ClientSettingsView() {
 						size="md"
 						checked={localConfig.dump_errors_in_console_logs}
 						onCheckedChange={(checked) => handleConfigChange("dump_errors_in_console_logs", checked)}
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 				{/* Async Job Result TTL */}
@@ -382,13 +268,12 @@ export default function ClientSettingsView() {
 						className="w-32 shrink-0"
 						value={localConfig.async_job_result_ttl}
 						onChange={(e) => handleConfigChange("async_job_result_ttl", parseInt(e.target.value) || 0)}
-						disabled={!hasSettingsUpdateAccess}
 						data-testid="client-settings-async-job-result-ttl-input"
 					/>
 				</div>
 			</div>
 
-			<UserAgentMappingsView disabled={isLoading || !hasSettingsUpdateAccess} />
+			<UserAgentMappingsView disabled={isLoading} />
 
 			{/* Header Filter Section */}
 			<div className="space-y-4">
@@ -541,7 +426,6 @@ export default function ClientSettingsView() {
 									)}
 									value={header}
 									onChange={(e) => handleAllowlistChange(index, e.target.value)}
-									disabled={!hasSettingsUpdateAccess}
 								/>
 								<Button
 									type="button"
@@ -549,13 +433,12 @@ export default function ClientSettingsView() {
 									size="icon"
 									onClick={() => handleRemoveAllowlistHeader(index)}
 									className="text-muted-foreground hover:text-destructive"
-									disabled={!hasSettingsUpdateAccess}
 								>
 									<X className="h-4 w-4" />
 								</Button>
 							</div>
 						))}
-						<Button type="button" variant="outline" size="sm" onClick={handleAddAllowlistHeader} disabled={!hasSettingsUpdateAccess}>
+						<Button type="button" variant="outline" size="sm" onClick={handleAddAllowlistHeader}>
 							<Plus className="mr-2 h-4 w-4" />
 							{t("addHeader")}
 						</Button>
@@ -590,7 +473,6 @@ export default function ClientSettingsView() {
 									)}
 									value={header}
 									onChange={(e) => handleDenylistChange(index, e.target.value)}
-									disabled={!hasSettingsUpdateAccess}
 								/>
 								<Button
 									type="button"
@@ -598,26 +480,18 @@ export default function ClientSettingsView() {
 									size="icon"
 									onClick={() => handleRemoveDenylistHeader(index)}
 									className="text-muted-foreground hover:text-destructive"
-									disabled={!hasSettingsUpdateAccess}
 								>
 									<X className="h-4 w-4" />
 								</Button>
 							</div>
 						))}
-						<Button type="button" variant="outline" size="sm" onClick={handleAddDenylistHeader} disabled={!hasSettingsUpdateAccess}>
+						<Button type="button" variant="outline" size="sm" onClick={handleAddDenylistHeader}>
 							<Plus className="mr-2 h-4 w-4" />
 							{t("addHeader")}
 						</Button>
 					</div>
 				</div>
 			</div>
-
-			{/* Large Payload Optimization - Enterprise only */}
-			<LargePayloadSettingsFragment
-				config={localLargePayloadConfig}
-				onConfigChange={handleLargePayloadConfigChange}
-				controlsDisabled={isLoading || !hasSettingsUpdateAccess}
-			/>
 
 			<div className="bg-card sticky bottom-0 flex justify-end py-2">
 				{hasSecurityHeaderError ? (
@@ -635,7 +509,7 @@ export default function ClientSettingsView() {
 						</TooltipContent>
 					</Tooltip>
 				) : (
-					<Button onClick={handleSave} disabled={!hasChanges || isLoading || isQueriesLoading || !hasSettingsUpdateAccess}>
+					<Button onClick={handleSave} disabled={!hasChanges || isLoading || isQueriesLoading}>
 						{isLoading ? t("saving") : t("saveChanges")}
 					</Button>
 				)}

@@ -6,7 +6,6 @@ import { getErrorMessage, setProviderFormDirtyState, useAppDispatch } from "@/li
 import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import { ModelProvider } from "@/lib/types/config";
 import { debuggingFormSchema, type DebuggingFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Info } from "lucide-react";
 import { useEffect } from "react";
@@ -14,15 +13,12 @@ import { useForm, type Resolver } from "react-hook-form";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface DebuggingFormFragmentProps {
 	provider: ModelProvider;
 }
-
 export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const form = useForm<DebuggingFormSchema, any, DebuggingFormSchema>({
 		resolver: zodResolver(debuggingFormSchema) as Resolver<DebuggingFormSchema, any, DebuggingFormSchema>,
@@ -37,11 +33,9 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 	const sendBackRawRequest = form.watch("send_back_raw_request");
 	const sendBackRawResponse = form.watch("send_back_raw_response");
 	const storeRawRequestResponse = form.watch("store_raw_request_response");
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	useEffect(() => {
 		form.reset({
 			send_back_raw_request: provider.send_back_raw_request ?? false,
@@ -50,7 +44,6 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [provider.name, provider.send_back_raw_request, provider.send_back_raw_response, provider.store_raw_request_response]);
-
 	const onSubmit = (data: DebuggingFormSchema) => {
 		const updatedProvider = buildProviderUpdatePayload(provider, {
 			send_back_raw_request: data.send_back_raw_request,
@@ -69,7 +62,6 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6" data-testid="provider-config-debugging-content">
@@ -106,7 +98,6 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 										<Switch
 											size="md"
 											checked={field.value}
-											disabled={!hasUpdateProviderAccess}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
 												form.trigger("send_back_raw_request");
@@ -151,7 +142,6 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 										<Switch
 											size="md"
 											checked={field.value}
-											disabled={!hasUpdateProviderAccess}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
 												form.trigger("send_back_raw_response");
@@ -197,7 +187,6 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 											data-testid="provider-debugging-store-raw-request-response-switch"
 											size="md"
 											checked={field.value}
-											disabled={!hasUpdateProviderAccess}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
 												form.trigger("store_raw_request_response");
@@ -212,11 +201,7 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 				</div>
 
 				<div className="flex justify-end space-x-2">
-					<Button
-						type="submit"
-						disabled={!form.formState.isDirty || !hasUpdateProviderAccess || isUpdatingProvider}
-						isLoading={isUpdatingProvider}
-					>
+					<Button type="submit" disabled={!form.formState.isDirty || isUpdatingProvider} isLoading={isUpdatingProvider}>
 						{t("providers.saveDebuggingConfig")}
 					</Button>
 				</div>

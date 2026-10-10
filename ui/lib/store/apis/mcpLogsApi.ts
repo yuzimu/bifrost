@@ -13,12 +13,8 @@ import { baseApi } from "./baseApi";
 // Helper function to build MCP filter params
 function buildMCPFilterParams(filters: MCPToolLogFilters): Record<string, string | number> {
 	const params: Record<string, string | number> = {};
-	if (filters.user_ids?.length) params.user_ids = filters.user_ids.join(",");
 	if (filters.team_ids?.length) params.team_ids = filters.team_ids.join(",");
 	if (filters.customer_ids?.length) params.customer_ids = filters.customer_ids.join(",");
-	if (filters.business_unit_ids?.length) params.business_unit_ids = filters.business_unit_ids.join(",");
-	if (filters.project_ids?.length) params.project_ids = filters.project_ids.join(",");
-	if (filters.device_ids?.length) params.device_ids = filters.device_ids.join(",");
 	if (filters.tool_names && filters.tool_names.length > 0) {
 		params.tool_names = filters.tool_names.join(",");
 	}
@@ -108,7 +104,13 @@ export const mcpLogsApi = baseApi.injectEndpoints({
 		// (tool_names, server_labels, virtual_keys); omit for all.
 		getMCPAvailableFilterData: builder.query<Partial<MCPToolLogFilterData>, { dimensions?: string[]; q?: string } | void>({
 			query: (arg) => {
-				const dims = arg && "dimensions" in arg ? arg.dimensions : undefined;
+				const dims = (arg && "dimensions" in arg ? arg.dimensions : undefined) ?? [
+					"tool_names",
+					"server_labels",
+					"apps",
+					"user_agents",
+					"virtual_keys",
+				];
 				const q = arg && "q" in arg ? arg.q : undefined;
 				const params = new URLSearchParams();
 				if (dims && dims.length > 0) {

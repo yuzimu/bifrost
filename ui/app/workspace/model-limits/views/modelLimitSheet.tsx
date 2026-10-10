@@ -16,13 +16,11 @@ import { ProviderLabels, ProviderName } from "@/lib/constants/logs";
 import { getModelLimitScope, getModelLimitScopes } from "@/lib/registries/modelLimitScopes";
 import { budgetSignature } from "@/lib/utils/governance";
 import { shouldClearModelOnProviderChange } from "./modelLimitSheet.utils";
-// Side-effect import: pulls in downstream scope registrations (e.g. enterprise
+
 // registers "user" + user picker). The OSS-build fallback is an empty module.
 import { getErrorMessage, useCreateModelConfigMutation, useLazyGetModelsQuery, useUpdateModelConfigMutation } from "@/lib/store";
 import { ModelConfig } from "@/lib/types/governance";
 import { formatCurrency } from "@/lib/utils/governance";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import "@enterprise/lib/registrations/modelLimitScopes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -31,13 +29,11 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
-
 interface ModelLimitSheetProps {
 	modelConfig?: ModelConfig | null;
 	onSave: () => void;
 	onCancel: () => void;
 }
-
 const formSchema = z
 	.object({
 		modelName: z.string().min(1, { error: () => i18n.t("modelLimits.modelNameRequired", { ns: "models" }) }),
@@ -63,13 +59,10 @@ const formSchema = z
 		error: () => i18n.t("modelLimits.vkRequiredForScope", { ns: "models" }),
 		path: ["scopeId"],
 	});
-
 type FormData = z.infer<typeof formSchema>;
-
 // A limit with no provider applies across all of them; the form spells that absence as a
 // sentinel so the control has something to show. Module level so its identity is stable.
 const ALL_PROVIDERS_VALUE = "all";
-
 /** 展示模型限制编辑及用量摘要，语言切换不改变作用域和限制值。 */
 export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: ModelLimitSheetProps) {
 	const { t } = useTranslation("models");
@@ -78,43 +71,35 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 	const allModelsOption = useMemo(() => [{ value: "*", label: tc("modelAccess.allModels") }], [tc]);
 	const [isOpen, setIsOpen] = useState(true);
 	const isEditing = !!modelConfig;
-	// A readOnly-registered scope (e.g. enterprise's access_profile) is
+
 	// system-generated: no field here is ever user-editable, and it must be
 	// changed by editing its owner instead.
 	const scopeEntry = getModelLimitScope(modelConfig?.scope || "global");
 	const isManagedReadOnly = isEditing && scopeEntry?.readOnly === true;
-
-	const hasCreateAccess = useRbac(RbacResource.Governance, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Governance, RbacOperation.Update);
-	const canSubmit = isEditing ? hasUpdateAccess : hasCreateAccess;
-
+	const canSubmit = isEditing ? true : true;
 	const handleClose = () => {
 		setIsOpen(false);
 		setTimeout(() => {
 			onCancel();
 		}, 150);
 	};
-
 	const [createModelConfig, { isLoading: isCreating }] = useCreateModelConfigMutation();
 	// Defers the save until the operator says whether to clear accumulated spend.
 	const resetPrompt = useBudgetUsageResetPrompt<FormData>();
 	const [updateModelConfig, { isLoading: isUpdating }] = useUpdateModelConfigMutation();
 	const [getModels] = useLazyGetModelsQuery();
 	const isLoading = isCreating || isUpdating;
-
 	// Handle provider change - clear model if it doesn't exist for the new provider
 	const handleProviderChange = async (newProvider: string, currentModel: string, onChange: (value: string) => void) => {
 		onChange(newProvider);
 		// "*" is provider-agnostic, so it needs no lookup and must survive the switch.
 		if (!currentModel || currentModel === "*") return;
-
 		try {
 			const response = await getModels({
 				provider: newProvider || undefined,
 				query: currentModel,
 				limit: 50,
 			}).unwrap();
-
 			if (
 				shouldClearModelOnProviderChange(
 					currentModel,
@@ -127,7 +112,6 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 			// On error, don't clear the model
 		}
 	};
-
 	const form = useForm<FormData>({
 		mode: "onChange",
 		resolver: zodResolver(formSchema),
@@ -148,17 +132,14 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 			requestResetDuration: modelConfig?.rate_limit?.request_reset_duration || "1h",
 		},
 	});
-
 	const watchedBudgets = form.watch("budgets");
 	const hasAnyLimit =
 		(watchedBudgets?.some((b) => b.max_limit !== undefined && b.max_limit !== null) ?? false) ||
 		(form.watch("tokenMaxLimit") !== undefined && form.watch("tokenMaxLimit") !== null) ||
 		(form.watch("requestMaxLimit") !== undefined && form.watch("requestMaxLimit") !== null);
-
 	useEffect(() => {
 		if (hasAnyLimit) form.clearErrors("root");
 	}, [hasAnyLimit, form]);
-
 	useEffect(() => {
 		if (modelConfig) {
 			// Never reset form if user is editing - skip reset entirely
@@ -183,7 +164,6 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 			});
 		}
 	}, [modelConfig, form]);
-
 	// A budget config change on an existing limit is when clearing accumulated
 	// spend becomes a meaningful choice; creating one has no usage to reset.
 	// Compared without ids on purpose: form rows carry none while persisted rows do,
@@ -206,29 +186,24 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 		}));
 		return budgetSignature(next) !== budgetSignature(current);
 	};
-
 	const onSubmit = async (data: FormData) => {
 		if (!canSubmit) {
 			toast.error(t("modelLimits.noPermission"));
 			return;
 		}
-
 		if (budgetsChanged(data)) {
 			resetPrompt.ask(data);
 			return;
 		}
 		await saveModelLimit(data, false);
 	};
-
 	const saveModelLimit = async (data: FormData, resetBudgetUsage: boolean) => {
 		if (!hasAnyLimit) {
 			form.setError("root", { message: t("modelLimits.atLeastOneRequired") });
 			return;
 		}
-
 		try {
 			const provider = data.provider && data.provider.trim() !== "" ? data.provider : undefined;
-
 			// Full desired set of budgets (kept lines with a max_limit). For updates this is
 			// reconciled server-side; an empty array removes all budgets.
 			const budgetsPayload = (data.budgets ?? [])
@@ -239,13 +214,11 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 					reset_duration: b.reset_duration || "1M",
 					reset_config: b.reset_config,
 				}));
-
 			if (isEditing && modelConfig) {
 				const hadRateLimit = !!modelConfig.rate_limit;
 				const hasRateLimit =
 					(data.tokenMaxLimit !== undefined && data.tokenMaxLimit !== null) ||
 					(data.requestMaxLimit !== undefined && data.requestMaxLimit !== null);
-
 				let rateLimitPayload:
 					| {
 							token_max_limit?: number | null;
@@ -265,7 +238,6 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 				} else if (hadRateLimit) {
 					rateLimitPayload = {};
 				}
-
 				await updateModelConfig({
 					id: modelConfig.id,
 					data: {
@@ -285,7 +257,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 					scope: data.scope || "global",
 					// Any scope with a registered PickerComponent carries a target;
 					// global (no picker) sends no scope_id. Mirrors the registry
-					// shape, so adding a new scope (e.g. enterprise's "user")
+
 					// doesn't need a branch here.
 					scope_id: getModelLimitScope(data.scope || "global")?.PickerComponent ? data.scopeId : undefined,
 					budgets: budgetsPayload.length > 0 ? budgetsPayload : undefined,
@@ -304,13 +276,11 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 				}).unwrap();
 				toast.success(t("modelLimits.createdSuccess"));
 			}
-
 			onSave();
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	if (isManagedReadOnly && modelConfig) {
 		const budgets = modelConfig.budgets ?? (modelConfig.budget ? [modelConfig.budget] : []);
 		return (
@@ -434,7 +404,6 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 			</Sheet>
 		);
 	}
-
 	return (
 		<Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
 			<SheetContent
@@ -556,9 +525,9 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 							/>
 
 							{/* Scope-target picker — driven by the scope registry.
-								Each non-global scope (virtual_key, user, …) registers its
-								own PickerComponent; we render whichever the current scope
-								provides. */}
+            Each non-global scope (virtual_key, user, …) registers its
+            own PickerComponent; we render whichever the current scope
+            provides. */}
 							{(() => {
 								const scopeEntry = getModelLimitScope(form.watch("scope") || "global");
 								const Picker = scopeEntry?.PickerComponent;

@@ -6,22 +6,18 @@ import { getErrorMessage, setProviderFormDirtyState, useAppDispatch } from "@/li
 import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import { ModelProvider } from "@/lib/types/config";
 import { performanceFormSchema, type PerformanceFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface PerformanceFormFragmentProps {
 	provider: ModelProvider;
 }
-
 export function PerformanceFormFragment({ provider }: PerformanceFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const form = useForm<PerformanceFormSchema, any, PerformanceFormSchema>({
 		resolver: zodResolver(performanceFormSchema) as Resolver<PerformanceFormSchema, any, PerformanceFormSchema>,
@@ -34,11 +30,9 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 			},
 		},
 	});
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty]);
-
 	useEffect(() => {
 		// Reset form with new provider's concurrency_and_buffer_size when provider changes
 		form.reset({
@@ -48,7 +42,6 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 			},
 		});
 	}, [form, provider.name, provider.concurrency_and_buffer_size]);
-
 	const onSubmit = (data: PerformanceFormSchema) => {
 		// Create updated provider configuration (raw request/response are in Debugging tab)
 		const updatedProvider = buildProviderUpdatePayload(provider, {
@@ -69,7 +62,6 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4 md:px-6">
@@ -89,7 +81,6 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 												placeholder="10"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -122,7 +113,6 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 												placeholder="10"
 												{...field}
 												value={field.value === undefined || Number.isNaN(field.value) ? "" : field.value}
-												disabled={!hasUpdateProviderAccess}
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === "") {
@@ -147,11 +137,7 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 
 				{/* Form Actions */}
 				<div className="mb-6 flex justify-end space-x-2">
-					<Button
-						type="submit"
-						disabled={!form.formState.isDirty || !hasUpdateProviderAccess || isUpdatingProvider}
-						isLoading={isUpdatingProvider}
-					>
+					<Button type="submit" disabled={!form.formState.isDirty || isUpdatingProvider} isLoading={isUpdatingProvider}>
 						{t("providers.savePerformanceConfig")}
 					</Button>
 				</div>

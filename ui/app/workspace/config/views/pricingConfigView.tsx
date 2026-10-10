@@ -4,26 +4,21 @@ import { Input } from "@/components/ui/input";
 import { useFormErrorLanguageSync } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { getErrorMessage, useForcePricingSyncMutation, useGetCoreConfigQuery, useUpdateCoreConfigMutation } from "@/lib/store";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 interface PricingFormData {
 	pricing_datasheet_url: string;
 	pricing_sync_interval_hours: number;
 	model_parameters_url: string;
 }
-
 export default function PricingConfigView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.framework_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [forcePricingSync, { isLoading: isForceSyncing }] = useForcePricingSyncMutation();
-
 	const {
 		register,
 		trigger,
@@ -39,9 +34,7 @@ export default function PricingConfigView() {
 		},
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	const formValues = watch();
-
 	useEffect(() => {
 		if (bifrostConfig && config) {
 			reset({
@@ -51,7 +44,6 @@ export default function PricingConfigView() {
 			});
 		}
 	}, [config, bifrostConfig, reset]);
-
 	const hasChanges = useMemo(() => {
 		if (!config || !isDirty) return false;
 		const serverUrl = config.pricing_url || "";
@@ -63,7 +55,6 @@ export default function PricingConfigView() {
 			formValues.model_parameters_url !== serverModelParamsUrl
 		);
 	}, [config, formValues, isDirty]);
-
 	const onSubmit = async (data: PricingFormData) => {
 		try {
 			await updateCoreConfig({
@@ -82,7 +73,6 @@ export default function PricingConfigView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const handleForceSync = async () => {
 		try {
 			await forcePricingSync().unwrap();
@@ -91,7 +81,6 @@ export default function PricingConfigView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-4" data-testid="pricing-config-view">
 			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -185,16 +174,10 @@ export default function PricingConfigView() {
 					</div>
 				</div>
 				<div className="flex justify-end gap-2 pt-2">
-					<Button
-						variant="outline"
-						type="button"
-						onClick={handleForceSync}
-						disabled={isForceSyncing || !hasSettingsUpdateAccess}
-						data-testid="pricing-force-sync-btn"
-					>
+					<Button variant="outline" type="button" onClick={handleForceSync} disabled={isForceSyncing} data-testid="pricing-force-sync-btn">
 						{isForceSyncing ? t("pricing.syncing") : t("pricing.forceSync")}
 					</Button>
-					<Button type="submit" disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess} data-testid="pricing-save-btn">
+					<Button type="submit" disabled={!hasChanges || isLoading} data-testid="pricing-save-btn">
 						{isLoading ? t("saving") : t("saveChanges")}
 					</Button>
 				</div>

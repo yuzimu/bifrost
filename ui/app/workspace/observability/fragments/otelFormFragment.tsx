@@ -12,16 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { otelFormSchema, type OtelFormSchema, type SecretVar } from "@/lib/types/schemas";
 import { emptySecretVar, toSecretVarFormValue, toSecretVarMapFormValue } from "@/lib/utils/secretVarForm";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, type Control, type Resolver, type UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
 // ProfileForm is a single profile's form shape, derived from the form schema.
 type ProfileForm = OtelFormSchema["profiles"][number];
-
 // StoredOtelProfile is one profile as persisted/returned by the API (headers are strings,
 // SecretVar fields may be plain strings or full objects).
 interface StoredOtelProfile {
@@ -47,11 +44,13 @@ interface StoredOtelProfile {
 	group_traces_by_session?: boolean;
 	disable_root_span_content?: boolean;
 }
-
 // StoredOtelConfig is either the canonical { profiles: [...] } wrapper or a legacy single
 // profile object (no "profiles" key).
-type StoredOtelConfig = (StoredOtelProfile & { profiles?: StoredOtelProfile[] }) | undefined;
-
+type StoredOtelConfig =
+	| (StoredOtelProfile & {
+			profiles?: StoredOtelProfile[];
+	  })
+	| undefined;
 interface OtelFormFragmentProps {
 	currentConfig?: {
 		enabled?: boolean;
@@ -62,8 +61,9 @@ interface OtelFormFragmentProps {
 	isDeleting?: boolean;
 	isLoading?: boolean;
 }
-
-const getTraceTypeOptions = (t: (key: string) => string): {
+const getTraceTypeOptions = (
+	t: (key: string) => string,
+): {
 	value: string;
 	label: string;
 	disabled?: boolean;
@@ -92,7 +92,6 @@ const protocolOptions: {
 	{ value: "http", label: "HTTP" },
 	{ value: "grpc", label: "GRPC" },
 ];
-
 // emptyProfile returns a fresh profile with the same defaults a newly created collector uses.
 const emptyProfile = (): ProfileForm => ({
 	enabled: true,
@@ -117,7 +116,6 @@ const emptyProfile = (): ProfileForm => ({
 	group_traces_by_session: false,
 	disable_root_span_content: false,
 });
-
 // toProfileForm normalizes a stored profile into the SecretVar-based form representation.
 const toProfileForm = (p?: StoredOtelProfile): ProfileForm => ({
 	enabled: p?.enabled ?? true,
@@ -142,7 +140,6 @@ const toProfileForm = (p?: StoredOtelProfile): ProfileForm => ({
 	group_traces_by_session: p?.group_traces_by_session ?? false,
 	disable_root_span_content: p?.disable_root_span_content ?? false,
 });
-
 // buildDefaults handles both stored shapes: the { profiles: [...] } wrapper and the legacy
 // single-object config. Always yields at least one profile.
 const buildDefaults = (initial?: OtelFormFragmentProps["currentConfig"]): OtelFormSchema => {
@@ -159,7 +156,6 @@ const buildDefaults = (initial?: OtelFormFragmentProps["currentConfig"]): OtelFo
 	if (profiles.length === 0) profiles = [emptyProfile()];
 	return { enabled: initial?.enabled ?? true, profiles };
 };
-
 export function OtelFormFragment({
 	currentConfig: initialConfig,
 	onSave,
@@ -169,7 +165,6 @@ export function OtelFormFragment({
 }: OtelFormFragmentProps) {
 	const { t } = useTranslation("observability");
 	const traceTypeOptions = useMemo(() => getTraceTypeOptions(t), [t]);
-	const hasOtelAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
 	const [isSaving, setIsSaving] = useState(false);
 	const [profileOpenState, setProfileOpenState] = useState<Record<number, boolean>>({});
 	const form = useForm<OtelFormSchema, unknown, OtelFormSchema>({
@@ -178,26 +173,21 @@ export function OtelFormFragment({
 		reValidateMode: "onChange",
 		defaultValues: buildDefaults(initialConfig),
 	});
-
 	const { fields, append, remove } = useFieldArray({
 		control: form.control,
 		name: "profiles",
 	});
-
 	const onSubmit = (data: OtelFormSchema) => {
 		setIsSaving(true);
 		onSave(data).finally(() => setIsSaving(false));
 	};
-
 	const handleProfileOpenChange = (index: number, open: boolean) => {
 		setProfileOpenState((prev) => ({ ...prev, [index]: open }));
 	};
-
 	const handleAddProfile = () => {
 		append(emptyProfile());
 		setProfileOpenState((prev) => ({ ...prev, [fields.length]: true }));
 	};
-
 	const handleRemoveProfile = (index: number) => {
 		remove(index);
 		setProfileOpenState((prev) => {
@@ -213,11 +203,9 @@ export function OtelFormFragment({
 			return next;
 		});
 	};
-
 	useEffect(() => {
 		form.reset(buildDefaults(initialConfig));
 	}, [form, initialConfig]);
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -228,7 +216,7 @@ export function OtelFormFragment({
 							form={form}
 							control={form.control}
 							index={index}
-							hasOtelAccess={hasOtelAccess}
+							hasOtelAccess={true}
 							canRemove={fields.length > 1}
 							open={profileOpenState[index] ?? false}
 							onOpenChange={(open) => handleProfileOpenChange(index, open)}
@@ -237,14 +225,7 @@ export function OtelFormFragment({
 					))}
 				</div>
 
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={handleAddProfile}
-					disabled={!hasOtelAccess}
-					data-testid="otel-add-profile-btn"
-				>
+				<Button type="button" variant="outline" size="sm" onClick={handleAddProfile} data-testid="otel-add-profile-btn">
 					<Plus className="size-4" /> {t("connectors.addProfile")}
 				</Button>
 
@@ -257,12 +238,7 @@ export function OtelFormFragment({
 							<FormItem className="flex items-center gap-2 py-2">
 								<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
 								<FormControl>
-									<Switch
-										checked={field.value}
-										onCheckedChange={field.onChange}
-										disabled={!hasOtelAccess}
-										data-testid="otel-connector-enable-toggle"
-									/>
+									<Switch checked={field.value} onCheckedChange={field.onChange} data-testid="otel-connector-enable-toggle" />
 								</FormControl>
 							</FormItem>
 						)}
@@ -273,7 +249,7 @@ export function OtelFormFragment({
 								type="button"
 								variant="outline"
 								onClick={onDelete}
-								disabled={isDeleting || !hasOtelAccess}
+								disabled={isDeleting}
 								data-testid="otel-connector-delete-btn"
 								title={t("connectors.deleteConnector")}
 								aria-label={t("connectors.deleteConnector")}
@@ -287,14 +263,14 @@ export function OtelFormFragment({
 							onClick={() => {
 								form.reset(buildDefaults(initialConfig));
 							}}
-							disabled={!hasOtelAccess || isLoading || !form.formState.isDirty}
+							disabled={isLoading || !form.formState.isDirty}
 						>
 							{t("connectors.reset")}
 						</Button>
 						<TooltipProvider>
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<Button type="submit" disabled={!hasOtelAccess || !form.formState.isDirty} isLoading={isSaving}>
+									<Button type="submit" disabled={!form.formState.isDirty} isLoading={isSaving}>
 										{t("connectors.saveOtel")}
 									</Button>
 								</TooltipTrigger>
@@ -317,7 +293,6 @@ export function OtelFormFragment({
 		</Form>
 	);
 }
-
 interface OtelProfileSectionProps {
 	form: UseFormReturn<OtelFormSchema, unknown, OtelFormSchema>;
 	control: Control<OtelFormSchema, unknown, OtelFormSchema>;
@@ -328,7 +303,6 @@ interface OtelProfileSectionProps {
 	onOpenChange: (open: boolean) => void;
 	onRemove: () => void;
 }
-
 // OtelProfileSection renders one collapsible profile. The header stays visible when collapsed
 // and surfaces the profile identity plus its enable toggle and remove control.
 function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, open, onOpenChange, onRemove }: OtelProfileSectionProps) {
@@ -342,9 +316,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 	const enabled = form.watch(`${base}.enabled`);
 	const serviceName = form.watch(`${base}.service_name`);
 	const collectorUrl = form.watch(`${base}.collector_url`);
-
 	const [activeTab, setActiveTab] = useState<"traces" | "metrics">("traces");
-
 	// Surface which tab holds a validation error so it's findable without expanding every section.
 	const profileErrors = form.formState.errors?.profiles?.[index];
 	const hasError = Boolean(profileErrors);
@@ -352,14 +324,12 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 	const metricsFields = ["metrics_endpoint", "metrics_push_interval"] as const;
 	const hasTracesError = tracesFields.some((f) => Boolean(profileErrors?.[f]));
 	const hasMetricsError = metricsFields.some((f) => Boolean(profileErrors?.[f]));
-
 	const collectorPreview =
 		typeof collectorUrl === "string"
 			? collectorUrl
 			: collectorUrl?.type === "env" || collectorUrl?.type === "vault"
 				? collectorUrl.ref
 				: collectorUrl?.value;
-
 	return (
 		<Collapsible open={open} onOpenChange={onOpenChange} className="rounded-sm border" data-testid={`otel-profile-${index}`}>
 			<div className="flex flex-row items-center gap-2 px-4 py-3">
@@ -370,9 +340,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 							<span className="flex items-center gap-2 truncate text-sm font-medium">
 								{serviceName || t("connectors.otel.profileN", { n: index + 1 })}
 								{!enabled && <Badge variant="secondary">{t("connectors.otel.disabled")}</Badge>}
-								{enabled && !tracesEnabled && metricsEnabled && (
-									<Badge variant="secondary">{t("connectors.otel.metricsOnly")}</Badge>
-								)}
+								{enabled && !tracesEnabled && metricsEnabled && <Badge variant="secondary">{t("connectors.otel.metricsOnly")}</Badge>}
 								{hasError && <Badge variant="destructive">{t("connectors.otel.error")}</Badge>}
 							</span>
 							{collectorPreview && <span className="text-muted-foreground truncate text-xs">{collectorPreview}</span>}
@@ -814,9 +782,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 											<div className="ml-auto">
 												<Switch
 													aria-label={t("connectors.otel.enableOverheadBreakdown")}
-													data-testid={
-														index === 0 ? "otel-overhead-breakdown-toggle" : `otel-profile-${index}-overhead-breakdown-toggle`
-													}
+													data-testid={index === 0 ? "otel-overhead-breakdown-toggle" : `otel-profile-${index}-overhead-breakdown-toggle`}
 													checked={field.value}
 													onCheckedChange={field.onChange}
 													disabled={!hasOtelAccess}

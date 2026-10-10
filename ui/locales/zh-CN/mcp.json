@@ -852,16 +852,6 @@
 			"searchUsers": "按姓名或邮箱搜索"
 		}
 	},
-	"toolGroups": {
-		"title": "MCP 工具组",
-		"description": "为 MCP 服务器配置工具组，以组织并治理工具。",
-		"unlockTitle": "解锁 MCP 工具组",
-		"unlockDescription": "此功能属于 Bifrost 企业版许可证。为 MCP 服务器配置工具组，以便在组织内组织并治理 MCP 工具。"
-	},
-	"authConfig": {
-		"unlockTitle": "解锁 MCP 鉴权配置",
-		"unlockDescription": "此功能属于 Bifrost 企业版许可证。为 MCP 服务器配置鉴权以保护 MCP 连接。"
-	},
 	"credentials": {
 		"justNow": "刚刚",
 		"minutesAgo": "{{minutes}} 分钟前",

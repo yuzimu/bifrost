@@ -2,7 +2,6 @@ import Provider from "@/components/provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ModelProvider } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useEffect, useMemo, useState } from "react";
 import {
 	ApiStructureFormFragment,
@@ -17,15 +16,12 @@ import { PromptCacheFormFragment } from "../fragments/promptCacheFormFragment";
 import { NetworkFormFragment } from "../fragments/networkFormFragment";
 import { PerformanceFormFragment } from "../fragments/performanceFormFragment";
 import { useTranslation } from "react-i18next";
-
 interface Props {
 	show: boolean;
 	onCancel: () => void;
 	provider: ModelProvider;
 }
-
 const ANTHROPIC_FAMILY_PROVIDERS = ["anthropic", "vertex", "bedrock", "bedrock_mantle", "azure"];
-
 // 按供应商能力和治理权限生成配置标签页。
 const availableTabs = (
 	hasCustomProviderConfig: boolean,
@@ -85,29 +81,23 @@ const availableTabs = (
 	}
 	return tabs;
 };
-
 export default function ProviderConfigSheet({ show, onCancel, provider }: Props) {
 	const { t } = useTranslation("models");
 	const [selectedTab, setSelectedTab] = useState<string | undefined>(undefined);
-	const hasGovernanceAccess = useRbac(RbacResource.Governance, RbacOperation.View);
 	const hasCustomProviderConfig = !!provider.custom_provider_config;
 	const isOpenAI = provider.name === "openai";
 	const isAnthropicFamily = ANTHROPIC_FAMILY_PROVIDERS.includes(provider.name.toLowerCase());
-
 	const tabs = useMemo(() => {
-		return availableTabs(hasCustomProviderConfig, hasGovernanceAccess, isOpenAI, isAnthropicFamily, t);
-	}, [hasCustomProviderConfig, hasGovernanceAccess, isOpenAI, isAnthropicFamily, t]);
-
+		return availableTabs(hasCustomProviderConfig, true, isOpenAI, isAnthropicFamily, t);
+	}, [hasCustomProviderConfig, isOpenAI, isAnthropicFamily, t]);
 	useEffect(() => {
 		setSelectedTab((previousTab) => {
 			if (previousTab && tabs.some((tab) => tab.id === previousTab)) {
 				return previousTab;
 			}
-
 			return tabs[0]?.id;
 		});
 	}, [tabs]);
-
 	return (
 		<Sheet
 			open={show}
@@ -130,7 +120,7 @@ export default function ProviderConfigSheet({ show, onCancel, provider }: Props)
 					<div className="w-full rounded-sm border">
 						<Tabs defaultValue={tabs[0]?.id} value={selectedTab} onValueChange={setSelectedTab}>
 							{/* TabsList collapses overflowing tabs into its own dropdown, so this
-							    no longer needs to scroll horizontally. */}
+            no longer needs to scroll horizontally. */}
 							<div className="mb-4 w-full">
 								<TabsList className="h-10 w-max min-w-full justify-start rounded-tl-sm rounded-tr-sm rounded-br-none rounded-bl-none">
 									{tabs.map((tab) => (

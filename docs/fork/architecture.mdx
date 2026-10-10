@@ -1,0 +1,167 @@
+---
+title: "Fork Architecture"
+description: "Open-source policy enforcement, adaptive routing, and circuit-breaker boundaries."
+---
+
+## Scope
+
+The HTTP host provides guardrails, adaptive routing, and circuit breakers using
+open-source runtime packages in `framework`. These capabilities do not use an
+enterprise license, private plugin, or enterprise feature flag.
+
+| Capability | Fork behavior | Boundary |
+| --- | --- | --- |
+| Guardrails | Regex, secrets, Presidio, prompt policies, and ten registered external adapters | Unsupported provider names and unsupported request shapes are rejected |
+| Realtime output policies | Matching active LLM output policies fail closed before upstream connection, SDP exchange, or client-secret minting | No full-response WebSocket/audio transform or enterprise Realtime parity |
+| Prompt policies | Configured host model executor | Judge requests can incur provider charges; no automatic judge calls from local evaluation |
+| Adaptive routing | Observed latency, failures, and throughput within eligible provider/key pools | Process-local state; private weighting formulas and undocumented enterprise statistics are not replicated |
+| Circuit breakers | Response-header signals affect subsequent attempts | No replay of the response that produced the signal |
+| Persistence | Existing plugin configuration rows | No new table, destructive schema migration, or deletion of historical business data |
+| Authentication | Existing management authentication, inference authentication, and virtual-key governance | Routing cannot enlarge authorized provider or key pools |
+
+## Host Lifecycle
+
+Builtin loading and `/api/plugins` management use the existing plugin lifecycle.
+Configuration changes must validate before persistence and runtime publication.
+A rejected configuration or failed durable write leaves the current runtime active.
+Plugin disable/delete removes the associated runtime capability.
+
+The configuration namespaces are `guardrails`, `adaptive-routing`, and
+`circuit-breaker`. The last two share one process-local resilience runtime while
+persisting independent configuration sections.
+
+The public config-file fields `guardrails_config`, `load_balancer_config`, and
+`circuit_breaker_config` map to those same stored rows. Unknown section fields and
+duplicate declarations in `plugins` are rejected. Guardrail enforcement defaults
+to disabled. In split mode, unchanged file declarations preserve database edits.
+With `source_of_truth: "config.json"`, only explicitly present sections are
+authoritative; a single top-level policy section does not delete unrelated plugin
+rows. An explicitly declared `plugins` list owns its plugin configuration rows,
+including removal of absent host namespaces after candidate validation. Historical
+logs, provider records, and other business data are not deleted.
+
+## Management Surface
+
+- Guardrail rules: `GET/POST /api/guardrails/rules`,
+  `PUT/DELETE /api/guardrails/rules/{id}`.
+- Guardrail profiles: `GET /api/guardrails`, and
+  `GET/POST/PUT/DELETE /api/guardrails/{provider}`. Profile deletion supplies its
+  identifier in the request body.
+- Adaptive configuration: `GET/PUT /api/load-balancer-config`.
+- Condition clearing: `POST /api/load-balancer-config/conditions/clear`; the body scopes
+  the provider, key, and model.
+- Circuit policies: `GET/POST /api/circuit-breaker/policies`,
+  `PUT/DELETE /api/circuit-breaker/policies/{name}`.
+- Circuit state: `GET /api/circuit-breaker/state`.
+
+These routes use the same management middleware as the gateway configuration.
+Runtime state is not a replacement for persisted configuration.
+They require a real management session, setup credential, or management API key;
+inference virtual keys, scoped temporary tokens, and auth-bypassed requests cannot
+manage policies.
+
+When no guardrail row is configured, policy/profile management remains available
+but enforcement is disabled. Creating a profile or rule does not enable the global
+guardrail switch. Enable it using `PUT /api/plugins/guardrails` with `enabled: true`.
+Disabling enforcement keeps profiles available for management.
+
+## Request Safety
+
+Input guardrails precede cache lookup, governance/routing decisions, and provider
+dispatch. Output enforcement precedes content logging. Streaming support is
+capability-specific; unsupported enforcement modes must be rejected rather than
+reported as available.
+
+Chat, text-completion, and Responses text redaction use a real accumulator and
+transactional pause-buffer transform. The host holds the whole output until full
+inspection, then rewrites copied normalized chunks, supported native-codec payloads,
+and terminal copies before replay. Text targets are identity-bound; unsupported or
+ambiguous native carriers fail closed. This whole-stream hold is not the upstream
+fragment-by-fragment low-latency behavior. Live gateway validation of these paths
+remains pending. MCP input and output hooks precede tool execution and content
+logging respectively.
+
+### Realtime Boundary
+
+The upstream guardrail streaming contract names Chat Completions, Text Completions,
+and Responses, not Realtime. This fork adds a Realtime admission boundary, not
+full-response Realtime output enforcement. A matching enabled `llm` rule with
+`apply_to: "output"` or `"both"` and an enabled linked profile returns
+`realtime_output_guardrails_unsupported`. This includes detection-only and
+logs-only profiles: complete Realtime text, tool, transcript, and audio inspection
+is not provided. Disabled profiles/rules, zero sampling, and false CEL conditions
+do not activate this boundary. Positive sampling rates are treated conservatively
+as protected for the entire session; a long connection cannot use one sampled
+request ID to bypass later turns. Unresolvable CEL conditions fail closed.
+Mutable `params` are treated as unknown during admission and event checks, so an
+empty initial parameter map cannot bypass a rule that would protect a later turn.
+Conditions definitively false from the actual provider/model and trusted scope
+remain non-matching.
+
+WebSocket admission checks both routed and key-alias-resolved targets before
+upstream connection. Transcription bootstrap, WebRTC SDP, and client-secret minting
+use the same boundary. WebSocket events and WebRTC data-channel events re-read
+the current loaded plugin before forwarding, closing on a newly matching policy.
+Realtime turn pre-hooks also enforce the boundary using the actual session target.
+Additional checks inspect event-declared session and response-create models without
+replacing the input-hook identity. Existing input hooks remain in place. No per-event regex substitution,
+synthetic safe output, or full-response buffering is claimed.
+
+| Transport | Output policy boundary | Unsupported surface |
+| --- | --- | --- |
+| Realtime WebSocket | Admission, client events, provider events, turn pre-hooks | Full text/tool/audio hold-and-transform |
+| Realtime WebRTC | SDP admission and data-channel events | Full audio hold-and-transform; RTP-only hot-update enforcement |
+| Realtime client secrets | Before minting and after key alias resolution | Direct-provider traffic outside the gateway |
+| GPT Live | Not extended by this Realtime boundary | Protected Live output enforcement |
+
+Multiple response IDs, cancel, and close retain the existing turn lifecycle;
+this boundary creates no additional lease, buffer, or provider attempt.
+These are source-level boundaries; running-gateway validation remains pending.
+
+Reversible mappings pass through the logging store wrapper before database or
+object-store writes. They require the configured persistent encryption key;
+missing encryption fails the write rather than persisting a plaintext map. Reveal
+uses the existing LLM/MCP log-detail resolver interfaces, checks genuine management
+authentication and the specific log ID on every read, and does not accept inference
+virtual keys or bootstrap-only authentication. Persistence/reveal runtime behavior
+has not yet been verified against a running gateway.
+
+## Provider Matrix
+
+| Provider | Implemented surface | Boundary |
+| --- | --- | --- |
+| Regex / secrets | Local text detection, blocking, redaction | Streaming uses full-output hold |
+| Presidio | Analyzer/anonymizer bridge | Requires the configured real services |
+| Prompt guardrail | Configured host Chat executor; typed protocol rejection can fall back to Responses | No automatic paid calls during configuration loading; explicit verification can incur charges |
+| A10 | Public moderation/transform adapter | Tool transformations fail closed; native streaming transformation is not asserted |
+| CrowdStrike AIDR, GraySwan, Patronus AI, Lakera, Repello Argus | Registered public HTTP adapters | Capability and tool-context restrictions are enforced per adapter; GraySwan text-only output streams may be skipped by its declared contract |
+| Azure PII, Azure Content Safety | Registered cloud adapters | Secrets are environment references; unsupported image shapes are rejected |
+| Bedrock Guardrails | Official AWS SDK adapter | Explicit pinned bedrockruntime dependency; unsupported image shapes are rejected |
+| Model Armor | Registered cloud adapter | Environment-backed credentials and safe text mapping required |
+| Singulr | Not registered | No sufficiently verified wire contract is implemented |
+
+These rows describe source integration, not completed live-provider acceptance or
+one-to-one enterprise parity.
+
+Adaptive selection receives only governance-filtered candidates. Circuit exclusion
+is hard: an exhausted key pool must not fall back to unfiltered keys. Soft holds
+may permit a candidate only within the remaining hard-eligible pool.
+An authorized routing-policy failure in the non-blocking pre-request phase is
+carried into a blocking pre-LLM short circuit rather than dispatching the unchanged
+target as though routing had succeeded.
+
+Observations settle once per actual attempt, not once per SSE chunk. Media task
+creation has no additional retry or cross-provider switch by default. Subsequent
+video-task operations retain the existing provider/task identity and ownership.
+
+## Not Provided
+
+This fork does not provide private enterprise clustering, cross-node health
+coordination, SSO/SCIM directory provisioning, enterprise RBAC/access-profile
+management, enterprise audit/log-export connectors, or enterprise alerting.
+Existing public schemas, stored data columns, security scopes, and ownership checks
+remain intact.
+
+The upstream public documentation describes a product surface, not the private
+implementation. Matching selected management contracts does not imply identical
+internal algorithms or performance. Upstream benchmarks are not fork benchmarks.

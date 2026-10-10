@@ -1,9 +1,5 @@
-import GuardrailsProviderView from "@enterprise/components/guardrails/guardrailsProviderView";
+import { ProfilesView } from "../components/profilesView";
 
 export default function GuardrailsProvidersPage() {
-	return (
-		<div className="no-padding-parent mx-auto w-full max-w-7xl p-4">
-			<GuardrailsProviderView />
-		</div>
-	);
+	return <ProfilesView />;
 }

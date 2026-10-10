@@ -4,9 +4,7 @@ import i18n from "@/lib/i18n";
  * Routing Rules Utility Functions
  * Helper functions for CEL validation, formatting, and rule management
  */
-
 import { RoutingFallbackFormData, RoutingFallbackWire } from "@/lib/types/routingRules";
-
 /**
  * Validates if a CEL expression has basic correct syntax
  * @param expression - The CEL expression to validate
@@ -16,30 +14,24 @@ export function isValidCELExpression(expression: string): boolean {
 	if (!expression) {
 		return true;
 	}
-
 	const trimmed = expression.trim();
 	if (trimmed.length === 0 || trimmed === "true" || trimmed === "false") {
 		return true;
 	}
-
 	// Check for basic syntax issues
 	if (trimmed.includes(";;")) {
 		return false;
 	}
-
 	// Check for matching brackets/parentheses
 	const openBrackets = (trimmed.match(/[[{]/g) || []).length;
 	const closeBrackets = (trimmed.match(/[\]}]/g) || []).length;
 	const openParens = (trimmed.match(/\(/g) || []).length;
 	const closeParens = (trimmed.match(/\)/g) || []).length;
-
 	if (openBrackets !== closeBrackets || openParens !== closeParens) {
 		return false;
 	}
-
 	return true;
 }
-
 /**
  * Formats a fallback string (provider/model) for display
  * @param fallback - The fallback string (e.g., "openai/gpt-4o")
@@ -50,7 +42,6 @@ export function formatFallback(fallback: string): string {
 	const parts = fallback.split("/");
 	return parts.length === 2 ? `${parts[0].toUpperCase()} - ${parts[1]}` : fallback;
 }
-
 /**
  * Normalizes a wire fallback into the provider and model the sheet's two selects need. Unpinned
  * fallbacks arrive as the bare "provider/model" string.
@@ -69,7 +60,6 @@ export function normalizeFallback(fallback: RoutingFallbackWire): RoutingFallbac
 	}
 	return { provider: fallback.slice(0, separator), model: fallback.slice(separator + 1), key_id: "" };
 }
-
 /**
  * Renders a fallback back onto the wire, as the bare string unless it pins a key. Sending the object
  * form for an unpinned fallback would change the rule's config hash on every save. The trailing
@@ -84,7 +74,6 @@ export function denormalizeFallback(fallback: Partial<RoutingFallbackFormData>):
 	}
 	return `${provider}/${model}`;
 }
-
 /**
  * Truncates CEL expression for table display
  * @param expression - The CEL expression
@@ -96,7 +85,6 @@ export function truncateCELExpression(expression: string, maxLength: number = 60
 	if (expression.length <= maxLength) return expression;
 	return expression.substring(0, maxLength) + "...";
 }
-
 /**
  * Validates a provider/model combination
  * @param provider - The provider name
@@ -109,7 +97,6 @@ export function validateProviderModel(provider: string, _model?: string): string
 	}
 	return "";
 }
-
 /**
  * Generates a CSS class for priority badge color
  * @returns CSS class name for styling
@@ -117,7 +104,6 @@ export function validateProviderModel(provider: string, _model?: string): string
 export function getPriorityBadgeClass(): string {
 	return "bg-primary text-primary-foreground";
 }
-
 /**
  * Gets a user-friendly CEL operator from the expression
  * @param expression - The CEL expression
@@ -126,7 +112,6 @@ export function getPriorityBadgeClass(): string {
 export function detectCELOperators(expression: string): string[] {
 	const operators: string[] = [];
 	if (!expression) return operators;
-
 	// Common CEL operators
 	const operatorPatterns = [
 		{ regex: /==/, label: "Equals" },
@@ -144,19 +129,15 @@ export function detectCELOperators(expression: string): string[] {
 		{ regex: /.contains\(/, label: "Contains" },
 		{ regex: /.endsWith\(/, label: "EndsWith" },
 	];
-
 	operatorPatterns.forEach(({ regex, label }) => {
 		if (regex.test(expression) && !operators.includes(label)) {
 			operators.push(label);
 		}
 	});
-
 	return operators;
 }
-
 /** Upper bound for a rule's TTFT deadline, mirroring the API's validation. */
 export const MAX_TTFT_TIMEOUT_MS = 300000;
-
 /**
  * Parses the TTFT deadline input. Empty means "off" (undefined); anything else must be a
  * whole number of milliseconds in 1..MAX_TTFT_TIMEOUT_MS, or null is returned.
@@ -172,27 +153,27 @@ export function parseTTFTTimeoutInput(raw: string): number | undefined | null {
 	const ms = Number(trimmed);
 	return ms >= 1 && ms <= MAX_TTFT_TIMEOUT_MS ? ms : null;
 }
-
 /**
  * The API stores the TTFT deadline per target while the form edits a single value. Returns
  * the shared deadline, or mixed=true when targets disagree (set vs unset counts as a disagreement).
  */
-export function summarizeTargetsTTFT(targets: RoutingTarget[] | undefined): { ms: number | undefined; mixed: boolean } {
+export function summarizeTargetsTTFT(targets: RoutingTarget[] | undefined): {
+	ms: number | undefined;
+	mixed: boolean;
+} {
 	const values = (targets ?? []).map((t) => t.ttft_timeout_ms || undefined);
 	const first = values[0];
 	const mixed = values.some((v) => v !== first);
 	return { ms: mixed ? undefined : first, mixed };
 }
-
 /** 按当前界面语言显示目标的首 Token 截止时间，不修改目标配置。 */
 export function formatTargetsTTFT(targets: RoutingTarget[] | undefined): string {
 	const { ms, mixed } = summarizeTargetsTTFT(targets);
 	if (mixed) {
 		return i18n.t("celUi.mixed", { ns: "models" });
 	}
-	return ms ? i18n.t("routingDisplay.ttftStreaming", { ns: "enterprise", ms }) : i18n.t("celUi.off", { ns: "models" });
+	return ms ? i18n.t("routingDisplay.ttftStreaming", { ns: "models", ms }) : i18n.t("celUi.off", { ns: "models" });
 }
-
 /**
  * Deadline to send for one target. While the input still equals what was loaded, a target keeps
  * its own stored deadline (so mixed values survive an unrelated save) and a target added since
@@ -205,7 +186,6 @@ export function resolveTargetTTFTMs(input: string, loadedInput: string, targetMs
 	}
 	return parseTTFTTimeoutInput(input) ?? 0;
 }
-
 /**
  * What the TTFT field should convey. While untouched it reflects the loaded targets, so a mixed
  * rule reads "Mixed" and still counts as having a deadline; once edited it follows the input.
@@ -214,7 +194,10 @@ export function summarizeTTFTDisplay(
 	targets: RoutingTarget[] | undefined,
 	input: string,
 	edited: boolean,
-): { mixed: boolean; active: boolean } {
+): {
+	mixed: boolean;
+	active: boolean;
+} {
 	if (edited) {
 		return { mixed: false, active: typeof parseTTFTTimeoutInput(input) === "number" };
 	}

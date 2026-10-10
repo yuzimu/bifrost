@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "Home",
 		"observability": "Observability",
 		"dashboard": "Dashboard",
 		"llmLogs": "LLM Logs",
@@ -13,7 +12,6 @@
 		"agentCatalog": "Agent Catalog",
 		"pushConfigurations": "Push Configurations",
 		"agentSettings": "Agent Settings",
-		"orgChart": "Org Chart",
 		"incidents": "Incidents",
 		"connectors": "Connectors",
 		"logsSettings": "Logs Settings",
@@ -36,30 +34,14 @@
 		"oauthGrants": "OAuth Grants",
 		"mcpSettings": "MCP Settings",
 		"plugins": "Plugins",
-		"alerting": "Alerting",
-		"channels": "Channels",
-		"rules": "Rules",
-		"history": "History",
 		"governance": "Governance",
 		"virtualKeys": "Virtual Keys",
-		"users": "Users",
 		"teams": "Teams",
-		"businessUnits": "Business Units",
 		"customers": "Customers",
-		"userProvisioning": "User Provisioning",
-		"rolesPermissions": "Roles & Permissions",
-		"accessProfiles": "Access Profiles",
-		"projects": "Projects",
-		"auditLogs": "Audit Logs",
 		"guardrails": "Guardrails",
 		"guardrailRules": "Rules",
 		"guardrailProviders": "Providers",
 		"webhooks": "Webhooks",
-		"edgeControl": "Edge Control",
-		"devices": "Devices",
-		"approvals": "Approvals",
-		"edgeSettings": "Edge Settings",
-		"clusterConfig": "Cluster Config",
 		"adaptiveRouting": "Adaptive Routing",
 		"adaptiveRoutingDashboard": "Dashboard",
 		"adaptiveRoutingSettings": "Settings",
@@ -71,15 +53,10 @@
 		"caching": "Caching",
 		"security": "Security",
 		"warp": "Warp",
-		"proxy": "Proxy",
-		"apiKeys": "API Keys",
 		"performanceTuning": "Performance Tuning",
-		"featureFlags": "Feature Flags",
-		"branding": "Branding",
-		"licenseInfo": "License Info"
+		"featureFlags": "Feature Flags"
 	},
 	"navDesc": {
-		"home": "Your usage, keys, budgets and access",
 		"observability": "Request logs & monitoring",
 		"dashboard": "Dashboard",
 		"llmLogs": "LLM request logs & monitoring",
@@ -89,7 +66,6 @@
 		"agentCatalog": "Registered A2A agents",
 		"pushConfigurations": "Stored A2A push callbacks",
 		"agentSettings": "Agent Gateway configuration",
-		"orgChart": "Budgets and usage across business units, teams and users",
 		"incidents": "Adaptive routing incidents",
 		"connectors": "Log connectors",
 		"logsSettings": "Logs configuration",
@@ -111,30 +87,14 @@
 		"oauthGrants": "Downstream OAuth grants",
 		"mcpSettings": "MCP configuration",
 		"plugins": "Manage custom plugins",
-		"alerting": "Manage alert channels, rules, and history",
-		"channels": "Configure notification channels",
-		"rules": "Define alerting rules",
-		"history": "Review alert delivery history",
 		"governance": "Virtual keys, users, teams, customers & roles",
 		"virtualKeys": "Manage virtual keys & access",
-		"users": "Manage users",
 		"teams": "Manage teams",
-		"businessUnits": "Manage business units",
 		"customers": "Manage customers",
-		"userProvisioning": "User management and provisioning",
-		"rolesPermissions": "User roles and permissions",
-		"accessProfiles": "Manage access profiles for roles",
-		"projects": "Scope requests to a project's access and budget",
-		"auditLogs": "Audit logs and compliance",
 		"guardrails": "Guardrails configuration",
 		"guardrailRules": "Guardrail rules",
 		"guardrailProviders": "Guardrail providers configuration",
 		"webhooks": "Async job webhook endpoints",
-		"edgeControl": "Edge device management",
-		"devices": "Manage edge devices",
-		"approvals": "Approve apps and MCP servers",
-		"edgeSettings": "Edge settings",
-		"clusterConfig": "Manage Bifrost cluster",
 		"adaptiveRouting": "Manage adaptive routing",
 		"adaptiveRoutingDashboard": "Adaptive routing metrics",
 		"adaptiveRoutingSettings": "Adaptive routing settings",
@@ -146,16 +106,8 @@
 		"caching": "Caching configuration",
 		"security": "Security settings",
 		"warp": "Warp agent configuration",
-		"proxy": "Proxy configuration",
-		"apiKeys": "API keys management",
 		"performanceTuning": "Performance tuning settings",
-		"featureFlags": "Toggle feature flags",
-		"branding": "Custom logo and icon",
-		"licenseInfo": "Enterprise license information"
-	},
-	"home": {
-		"unlockTitle": "Unlock your personal Home page",
-		"unlockDescription": "This feature is a part of the Bifrost enterprise license. Home shows each user their own usage, keys, budgets and access."
+		"featureFlags": "Toggle feature flags"
 	},
 	"search": {
 		"placeholder": "Search...",
@@ -188,11 +140,6 @@
 			"available": "{{name}} is now available.",
 			"viewNotes": "View release notes",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "Need help with production setup?",
-			"body": "We offer help with production setup including custom integrations and dedicated support.",
-			"bookDemo": "Book a demo with our team <link>here</link>."
 		}
 	},
 	"topbar": {
@@ -219,25 +166,14 @@
 		"pushConfigurations": "Push Configurations",
 		"agentSettings": "Agent Settings",
 		"adaptiveRoutingSettings": "Adaptive Routing Settings",
-		"alertChannels": "Alert Channels",
-		"alertHistory": "Alert History",
-		"alertRules": "Alert Rules",
-		"clusterConfig": "Cluster Config",
 		"settings": "Settings",
-		"licenseInfo": "License Info",
-		"edgeSettings": "Edge Settings",
-		"edgeDevices": "Edge Devices",
-		"edgeApprovals": "Edge Approvals",
-		"rolesPermissions": "Roles & Permissions",
 		"guardrailRules": "Guardrail Rules",
 		"guardrailProviders": "Guardrail Providers",
 		"llmLogs": "LLM Logs",
-		"logConnectors": "Log Connectors",
 		"observabilityConnectors": "Observability Connectors",
 		"promptRepository": "Prompt Repository",
 		"modelProviders": "Model Providers",
-		"routingTree": "Routing Tree",
-		"userProvisioning": "User Provisioning"
+		"routingTree": "Routing Tree"
 	},
 	"error": {
 		"title": "Something went wrong",
@@ -313,13 +249,6 @@
 		"title": "Config store setup is missing.",
 		"description": "The UI requires a database connection to store configuration data, but no database is currently configured.",
 		"instructions": "To enable the UI, please add the database settings to your <code>config.json</code> (see <link>documentation</link>)."
-	},
-	"trial": {
-		"expiredSubject": "I need help with my expired enterprise trial",
-		"extendSubject": "I need help extending my enterprise trial",
-		"expired": "Your Bifrost Enterprise Trial has expired. <link>Contact us</link> if you need any assistance.",
-		"expires_one": "Your Bifrost Enterprise Trial expires in {{count}} day. <link>Contact us</link> if you need any assistance.",
-		"expires_other": "Your Bifrost Enterprise Trial expires in {{count}} days. <link>Contact us</link> if you need any assistance."
 	},
 	"warp": {
 		"ask": "Ask Warp",
@@ -552,6 +481,77 @@
 				"summary": "Something went wrong.",
 				"cause": "Warp returned an error without a recognised code.",
 				"suggestions": ["Try the question again.", "If it keeps happening, report it with the details below."]
+			}
+		}
+	},
+	"docs": {
+		"headline": "Power Up Your Bifrost Stack",
+		"fullDocumentation": "View Full Documentation",
+		"quickStartGuide": "Quick Start Guide",
+		"readMore": "Read More",
+		"popular": "Popular",
+		"comprehensive": "Comprehensive",
+		"sections": {
+			"quickStart": {
+				"title": "Quick Start",
+				"description": "Get Bifrost running in under 30 seconds",
+				"httpTransport": "HTTP Transport Setup",
+				"goPackage": "Go Package Usage",
+				"docker": "Docker Guide"
+			},
+			"architecture": {
+				"title": "Architecture",
+				"description": "Deep dive into Bifrost's design and performance",
+				"overview": "System Overview",
+				"requestFlow": "Request Flow",
+				"concurrency": "Concurrency Model",
+				"decisions": "Design Decisions"
+			},
+			"usage": {
+				"title": "Usage Guides",
+				"description": "Complete API reference and configuration guides",
+				"providers": "Providers Setup",
+				"keys": "Key Management",
+				"errors": "Error Handling",
+				"memory": "Memory & Networking"
+			},
+			"contributing": {
+				"title": "Contributing",
+				"description": "Help improve Bifrost for everyone",
+				"guide": "Contributing Guide",
+				"providers": "Adding Providers",
+				"plugins": "Plugin Development",
+				"conventions": "Code Conventions"
+			},
+			"integrations": {
+				"title": "Integration Examples",
+				"description": "Practical examples and testing code",
+				"openai": "OpenAI Integration",
+				"anthropic": "Anthropic Integration",
+				"genai": "GenAI Integration",
+				"migration": "Migration Guides"
+			},
+			"benchmarks": {
+				"title": "Benchmarks",
+				"description": "Performance metrics and guides",
+				"results": "5K RPS Test Results",
+				"metrics": "Performance Metrics",
+				"tuning": "Configuration Tuning",
+				"hardware": "Hardware Comparisons"
+			}
+		},
+		"featured": {
+			"mcp": {
+				"title": "MCP Documentation",
+				"description": "Comprehensive guide to Model Context Protocol integration",
+				"content": "Learn how to build sophisticated AI agents with MCP support, tool calling, and external integrations.",
+				"button": "View MCP Guide"
+			},
+			"governance": {
+				"title": "Governance Plugin",
+				"description": "Complete access control, budgets, and rate limiting guide",
+				"content": "Master Virtual Keys, hierarchical budgets, rate limiting, and usage tracking for secure AI infrastructure.",
+				"button": "View Governance Guide"
 			}
 		}
 	}

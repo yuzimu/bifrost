@@ -1,26 +1,15 @@
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import i18n from "@/lib/i18n";
 import { BifrostErrorResponse } from "@/lib/types/config";
 import { getApiBaseUrl } from "@/lib/utils/port";
-import { createBaseQueryWithRefresh } from "@enterprise/lib/store/utils/baseQueryWithRefresh";
-import { clearOAuthStorage } from "@enterprise/lib/store/utils/tokenManager";
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery, type BaseQueryFn } from "@reduxjs/toolkit/query/react";
 import { getActiveTempToken, getSuppressGlobal401 } from "./tempToken";
-
 // Auth tokens are now stored in HTTP-only cookies (set by server)
 // No client-side token needed — handled by credentials: "include"
 export const getTokenFromStorage = (): Promise<string | null> => {
 	return Promise.resolve(null);
 };
-
-// Helper function to set auth token
-// Non-enterprise: no-op — auth relies on HTTPOnly cookies set by the server
-// Enterprise: handled separately via tokenManager
-export const setAuthToken = (_token: string | null) => {
-	// Non-enterprise auth is cookie-based; no client-side token storage needed.
-	// Enterprise token management is handled by the tokenManager module.
-};
-
+// OSS 会话由服务端 HTTPOnly cookie 管理。
+export const setAuthToken = (_token: string | null) => {};
 // Helper function to clear all auth-related storage
 export const clearAuthStorage = () => {
 	if (typeof window === "undefined") {
@@ -29,16 +18,10 @@ export const clearAuthStorage = () => {
 	try {
 		// Clear traditional auth token
 		localStorage.removeItem("bifrost-auth-token");
-
-		// Clear enterprise OAuth tokens using tokenManager
-		if (IS_ENTERPRISE) {
-			clearOAuthStorage();
-		}
 	} catch (error) {
 		console.error("Error clearing auth storage:", error);
 	}
 };
-
 // Define the base query with authentication headers
 const baseQuery = fetchBaseQuery({
 	baseUrl: getApiBaseUrl(),
@@ -66,21 +49,13 @@ const baseQuery = fetchBaseQuery({
 		return headers;
 	},
 });
-
-// Wrap base query with enterprise refresh logic (or passthrough for non-enterprise)
-const baseQueryWithRefresh = createBaseQueryWithRefresh(baseQuery);
-
 /** 保留认证处理及原始错误身份，客户端消息不依赖请求时的界面语言。 */
-const baseQueryWithErrorHandling: typeof baseQueryWithRefresh = async (args: any, api: any, extraOptions: any) => {
-	// First apply refresh logic (enterprise-specific, handles 401)
-	const result = await baseQueryWithRefresh(args, api, extraOptions);
-
+const baseQueryWithErrorHandling: BaseQueryFn = async (args, api, extraOptions) => {
+	const result = await baseQuery(args, api, extraOptions);
 	// Then handle other error types
 	if (result.error) {
 		const error = result.error as any;
-
-		// Handle 401 for non-enterprise (no refresh available)
-		if (error?.status === 401 && !IS_ENTERPRISE) {
+		if (error?.status === 401) {
 			// When a TempTokenScope wrapper is active, the wrapped page handles
 			// its own 401 display (an "invalid/expired link" view). Skip the
 			// global redirect so the user stays on the page they opened.
@@ -94,7 +69,6 @@ const baseQueryWithErrorHandling: typeof baseQueryWithRefresh = async (args: any
 			}
 			return result;
 		}
-
 		// Handle specific error types
 		if (error?.status === "FETCH_ERROR" || error?.status === "TIMEOUT_ERROR") {
 			return {
@@ -109,13 +83,10 @@ const baseQueryWithErrorHandling: typeof baseQueryWithRefresh = async (args: any
 				},
 			};
 		}
-
 		// 原始载荷和诊断不补写；缺失消息的展示兜底由 getErrorMessage 处理。
 	}
-
 	return result;
 };
-
 // Create the base API
 export const baseApi = createApi({
 	reducerPath: "api",
@@ -142,39 +113,18 @@ export const baseApi = createApi({
 		"ModelConfigs",
 		"ProviderGovernance",
 		"Plugins",
-		"SCIMProviders",
-		"User",
 		"Guardrails",
-		"ClusterNodes",
-		"Users",
 		"GuardrailRules",
-		"Roles",
-		"Resources",
-		"Operations",
-		"Permissions",
-		"APIKeys",
-		"OAuth2Config",
 		"RoutingRules",
 		"PricingOverrides",
 		"MCPToolGroups",
 		"VirtualMCPs",
-		"AuditLogs",
-		"UserGovernance",
-		"LargePayloadConfig",
 		"LoadBalancerConfig",
 		"LoadBalancerHistory",
 		"Folders",
 		"Prompts",
 		"Versions",
 		"Sessions",
-		"AccessProfiles",
-		// The profile a team, business unit or customer holds. Separate from AccessProfiles so
-		// attaching to one entity does not refetch every template list on the page.
-		"EntityAccessProfiles",
-		"Projects",
-		"BusinessUnits",
-		"PromptDeployments",
-		"AuthType",
 		"MCPSessions",
 		"MCPPerUserHeaderCredentials",
 		"MCPLibrary",
@@ -182,19 +132,12 @@ export const baseApi = createApi({
 		"ComplexityAnalyzerConfig",
 		"Skills",
 		"OAuth2Grants",
+		"OAuth2Config",
 		"UserAgentMappings",
-		"Branding",
-		"Devices",
 		"CircuitBreakerPolicies",
 		"CircuitBreakerState",
-		"AlertChannels",
-		"AlertRules",
-		"AlertHistory",
 		"WebhookEndpoints",
 		"WebhookDeliveries",
-		"EdgeApps",
-		"EdgeMCPServers",
-		"EdgeConfig",
 		"Notifications",
 		"SidekiqJobs",
 		"WarpConfig",
@@ -205,15 +148,17 @@ export const baseApi = createApi({
 	],
 	endpoints: () => ({}),
 });
-
 export const getErrorCode = (error: unknown): string | undefined => {
 	if (typeof error !== "object" || !error || !("data" in error)) {
 		return undefined;
 	}
-	const data = (error as { data?: BifrostErrorResponse }).data;
+	const data = (
+		error as {
+			data?: BifrostErrorResponse;
+		}
+	).data;
 	return typeof data?.error?.code === "string" ? data.error.code : undefined;
 };
-
 /** 按当前语言展示已确认的客户端错误，未知服务端消息和原始诊断保持原样。 */
 export const getErrorMessage = (error: unknown): string => {
 	if (error === undefined || error === null) {

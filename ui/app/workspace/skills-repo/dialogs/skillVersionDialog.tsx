@@ -1,5 +1,4 @@
 "use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -10,9 +9,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatDate, useDebouncedValue } from "../components/helpers";
-
 const PAGE_SIZE = 20;
-
 export function SkillVersionsPopover({
 	skillId,
 	servingVersion,
@@ -28,7 +25,6 @@ export function SkillVersionsPopover({
 	const debouncedSearch = useDebouncedValue(search, 300);
 	const [offset, setOffset] = useState(0);
 	const [accumulated, setAccumulated] = useState<SkillVersionSummary[]>([]);
-
 	const { data, isFetching, isError } = useListSkillVersionsQuery(
 		{
 			id: skillId,
@@ -38,14 +34,12 @@ export function SkillVersionsPopover({
 		},
 		{ skip: !open },
 	);
-
 	// Reset the accumulator whenever the search term changes so a new query
 	// starts from page 0 instead of appending onto stale results.
 	useEffect(() => {
 		setOffset(0);
 		setAccumulated([]);
 	}, [debouncedSearch, skillId]);
-
 	// Append each fetched page. RTK Query replaces `data` per arg combo, so we
 	// accumulate here; dedupe by id guards against effect re-runs on the same page.
 	useEffect(() => {
@@ -56,10 +50,8 @@ export function SkillVersionsPopover({
 			return [...prev, ...data.versions.filter((v) => !seen.has(v.id))];
 		});
 	}, [data, offset]);
-
 	const total = data?.total ?? 0;
 	const hasMore = accumulated.length < total;
-
 	// Infinite scroll: bump the offset when the bottom sentinel scrolls into view.
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
 	useEffect(() => {
@@ -76,7 +68,6 @@ export function SkillVersionsPopover({
 		observer.observe(node);
 		return () => observer.disconnect();
 	}, [open, hasMore, isFetching]);
-
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
@@ -99,7 +90,6 @@ export function SkillVersionsPopover({
 		</Popover>
 	);
 }
-
 /**
  * The searchable, infinitely-scrolling list of skill versions. Extracted so it can
  * be rendered either inside the standalone popover or inside a SplitButton dropdown.
@@ -121,7 +111,6 @@ export function SkillVersionsList({
 	const debouncedSearch = useDebouncedValue(search, 300);
 	const [offset, setOffset] = useState(0);
 	const [accumulated, setAccumulated] = useState<SkillVersionSummary[]>([]);
-
 	const { data, isFetching, isError } = useListSkillVersionsQuery(
 		{
 			id: skillId,
@@ -131,14 +120,12 @@ export function SkillVersionsList({
 		},
 		{ skip: !open },
 	);
-
 	// Reset the accumulator whenever the search term changes so a new query
 	// starts from page 0 instead of appending onto stale results.
 	useEffect(() => {
 		setOffset(0);
 		setAccumulated([]);
 	}, [debouncedSearch, skillId]);
-
 	// Append each fetched page. RTK Query replaces `data` per arg combo, so we
 	// accumulate here; dedupe by id guards against effect re-runs on the same page.
 	useEffect(() => {
@@ -149,10 +136,8 @@ export function SkillVersionsList({
 			return [...prev, ...data.versions.filter((v) => !seen.has(v.id))];
 		});
 	}, [data, offset]);
-
 	const total = data?.total ?? 0;
 	const hasMore = accumulated.length < total;
-
 	// Infinite scroll: bump the offset when the bottom sentinel scrolls into view.
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
 	useEffect(() => {
@@ -169,9 +154,8 @@ export function SkillVersionsList({
 		observer.observe(node);
 		return () => observer.disconnect();
 	}, [open, hasMore, isFetching]);
-
 	return (
-		<Command shouldFilter={false}>
+		<Command shouldFilter>
 			<CommandInput
 				data-testid="skill-versions-search-input"
 				placeholder={t("skillsRepo.searchVersions")}

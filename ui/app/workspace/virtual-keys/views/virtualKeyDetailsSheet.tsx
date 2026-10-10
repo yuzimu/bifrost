@@ -4,7 +4,6 @@ import { CopyableId } from "@/components/copyableId";
 import { isWildcardList, ModelAccessBadges } from "@/components/modelAccess";
 import { SheetNavigationButtons } from "@/components/sheetNavigationButtons";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { DottedSeparator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -24,21 +23,16 @@ import {
 	hasActiveBudgetOverride,
 	parseResetPeriod,
 } from "@/lib/utils/governance";
-import ManagedVirtualKeyNotice from "@enterprise/components/access-profiles/managedVirtualKeyNotice";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { formatDistanceToNow } from "date-fns";
 import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 import { getLocale } from "@/lib/i18n";
-import { Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useVirtualKeyUsage } from "../hooks/useVirtualKeyUsage";
-
 function usageBarClass(pct: number, exhausted: boolean) {
 	if (exhausted) return "[&>div]:bg-red-500/70";
 	if (pct > 80) return "[&>div]:bg-amber-500/70";
 	return "[&>div]:bg-emerald-500/70";
 }
-
 /** 展示用量与本地化无障碍标签，不改变用量百分比。 */
 function UsageLine({ current, max, format }: { current: number; max: number; format: (n: number) => string }) {
 	const { t } = useTranslation("models");
@@ -67,7 +61,6 @@ function UsageLine({ current, max, format }: { current: number; max: number; for
 		</div>
 	);
 }
-
 interface VirtualKeyDetailSheetProps {
 	virtualKey: VirtualKey;
 	onClose: () => void;
@@ -75,7 +68,6 @@ interface VirtualKeyDetailSheetProps {
 	hasPrev?: boolean;
 	hasNext?: boolean;
 }
-
 /** 展示虚拟密钥详情与本地化日期，保留权限和授权数据。 */
 export default function VirtualKeyDetailSheet({
 	virtualKey,
@@ -85,8 +77,7 @@ export default function VirtualKeyDetailSheet({
 	hasNext = false,
 }: VirtualKeyDetailSheetProps) {
 	const { t, i18n } = useTranslation("models");
-	const { assignedUsers, isManagedByProfile, managingProfile, displayBudgets, displayRateLimit } = useVirtualKeyUsage(virtualKey);
-	const canUpdateVirtualKeys = useRbac(RbacResource.VirtualKeys, RbacOperation.Update);
+	const { displayBudgets, displayRateLimit } = useVirtualKeyUsage(virtualKey);
 	const { data: coreConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const deletesAfterExpire = virtualKey.delete_after_expire ?? coreConfig?.client_config?.delete_expired_virtual_keys ?? false;
 	const [setBudgetOverride] = useSetVirtualKeyBudgetOverrideMutation();
@@ -128,14 +119,12 @@ export default function VirtualKeyDetailSheet({
 		}
 		return sections;
 	};
-
 	const { prev: prevKeys, next: nextKeys } = useSheetNavigation({
 		enabled: true,
 		hasPrev,
 		hasNext,
 		onNavigate: (direction) => onNavigate?.(direction),
 	});
-
 	const getEntityInfo = () => {
 		if (virtualKey.team) {
 			return { type: t("routing.team"), name: virtualKey.team.name };
@@ -145,9 +134,7 @@ export default function VirtualKeyDetailSheet({
 		}
 		return { type: t("virtualKeys.none"), name: "" };
 	};
-
 	const entityInfo = getEntityInfo();
-
 	const isExhausted =
 		// Budget exhausted (AP-mirrored when managed, VK-own otherwise)
 		displayBudgets?.some((b) => b.current_usage >= getEffectiveBudgetLimit(b)) ||
@@ -158,7 +145,6 @@ export default function VirtualKeyDetailSheet({
 		(displayRateLimit?.request_current_usage &&
 			displayRateLimit?.request_max_limit &&
 			displayRateLimit.request_current_usage >= displayRateLimit.request_max_limit);
-
 	return (
 		<Sheet open onOpenChange={onClose}>
 			<SheetContent className="flex w-full flex-col overflow-x-hidden p-0 pt-4 sm:max-w-2xl">
@@ -184,17 +170,7 @@ export default function VirtualKeyDetailSheet({
 				</SheetHeader>
 
 				<div className="space-y-6 px-4 py-4 md:px-8">
-					<ManagedVirtualKeyNotice isManagedByProfile={isManagedByProfile} managingProfile={managingProfile} />
-
-					{assignedUsers.length > 0 ? (
-						<div className="space-y-1">
-							<Label className="text-sm font-medium">{t("virtualKeys.assignedUsers")}</Label>
-							<div className="flex items-center gap-2">
-								<Users className="text-muted-foreground h-4 w-4" />
-								<span className="text-sm">{assignedUsers.map((u) => u.name || u.email).join(", ")}</span>
-							</div>
-						</div>
-					) : null}
+					<></>
 
 					{/* Basic Information */}
 					<div className="space-y-4">
@@ -286,9 +262,9 @@ export default function VirtualKeyDetailSheet({
 					</div>
 
 					{/* Providers, MCP access, budgets, and rate limits are all owned by the access profile for a
-					managed key (ManagedVirtualKeyNotice above says so, with a link to it) - the VK itself never
-					carries this data, so showing these sections would only ever read as a false deny-all. */}
-					{!isManagedByProfile && (
+managed key (ManagedVirtualKeyNotice above says so, with a link to it) - the VK itself never
+carries this data, so showing these sections would only ever read as a false deny-all. */}
+					{
 						<>
 							<DottedSeparator />
 
@@ -304,7 +280,7 @@ export default function VirtualKeyDetailSheet({
 								</div>
 
 								{/* A key that allows every provider grants ones it holds no entry for, including ones added
-								later, so the entries below are overrides rather than the whole of what it may reach. */}
+later, so the entries below are overrides rather than the whole of what it may reach. */}
 								{virtualKey.allow_all_providers && <p className="text-muted-foreground text-sm">{t("virtualKeys.allProvidersHelp")}</p>}
 
 								<div className="space-y-3">
@@ -331,7 +307,7 @@ export default function VirtualKeyDetailSheet({
 																	<span className="text-muted-foreground italic">{t("virtualKeys.weightNotSet")}</span>
 																)}
 															</Badge>
-															{!isManagedByProfile ? (
+															{
 																<BudgetOverrideManagerDialog
 																	title={t("virtualKeys.budgetOverridesTitle", {
 																		provider: ProviderLabels[config.provider as ProviderName] || config.provider,
@@ -339,9 +315,8 @@ export default function VirtualKeyDetailSheet({
 																	sections={buildProviderOverrideSections(config)}
 																	onSave={saveBudgetOverride}
 																	onRemove={clearBudgetOverride}
-																	disabled={!canUpdateVirtualKeys}
 																/>
-															) : null}
+															}
 														</div>
 													</div>
 
@@ -697,7 +672,6 @@ export default function VirtualKeyDetailSheet({
 															budget={b}
 															onSave={(data) => saveBudgetOverride(b.id, data)}
 															onRemove={() => clearBudgetOverride(b.id)}
-															disabled={!canUpdateVirtualKeys}
 															calendarAligned={virtualKey.calendar_aligned}
 														/>
 													</div>
@@ -820,7 +794,7 @@ export default function VirtualKeyDetailSheet({
 								)}
 							</div>
 						</>
-					)}
+					}
 				</div>
 			</SheetContent>
 		</Sheet>

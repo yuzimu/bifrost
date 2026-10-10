@@ -1,6 +1,6 @@
 // Shared visual building blocks for the MCP-client verification/
 // authorization dialogs: OAuth2Authorizer (shared + per-user OAuth),
-// MCPHeadersAuthorizer (per-user headers), and the token_exchange
+
 // "Re-verify as me" dialog in mcpClientsTable.tsx. All three walk an admin
 // through the same shape of flow (confirm intent, wait on a check, land on
 // success/failure), so they share one dialog chrome: a bordered icon

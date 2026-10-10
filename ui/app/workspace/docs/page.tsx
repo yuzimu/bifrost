@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import GradientHeader from "@/components/ui/gradientHeader";
 import { BookOpen, Code, ExternalLink, FileText, GitBranch, Play, Shield, Users, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
 const docSections = [
 	{
 		id: "quickStart",
@@ -51,7 +50,6 @@ const docSections = [
 		items: ["results", "metrics", "tuning", "hardware"],
 	},
 ];
-
 const featuredDocs = [
 	{
 		id: "mcp",
@@ -72,11 +70,10 @@ const featuredDocs = [
 		iconColor: "text-green-600",
 	},
 ];
-
 /** 按当前语言渲染文档目录，链接与自动化标识不随语言改变。 */
 export default function DocsPage() {
 	const { t } = useTranslation("config");
-	const { t: te } = useTranslation("enterprise");
+	const { t: te } = useTranslation("shell");
 	return (
 		<div className="dark:bg-card bg-white">
 			<div className="mx-auto max-w-7xl">

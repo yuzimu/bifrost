@@ -26,7 +26,6 @@ import {
 import { MAX_SEMANTIC_PHRASES } from "@/lib/types/complexityRouter";
 import { ModelProvider } from "@/lib/types/config";
 import { DBKey } from "@/lib/types/governance";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, ExternalLink, LoaderCircle, RotateCcw, Save, Settings2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -62,7 +61,6 @@ import {
 	StepRail,
 	DecisionProviderAlert,
 } from "./views/sections";
-
 // Embedding-capable providers gate this page, matching the local cache screen's
 // rule: built-ins are listed in EmbeddingSupportedProviders, custom providers
 // declare support through allowed_requests.embedding. A custom provider with no
@@ -75,7 +73,6 @@ const supportsEmbedding = (provider: ModelProvider): boolean => {
 	}
 	return (EmbeddingSupportedProviders as readonly string[]).includes(provider.name);
 };
-
 // Supporting embeddings is not enough to be selectable: every embedding call
 // this page makes — warmup and each classification —
 // needs a key that is actually serving. A provider whose keys are all disabled
@@ -84,7 +81,6 @@ const supportsEmbedding = (provider: ModelProvider): boolean => {
 // A key omits `enabled` when unset, which the Go side reads as enabled.
 const hasEnabledKey = (provider: ModelProvider, keys: DBKey[]): boolean =>
 	keys.some((key) => key.provider === provider.name && key.enabled !== false);
-
 // The llm classifier needs chat completions rather than embeddings. Built-in
 // providers all serve chat; custom providers declare support through
 // allowed_requests.chat_completion, and no allowed_requests block at all means
@@ -96,20 +92,17 @@ const supportsChat = (provider: ModelProvider): boolean => {
 	}
 	return true;
 };
-
 /** 保留两步配置及两类分类器状态，按当前语言显示配置文案。 */
 export default function ComplexityRouterPage() {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const tcpx = (key: string, opts?: Record<string, unknown>) => t(`routing.complexityUi.${key}`, opts);
-	const canUpdate = useRbac(RbacResource.RoutingRules, RbacOperation.Update);
 	const { data, isLoading, isFetching, error, refetch } = useGetComplexityAnalyzerConfigQuery(undefined, {
 		refetchOnMountOrArgChange: true,
 	});
 	const [updateConfig, { isLoading: isSaving }] = useUpdateComplexityAnalyzerConfigMutation();
 	const [resetConfig, { isLoading: isResetting }] = useResetComplexityAnalyzerConfigMutation();
 	const [retrySemanticWarmup, { isLoading: isRetryingWarmup }] = useRetryComplexitySemanticWarmupMutation();
-
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
 	const [embeddingSheetOpen, setEmbeddingSheetOpen] = useState(false);
@@ -123,11 +116,14 @@ export default function ComplexityRouterPage() {
 	// An intentionally empty draft can equal the saved default and be non-dirty.
 	// Track interaction separately so status refreshes never refill it.
 	const promptEdited = useRef(false);
-
 	// Refetched on every visit: provider and key fixes happen on the providers
 	// page, and a cached list would keep describing the state before them.
-	const { data: providersData, isLoading: providersLoading } = useGetProvidersQuery(undefined, { refetchOnMountOrArgChange: true });
-	const { data: allKeys, isLoading: keysLoading } = useGetAllKeysQuery(undefined, { refetchOnMountOrArgChange: true });
+	const { data: providersData, isLoading: providersLoading } = useGetProvidersQuery(undefined, {
+		refetchOnMountOrArgChange: true,
+	});
+	const { data: allKeys, isLoading: keysLoading } = useGetAllKeysQuery(undefined, {
+		refetchOnMountOrArgChange: true,
+	});
 	const embeddingProviders = useMemo(
 		() => (providersData || []).filter((provider) => supportsEmbedding(provider) && hasEnabledKey(provider, allKeys || [])),
 		[providersData, allKeys],
@@ -136,10 +132,8 @@ export default function ComplexityRouterPage() {
 		() => (providersData || []).filter((provider) => supportsChat(provider) && hasEnabledKey(provider, allKeys || [])),
 		[providersData, allKeys],
 	);
-
 	const { data: coreConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const isVectorStoreConnected = coreConfig?.is_cache_connected ?? false;
-
 	const {
 		register,
 		trigger,
@@ -157,18 +151,15 @@ export default function ComplexityRouterPage() {
 		reValidateMode: "onChange",
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	// Both queries feed the provider list, so the empty state has to wait for
 	// both: gating on one alone flashes "no provider configured" on every load.
 	const isProviderListLoading = providersLoading || keysLoading;
-
 	const liveClassifier = watch("classifier");
 	const liveSemantic = watch("semantic");
 	const liveLLM = watch("llm");
 	const liveDecisionProvider = watch("decision.provider");
 	const liveSession = watch("session");
 	const liveKeywords = watch("keywords");
-
 	// Narrows the model list to what this provider's enabled keys can actually
 	// serve. /api/models only applies per-key allow-lists and blacklists when it
 	// is handed key ids; without them it returns the whole provider pool, so the
@@ -193,7 +184,6 @@ export default function ComplexityRouterPage() {
 		[providersData, allKeys, liveDecisionProvider],
 	);
 	const decisionProviderReady = decisionProviderState === "configured";
-
 	const isClassifierConfigured = Boolean(liveSemantic?.provider && liveSemantic?.embedding_model);
 	const isLLMFallbackEnabled = liveClassifier === "semantic" && liveSemantic?.fallback === "llm";
 	const isDecisionFallbackEnabled = liveClassifier === "semantic" && liveSemantic?.fallback === "decision";
@@ -212,8 +202,7 @@ export default function ComplexityRouterPage() {
 		Object.values(dirtyFields.semantic ?? {}).some(Boolean) || Object.values(dirtyFields.llm ?? {}).some(Boolean);
 	const hasClassifier = isRouterConfigured(data) || picked;
 	// Read-only operators cannot choose, so they always land on the setup step.
-	const step = openStep ?? (canUpdate && !hasClassifier ? "classifier" : "setup");
-
+	const step = openStep ?? (!hasClassifier ? "classifier" : "setup");
 	// Only the unsettled states are polled. Ready and disabled are steady until
 	// the next save, which refetches through the cache tag anyway.
 	//
@@ -242,7 +231,6 @@ export default function ComplexityRouterPage() {
 	useEffect(() => {
 		setStatusPollInterval(semanticStatus?.state === "warming" ? 2000 : semanticStatus?.state === "failed" ? 10000 : 0);
 	}, [semanticStatus?.state]);
-
 	const totalPhrases = useMemo(
 		() =>
 			countCanonicalSemanticPhrases({
@@ -252,7 +240,6 @@ export default function ComplexityRouterPage() {
 			}).total,
 		[liveKeywords],
 	);
-
 	// Every embedding-cost warning below is about what the pending save will do,
 	// so it is gated on there being a pending save at all. Without this the page
 	// compares the form against a stale `data` and bills a save that cannot
@@ -260,7 +247,6 @@ export default function ComplexityRouterPage() {
 	// it clean while the config query has not refetched yet — the exact window
 	// where a "saving will embed N phrases" line appears next to a disabled Save.
 	const hasPendingSave = isDirty;
-
 	// Shipped guidance initializes untouched drafts; an empty edited prompt is
 	// valid and means "use default guidance" when saved.
 	const defaultLLMPrompt = semanticStatus?.llm_default_prompt ?? "";
@@ -271,10 +257,12 @@ export default function ComplexityRouterPage() {
 	const isDecisionGuidanceAtDefaults = !decisionDefaults || isDecisionGuidanceDefault(liveDecisionCriteria, decisionDefaults);
 	const restoreDecisionDefaults = () => {
 		if (!decisionDefaults) return;
-		setValue("decision.criteria", decisionCriteriaFromDefaults(decisionDefaults), { shouldDirty: true, shouldValidate: true });
+		setValue("decision.criteria", decisionCriteriaFromDefaults(decisionDefaults), {
+			shouldDirty: true,
+			shouldValidate: true,
+		});
 	};
 	const livePrompt = liveLLM?.prompt ?? "";
-
 	// Saving re-runs warmup, but what it costs depends on what changed, because
 	// the gateway caches a vector per phrase (semanticEmbeddingCache).
 	//
@@ -294,7 +282,6 @@ export default function ComplexityRouterPage() {
 		if (cachedPhrases !== undefined && cachedPhrases === 0) return true;
 		return saved.provider !== liveSemantic?.provider || saved.embedding_model !== liveSemantic?.embedding_model;
 	}, [data, isClassifierConfigured, hasPendingSave, liveSemantic, cachedPhrases]);
-
 	// Editing the lists only pays for phrase text the gateway has not embedded
 	// before. The cache is keyed by phrase alone, so moving a phrase between
 	// tiers costs nothing — only genuinely new text reaches the provider.
@@ -336,15 +323,12 @@ export default function ComplexityRouterPage() {
 		const carried = Math.min(live.size - added, cachedPhrases ?? live.size - added);
 		return { newPhraseCount: live.size - carried, reusedPhraseCount: carried };
 	}, [data, isClassifierConfigured, hasPendingSave, willReembedAll, liveKeywords, cachedPhrases]);
-
 	const willReembed = willReembedAll || newPhraseCount > 0;
-
 	useEffect(() => {
 		if (!data || isDirty || promptEdited.current) return;
 		reset(toFormValues(data, decisionDefaults));
 		setSubmitError(null);
 	}, [data, isDirty, reset, decisionDefaults]);
-
 	// Status usually lands after the config, so guidance the form hydrated
 	// without defaults is filled in once they arrive. Only still-empty guidance
 	// is touched, so an operator's edits are never overwritten.
@@ -353,22 +337,18 @@ export default function ComplexityRouterPage() {
 		const seeded = decisionGuidanceFormValues(data.decision, decisionDefaults);
 		setValue("decision.criteria", seeded.criteria, { shouldDirty: false });
 	}, [data, decisionDefaults, getValues, setValue]);
-
 	// Run after saved-data hydration and read the current form value, not the
 	// previous render's value, when config and status arrive together.
 	useEffect(() => {
 		if (!data || !shouldSeedLLMPrompt(isLLMFallbackEnabled, defaultLLMPrompt, getValues("llm.prompt") ?? "", promptEdited.current)) return;
 		setValue("llm.prompt", defaultLLMPrompt, { shouldDirty: false });
 	}, [data, isLLMFallbackEnabled, defaultLLMPrompt, livePrompt, getValues, setValue]);
-
 	const handleDiscard = () => {
 		promptEdited.current = false;
 		if (data) reset(toFormValues(data, decisionDefaults));
 		setSubmitError(null);
 	};
-
 	const handleRestoreDefaults = () => {
-		if (!canUpdate) return;
 		setSubmitError(null);
 		resetConfig()
 			.unwrap()
@@ -381,9 +361,7 @@ export default function ComplexityRouterPage() {
 				setSubmitError(tcpx("restoreFailed", { error: getErrorMessage(err) }));
 			});
 	};
-
 	const handleRetrySemanticWarmup = () => {
-		if (!canUpdate) return;
 		retrySemanticWarmup()
 			.unwrap()
 			.then(() => {
@@ -391,12 +369,12 @@ export default function ComplexityRouterPage() {
 				void refetchStatus();
 			})
 			.catch((err) => {
-				toast.error(tcpx("warmupRetryFailed", { error: getErrorMessage(err) }), { position: "top-right" });
+				toast.error(tcpx("warmupRetryFailed", { error: getErrorMessage(err) }), {
+					position: "top-right",
+				});
 			});
 	};
-
 	const onValid = (values: AnalyzerFormValues) => {
-		if (!canUpdate) return;
 		setSubmitError(null);
 		// The endpoint replaces the whole record and rejects a semantic block
 		// without a provider and model, so an unconfigured classifier omits it
@@ -426,7 +404,6 @@ export default function ComplexityRouterPage() {
 				setSubmitError(tcpx("saveFailed", { error: getErrorMessage(err) }));
 			});
 	};
-
 	// Saving from inside the sheet still submits the whole configuration, so a
 	// phrase error would report behind it. Close the sheet in that case,
 	// otherwise the message is hidden under the overlay. An llm or decision-model fallback
@@ -443,11 +420,9 @@ export default function ComplexityRouterPage() {
 		setEmbeddingSheetOpen(Boolean(formErrors.semantic || formErrors.llm || (decisionSheetError && liveClassifier === "semantic")));
 		setDecisionSheetOpen(decisionSheetError && liveClassifier === "decision");
 	});
-
 	if (isLoading && !data) {
 		return <FullPageLoader />;
 	}
-
 	if (error && !data) {
 		return (
 			<div className="mx-auto w-full max-w-7xl space-y-4 px-4 pt-6 sm:px-6 sm:pt-8 lg:px-14">
@@ -459,7 +434,6 @@ export default function ComplexityRouterPage() {
 			</div>
 		);
 	}
-
 	if (!data) {
 		return (
 			<div className="mx-auto w-full max-w-7xl space-y-4 px-4 pt-6 sm:px-6 sm:pt-8 lg:px-14">
@@ -470,15 +444,13 @@ export default function ComplexityRouterPage() {
 			</div>
 		);
 	}
-
 	const hasErrors = Boolean(errors.keywords || errors.semantic || errors.decision || errors.llm || errors.session || errors.classifier);
 	const isSemantic = liveClassifier === "semantic";
 	// Saving the decision model as the classifier or the fallback while its provider cannot serve it
 	// would route every classified request into a failing call, so it waits
 	// until that provider is fixed.
 	const blockedOnDecisionProvider = isDecisionInUse && !isProviderListLoading && !decisionProviderReady;
-	const canSave = canUpdate && isDirty && !isResetting && !(isSubmitted && hasErrors) && !blockedOnDecisionProvider;
-
+	const canSave = isDirty && !isResetting && !(isSubmitted && hasErrors) && !blockedOnDecisionProvider;
 	// Rendered on the page and again inside the sheet: the re-embed cost is a
 	// consequence of saving, and either surface can trigger the save.
 	// Only a full re-embed is worth warning about in the sheet: every field that
@@ -492,7 +464,6 @@ export default function ComplexityRouterPage() {
 				<AlertDescription>{tcpx("reembedAll", { count: totalPhrases })}</AlertDescription>
 			</Alert>
 		) : null;
-
 	// Phrases already embedded on this gateway are reused, so the bill is the
 	// new text alone rather than the whole list.
 	const newPhraseWarning =
@@ -502,9 +473,7 @@ export default function ComplexityRouterPage() {
 				<AlertDescription>{tcpx("newPhraseWarning", { count: newPhraseCount, reused: reusedPhraseCount })}</AlertDescription>
 			</Alert>
 		) : null;
-
 	const reembedWarning = reembedAllWarning ?? newPhraseWarning;
-
 	// Rendered wherever the decision model runs: under its settings as the primary classifier,
 	// or in the fallback slot the llm prompt otherwise uses.
 	const decisionGuidance = (variant: "primary" | "fallback") => (
@@ -512,13 +481,12 @@ export default function ComplexityRouterPage() {
 			control={control}
 			setValue={setValue}
 			errors={errors.decision}
-			canUpdate={canUpdate}
+			canUpdate={true}
 			defaults={decisionDefaults}
 			defaultsLoading={statusLoading || statusFetching}
 			variant={variant}
 		/>
 	);
-
 	const decisionSettings = (
 		<div className="space-y-4" data-testid="complexity-router-decision-settings">
 			{!isProviderListLoading && <DecisionProviderAlert state={decisionProviderState} provider={liveDecisionProvider} />}
@@ -527,13 +495,12 @@ export default function ComplexityRouterPage() {
 				register={register}
 				setValue={setValue}
 				errors={errors.decision}
-				canUpdate={canUpdate}
+				canUpdate={true}
 				providers={providersData ?? []}
 				providerKeyIds={enabledKeyIdsForDecisionProvider}
 			/>
 		</div>
 	);
-
 	// Selecting a card only selects it; Next moves on, as in the Virtual MCP
 	// wizard. The switch is an unsaved edit like any other, so Save commits it
 	// and Discard reverts it.
@@ -551,21 +518,27 @@ export default function ComplexityRouterPage() {
 		// the one place that sets it.
 		if (isSemantic && !isClassifierConfigured) setEmbeddingSheetOpen(true);
 	};
-
 	const steps = [
-		{ key: "classifier", title: tcpx("classifierStep", { defaultValue: "Classifier" }), enabled: canUpdate },
-		{ key: "setup", title: tcpx("configurationStep", { defaultValue: "Configuration" }), enabled: hasClassifier },
+		{
+			key: "classifier",
+			title: tcpx("classifierStep", { defaultValue: "Classifier" }),
+			enabled: true,
+		},
+		{
+			key: "setup",
+			title: tcpx("configurationStep", { defaultValue: "Configuration" }),
+			enabled: hasClassifier,
+		},
 	];
 	const stepIndex = step === "classifier" ? 0 : 1;
-
 	return (
 		<>
 			{/* no-padding-parent drops the shell's wide side padding so the step
-			    rail sits near the card's left edge, and the width it frees goes
-			    to the step content on the right. */}
+            rail sits near the card's left edge, and the width it frees goes
+            to the step content on the right. */}
 			<form className="no-padding-parent flex h-full min-h-0 w-full flex-col p-4" onSubmit={submit} noValidate>
 				{/* PageTitle renders nothing inline; its badge and description are
-				    portalled into the topbar. */}
+            portalled into the topbar. */}
 				<PageTitle title={t("routing.complexityTitle")} beta>
 					<Trans
 						t={t}
@@ -575,7 +548,9 @@ export default function ComplexityRouterPage() {
 								? "The decision model classifies each new human request, filling the <code>complexity_tier</code> field that routing rules target."
 								: "Each request takes the tier of its nearest semantic reference phrase, filling the <code>complexity_tier</code> field that routing rules target."
 						}
-						components={{ code: <code className="bg-muted rounded-sm px-1 py-0.5 font-mono text-xs" /> }}
+						components={{
+							code: <code className="bg-muted rounded-sm px-1 py-0.5 font-mono text-xs" />,
+						}}
 					/>
 					{isLLMFallbackEnabled ? ` ${tcpx("descriptionLlm")}` : ""}
 					{isSemantic && liveSemantic?.fallback === "decision"
@@ -585,24 +560,24 @@ export default function ComplexityRouterPage() {
 				</PageTitle>
 
 				{/* Same shape as the Edge inventory page: a slim step nav on the
-				    left, the open step on the right. It spans the full content width
-				    rather than a centred max-width, which on wide screens left an
-				    empty band beside the nav and squeezed the phrase lists. */}
+            left, the open step on the right. It spans the full content width
+            rather than a centred max-width, which on wide screens left an
+            empty band beside the nav and squeezed the phrase lists. */}
 				<div className="flex min-h-0 w-full grow flex-col gap-4 md:flex-row md:gap-8">
 					<StepRail steps={steps} currentIndex={stepIndex} onSelect={(index) => setOpenStep(index === 0 ? "classifier" : "setup")} />
 
 					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						{/* The footer is a sibling of the scroll area rather than a sticky
-						    child of it. Radix wraps scrolled content in a display:table
-						    element, and position:sticky is unreliable inside table boxes. */}
+            child of it. Radix wraps scrolled content in a display:table
+            element, and position:sticky is unreliable inside table boxes. */}
 						<ScrollArea className="min-h-0 flex-1">
 							<div className="space-y-6 pb-8">
 								{/* ── Step header ── */}
 								{/* Status and embedding setup ride on the right: both are
-								    checked occasionally, while the phrase lists below are the
-								    real work surface. The row never wraps on wide screens: the
-								    status badge changes width as the classifier warms, and
-								    wrapping made the buttons jump below the title and back. */}
+            checked occasionally, while the phrase lists below are the
+            real work surface. The row never wraps on wide screens: the
+            status badge changes width as the classifier warms, and
+            wrapping made the buttons jump below the title and back. */}
 								<div className="flex w-full flex-col gap-3 md:flex-row md:items-start md:justify-between">
 									<div className="min-w-0 md:flex-1">
 										<h2 className="text-lg font-semibold">{steps[stepIndex].title}</h2>
@@ -614,7 +589,9 @@ export default function ComplexityRouterPage() {
 													})
 												: isSemantic
 													? tcpx("phraseMappingDescription")
-													: tcpx("decisionMappingDescription", { defaultValue: "A decision model scores each new request into a tier." })}
+													: tcpx("decisionMappingDescription", {
+															defaultValue: "A decision model scores each new request into a tier.",
+														})}
 										</p>
 									</div>
 									<div className="flex shrink-0 flex-wrap items-center gap-2 md:flex-nowrap">
@@ -630,7 +607,7 @@ export default function ComplexityRouterPage() {
 													statusUnavailable={statusIsError && !semanticStatus}
 													statusRefreshFailed={statusIsError && Boolean(semanticStatus)}
 													isRetryingStatus={statusFetching}
-													canRetryWarmup={canUpdate}
+													canRetryWarmup={true}
 													isRetryingWarmup={isRetryingWarmup}
 													onConfigure={() => setEmbeddingSheetOpen(true)}
 													onRetryStatus={() => void refetchStatus()}
@@ -646,11 +623,7 @@ export default function ComplexityRouterPage() {
 													<Settings2 className="size-3.5" />
 													{isClassifierConfigured ? tcpx("editEmbedding") : tcpx("configureEmbedding")}
 													{hasUnsavedEmbeddingConfigChanges && (
-														<span
-															className="size-1.5 rounded-full bg-amber-500"
-															role="status"
-															aria-label={tcpx("unsavedEmbeddingAria")}
-														/>
+														<span className="size-1.5 rounded-full bg-amber-500" role="status" aria-label={tcpx("unsavedEmbeddingAria")} />
 													)}
 												</Button>
 											</>
@@ -669,7 +642,9 @@ export default function ComplexityRouterPage() {
 													<span
 														className="size-1.5 rounded-full bg-amber-500"
 														role="status"
-														aria-label={tcpx("unsavedDecisionAria", { defaultValue: "Unsaved model configuration changes" })}
+														aria-label={tcpx("unsavedDecisionAria", {
+															defaultValue: "Unsaved model configuration changes",
+														})}
 													/>
 												)}
 											</Button>
@@ -688,7 +663,7 @@ export default function ComplexityRouterPage() {
 									<>
 										<ClassifierChoice value={hasClassifier ? liveClassifier : undefined} onChange={selectClassifier} />
 										{/* One warning, and only once the decision model is the pick: it is the only
-										    time a missing decision provider matters here. */}
+                time a missing decision provider matters here. */}
 										{hasClassifier && !isSemantic && !isProviderListLoading && (
 											<DecisionProviderAlert state={decisionProviderState} provider={liveDecisionProvider} />
 										)}
@@ -717,26 +692,26 @@ export default function ComplexityRouterPage() {
 
 								{/* ── Step 2: decision model ── */}
 								{/* The page holds the tier guidance; set-once settings live in the
-								    model configuration sheet, as the embedding configuration does for semantic. The
-								    provider problem stays on the page because nothing runs until
-								    it is fixed. */}
+            model configuration sheet, as the embedding configuration does for semantic. The
+            provider problem stays on the page because nothing runs until
+            it is fixed. */}
 								{step === "setup" && !isSemantic && !isProviderListLoading && (
 									<DecisionProviderAlert state={decisionProviderState} provider={liveDecisionProvider} />
 								)}
 								{step === "setup" && !isSemantic && decisionGuidance("primary")}
 
-								{step === "setup" && <SessionRoutingCard control={control} errors={errors.session} canUpdate={canUpdate} />}
+								{step === "setup" && <SessionRoutingCard control={control} errors={errors.session} canUpdate={true} />}
 
 								{/* ── Fallback Classification Prompt ── */}
 								{/* Below the phrase lists rather than in the sheet: prompt text
-								    needs width and iteration, and the sheet holds set-once
-								    plumbing. Visible only while the fallback is on, because that
-								    is the only time it runs. */}
+            needs width and iteration, and the sheet holds set-once
+            plumbing. Visible only while the fallback is on, because that
+            is the only time it runs. */}
 								{step === "setup" && isLLMFallbackEnabled && (
 									<LLMPromptSection
 										control={control}
 										error={errors.llm?.prompt}
-										canUpdate={canUpdate}
+										canUpdate={true}
 										defaultPrompt={defaultLLMPrompt}
 										livePrompt={livePrompt}
 										onEdit={() => {
@@ -780,7 +755,7 @@ export default function ComplexityRouterPage() {
 								</Button>
 							) : (
 								<>
-									{canUpdate && (
+									{
 										<Button
 											type="button"
 											variant="ghost"
@@ -791,11 +766,11 @@ export default function ComplexityRouterPage() {
 											<ArrowLeft className="h-3.5 w-3.5" />
 											{tc("back")}
 										</Button>
-									)}
+									}
 									{/* The provider warning is already on screen when the decision model is primary; as
-									    the fallback it sits inside the sheet, so the page says why
-									    Save is off. Otherwise an unsaved classifier switch is
-									    called out, since the page has no leave guard. */}
+                the fallback it sits inside the sheet, so the page says why
+                Save is off. Otherwise an unsaved classifier switch is
+                called out, since the page has no leave guard. */}
 									<p
 										className="mr-auto text-xs text-amber-700 dark:text-amber-400"
 										role="status"
@@ -815,7 +790,7 @@ export default function ComplexityRouterPage() {
 												: ""}
 									</p>
 									{/* Each classifier restores only its own defaults: the semantic
-									    phrase lists, or the decision model's tier guidance. */}
+                phrase lists, or the decision model's tier guidance. */}
 									{!isSemantic && (
 										<Button
 											data-testid="complexity-router-decision-restore-defaults-button"
@@ -823,7 +798,7 @@ export default function ComplexityRouterPage() {
 											variant="ghost"
 											size="sm"
 											onClick={restoreDecisionDefaults}
-											disabled={!canUpdate || isSaving || isDecisionGuidanceAtDefaults}
+											disabled={isSaving || isDecisionGuidanceAtDefaults}
 										>
 											<RotateCcw className="h-3.5 w-3.5" />
 											{t("routing.restoreDefaults")}
@@ -836,7 +811,7 @@ export default function ComplexityRouterPage() {
 											variant="ghost"
 											size="sm"
 											onClick={() => setRestoreDialogOpen(true)}
-											disabled={!canUpdate || isSaving || isResetting}
+											disabled={isSaving || isResetting}
 										>
 											{isResetting ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
 											{t("routing.restoreDefaults")}
@@ -873,7 +848,7 @@ export default function ComplexityRouterPage() {
 				semantic={liveSemantic}
 				llmErrors={errors.llm}
 				llm={liveLLM}
-				canUpdate={canUpdate}
+				canUpdate={true}
 				providers={embeddingProviders}
 				providerKeyIds={enabledKeyIdsForProvider}
 				llmProviders={chatProviders}
@@ -918,7 +893,7 @@ export default function ComplexityRouterPage() {
 								setRestoreDialogOpen(false);
 								handleRestoreDefaults();
 							}}
-							disabled={!canUpdate || isResetting}
+							disabled={isResetting}
 						>
 							{t("routing.restoreDefaults")}
 						</AlertDialogAction>

@@ -111,13 +111,34 @@
 	"codeModeLimits": {
 		"title": "代码模式限制",
 		"description": "限制每次代码执行的资源用量。字段留空时使用默认值。不限制同时执行的数量。",
-		"max_source_bytes": { "label": "最大源码大小（字节）", "description": "单次执行可提交的最大代码大小。" },
-		"max_steps": { "label": "最大计算步数", "description": "每次执行的解释器步数，包括内置函数中的计算。" },
-		"max_memory_bytes": { "label": "最大内存（字节）", "description": "每次执行的预计内存分配预算。每个并发执行拥有独立预算。" },
-		"max_log_bytes": { "label": "最大日志输出（字节）", "description": "每次执行的打印和工具日志输出大小，包括换行符。" },
-		"max_tool_calls": { "label": "最大工具调用次数", "description": "每次执行中嵌套的 MCP 工具调用次数。" },
-		"max_value_bytes": { "label": "最大值大小（字节）", "description": "每个工具载荷和转换结果的大小预算。不得少于 {{min}}。" },
-		"max_nesting_depth": { "label": "最大嵌套深度", "description": "跨工具边界传递值的嵌套深度。不得超过 {{max}}。" },
+		"max_source_bytes": {
+			"label": "最大源码大小（字节）",
+			"description": "单次执行可提交的最大代码大小。"
+		},
+		"max_steps": {
+			"label": "最大计算步数",
+			"description": "每次执行的解释器步数，包括内置函数中的计算。"
+		},
+		"max_memory_bytes": {
+			"label": "最大内存（字节）",
+			"description": "每次执行的预计内存分配预算。每个并发执行拥有独立预算。"
+		},
+		"max_log_bytes": {
+			"label": "最大日志输出（字节）",
+			"description": "每次执行的打印和工具日志输出大小，包括换行符。"
+		},
+		"max_tool_calls": {
+			"label": "最大工具调用次数",
+			"description": "每次执行中嵌套的 MCP 工具调用次数。"
+		},
+		"max_value_bytes": {
+			"label": "最大值大小（字节）",
+			"description": "每个工具载荷和转换结果的大小预算。不得少于 {{min}}。"
+		},
+		"max_nesting_depth": {
+			"label": "最大嵌套深度",
+			"description": "跨工具边界传递值的嵌套深度。不得超过 {{max}}。"
+		},
 		"negative": "{{label}}不能为负数。",
 		"valueMin": "最大值大小不得少于 {{min}} 字节。",
 		"nestingMax": "最大嵌套深度不得超过 {{max}}。"
@@ -130,24 +151,6 @@
 	"configNotLoaded": "配置尚未加载",
 	"configNotLoadedRefresh": "配置尚未加载。请刷新后重试。",
 	"learnMore": "了解更多",
-	"enterprise": {
-		"sharedDescription": "此功能属于 Bifrost 企业版许可证。我们很想了解你的使用场景，以及如何更好地帮助你。",
-		"readMore": "阅读更多",
-		"bookDemo": "预约演示",
-		"readMoreAria": "阅读更多关于此功能的说明（在新标签页打开）",
-		"bookDemoAria": "预约演示（在新标签页打开 Calendly）",
-		"clusterTitle": "解锁集群模式以实现可靠扩缩",
-		"adaptiveRoutingTitle": "解锁自适应路由以获得更好性能",
-		"scimTitle": "解锁基于 SCIM 的用户配置与访问管理",
-		"edgeConfigTitle": "解锁边缘控制以治理边缘设备",
-		"edgeDevicesTitle": "解锁边缘控制以管理设备",
-		"edgeInventoryTitle": "解锁边缘控制以审批应用与 MCP 服务器",
-		"brandingTitle": "解锁自定义品牌",
-		"brandingDescription": "在仪表盘与登录页将 Bifrost 标志替换为你自己的品牌。此功能属于 Bifrost 企业版许可证。我们很想了解你的使用场景，以及如何更好地帮助你。",
-		"licenseTitle": "解锁许可证管理",
-		"apiKeysTitle": "基于范围的 API 密钥",
-		"apiKeysDescription": "需要按范围精细控制访问的 API 密钥？企业客户可为不同服务、团队或环境创建多把具有特定权限的 API 密钥。"
-	},
 	"clientSettings": {
 		"title": "客户端设置",
 		"description": "配置客户端行为与请求处理。",
@@ -417,7 +420,12 @@
 		"toastSaved": "兼容性设置已成功更新。"
 	},
 	"featureFlags": {
-		"sources": { "default": "默认", "db": "数据库", "remote": "远程", "file": "文件" },
+		"sources": {
+			"default": "默认",
+			"db": "数据库",
+			"remote": "远程",
+			"file": "文件"
+		},
 		"enableAria": "启用 {{name}}",
 		"title": "功能开关",
 		"description": "切换进程内功能开关。开关在代码中声明；也可通过 config.json 或 Helm 设置，此时会在此显示为锁定。",
@@ -428,8 +436,6 @@
 		"empty": "未找到功能开关。",
 		"locked": "已锁定",
 		"lockedHelp": "值由 config.json 或 Helm 固定；请编辑配置以更改。",
-		"enterpriseOnly": "企业版",
-		"enterpriseHelp": "此开关控制企业版专属功能。升级后可启用。",
 		"unregistered": "未注册",
 		"unregisteredHelp": "此 id 没有代码注册。请恢复 Register() 调用或清理过期值。",
 		"unregisteredNote": "当前没有代码读取此开关。覆盖值已保存，但在添加 Register() 调用前不会生效。",
@@ -548,47 +554,6 @@
 		"syncIntervalMax": "同步间隔不能超过 8760 小时（1 年）",
 		"syncing": "正在同步…",
 		"forceSync": "立即强制同步"
-	},
-	"proxy": {
-		"enterprise": "企业版",
-		"title": "代理设置",
-		"description": "配置出站请求的全局代理设置。",
-		"enableProxy": "启用代理",
-		"enableProxyHelp": "为出站 HTTP 请求启用全局代理。",
-		"proxyConfiguration": "代理配置",
-		"proxyType": "代理类型",
-		"httpHttps": "HTTP / HTTPS",
-		"proxyTypeHelp": "选择代理协议类型。当前仅支持 HTTP 代理。",
-		"selectType": "选择类型",
-		"proxyUrl": "代理 URL",
-		"proxyUrlHelp": "代理服务器的完整 URL，包含协议与端口。",
-		"authentication": "身份验证（可选）",
-		"username": "用户名",
-		"password": "密码",
-		"usernamePlaceholder": "代理用户名",
-		"passwordPlaceholder": "代理密码",
-		"advancedSettings": "高级设置",
-		"noProxyHosts": "不走代理的主机",
-		"noProxyHostsHelp": "应绕过代理的主机列表，逗号分隔。",
-		"connectionTimeout": "连接超时（秒）",
-		"caCertificate": "CA 证书（PEM）（可选）",
-		"skipTls": "跳过 TLS 验证",
-		"enableProxyFor": "为以下组件启用代理",
-		"enableProxyForHelp": "选择哪些组件的出站请求应使用代理。",
-		"scim": "SCIM",
-		"scimHelp": "对 SCIM 目录同步请求使用代理。",
-		"scimEnterpriseOnly": "Bifrost Enterprise 提供 SCIM 代理支持。",
-		"inference": "推理",
-		"inferenceHelp": "对发往模型提供商的 LLM 推理请求使用代理。",
-		"comingSoon": "即将推出",
-		"api": "API",
-		"apiHelp": "对外部 API 调用与 webhook 使用代理。",
-		"noPermission": "你没有更新设置的权限",
-		"toastSaved": "代理配置已成功更新。",
-		"connectionTimeoutHelp": "建立代理连接的超时时间。0 表示不设超时，默认值为 60 秒。",
-		"caCertificateHelp": "通过会拦截 SSL 的代理建立 TLS 连接时，使用此 PEM 编码的 CA 证书作为受信任证书。",
-		"skipTlsHelp": "禁用 HTTPS 代理的 TLS 证书验证。不建议在生产环境中使用。",
-		"unsupportedType": "暂不支持 {{type}} 代理，请使用 HTTP 代理。"
 	},
 	"userAgent": {
 		"title": "User-Agent 映射",
@@ -1060,7 +1025,14 @@
 		"makeDefault": "设为默认",
 		"removeModel": "移除模型 {{n}}",
 		"aboutField": "关于{{label}}",
-		"efforts": { "none": "无", "minimal": "最低", "low": "低", "medium": "中", "high": "高", "xhigh": "极高" },
+		"efforts": {
+			"none": "无",
+			"minimal": "最低",
+			"low": "低",
+			"medium": "中",
+			"high": "高",
+			"xhigh": "极高"
+		},
 		"statuses": {
 			"idle": "空闲",
 			"pending": "等待中",
@@ -1172,5 +1144,8 @@
 			"retentionWhole": "必须为整天数",
 			"retentionMin": "必须为 0 天或更多（0 表示保留默认值）"
 		}
+	},
+	"enterprise": {
+		"adaptiveRoutingTitle": "解锁自适应路由以获得更好性能"
 	}
 }

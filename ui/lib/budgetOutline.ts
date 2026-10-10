@@ -1,4 +1,3 @@
-// Shared helpers for the provider-config outline/tree UI (Access Profile edit
 // fragment + saved detail view, and the Virtual Key provider card). Keeps the
 // compact mono budget labels, allocation-bar math, and the neutral swatch ramp
 // consistent across every screen that renders a provider config.

@@ -1,4 +1,4 @@
-import { BifrostConfig, GlobalProxyConfig, LatestReleaseResponse } from "@/lib/types/config";
+import { BifrostConfig, LatestReleaseResponse } from "@/lib/types/config";
 import axios from "axios";
 import { baseApi } from "./baseApi";
 
@@ -126,16 +126,6 @@ export const configApi = baseApi.injectEndpoints({
 			invalidatesTags: ["Config"],
 		}),
 
-		// Update proxy configuration
-		updateProxyConfig: builder.mutation<null, GlobalProxyConfig>({
-			query: (data) => ({
-				url: "/proxy-config",
-				method: "PUT",
-				body: data,
-			}),
-			invalidatesTags: ["Config"],
-		}),
-
 		// Force a pricing sync immediately
 		forcePricingSync: builder.mutation<null, void>({
 			query: () => ({
@@ -203,7 +193,6 @@ export const {
 	useGetVersionQuery,
 	useGetCoreConfigQuery,
 	useUpdateCoreConfigMutation,
-	useUpdateProxyConfigMutation,
 	useForcePricingSyncMutation,
 	useUpdateClientMetadataMutation,
 	useLazyGetCoreConfigQuery,

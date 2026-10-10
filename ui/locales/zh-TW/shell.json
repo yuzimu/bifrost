@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "簡體中文",
 	"nav": {
-		"home": "主頁",
 		"observability": "可觀測性",
 		"dashboard": "儀表板",
 		"llmLogs": "LLM 日誌",
@@ -28,30 +27,14 @@
 		"oauthGrants": "OAuth 授權",
 		"mcpSettings": "MCP 設定",
 		"plugins": "外掛",
-		"alerting": "告警",
-		"channels": "通知渠道",
-		"rules": "規則",
-		"history": "歷史記錄",
 		"governance": "治理",
 		"virtualKeys": "虛擬金鑰",
-		"users": "使用者",
 		"teams": "團隊",
-		"businessUnits": "業務單元",
 		"customers": "客戶",
-		"userProvisioning": "使用者配置",
-		"rolesPermissions": "角色與許可權",
-		"accessProfiles": "存取配置",
-		"projects": "專案",
-		"auditLogs": "審計日誌",
 		"guardrails": "護欄",
 		"guardrailRules": "規則",
 		"guardrailProviders": "供應商",
 		"webhooks": "Webhook",
-		"edgeControl": "邊緣控制",
-		"devices": "裝置",
-		"approvals": "審批",
-		"edgeSettings": "邊緣設定",
-		"clusterConfig": "叢集配置",
 		"adaptiveRouting": "自適應路由",
 		"adaptiveRoutingDashboard": "儀表板",
 		"adaptiveRoutingSettings": "設定",
@@ -63,15 +46,10 @@
 		"caching": "快取",
 		"security": "安全",
 		"warp": "Warp",
-		"proxy": "代理",
-		"apiKeys": "API 金鑰",
 		"performanceTuning": "效能調優",
-		"featureFlags": "功能開關",
-		"branding": "品牌",
-		"licenseInfo": "許可證資訊"
+		"featureFlags": "功能開關"
 	},
 	"navDesc": {
-		"home": "你的用量、金鑰、預算和存取權限",
 		"observability": "請求日誌與監控",
 		"dashboard": "儀表板",
 		"llmLogs": "LLM 請求日誌與監控",
@@ -96,30 +74,14 @@
 		"oauthGrants": "下游 OAuth 授權",
 		"mcpSettings": "MCP 配置",
 		"plugins": "管理自定義外掛",
-		"alerting": "管理告警渠道、規則與歷史",
-		"channels": "配置通知渠道",
-		"rules": "定義告警規則",
-		"history": "檢視告警投遞歷史",
 		"governance": "虛擬金鑰、使用者、團隊、客戶與角色",
 		"virtualKeys": "管理虛擬金鑰與存取許可權",
-		"users": "管理使用者",
 		"teams": "管理團隊",
-		"businessUnits": "管理業務單元",
 		"customers": "管理客戶",
-		"userProvisioning": "使用者管理與配置",
-		"rolesPermissions": "使用者角色與許可權",
-		"accessProfiles": "管理角色的存取配置",
-		"projects": "將請求限定到專案的存取與預算",
-		"auditLogs": "審計日誌與合規",
 		"guardrails": "護欄配置",
 		"guardrailRules": "護欄規則",
 		"guardrailProviders": "護欄供應商配置",
 		"webhooks": "非同步任務 Webhook 端點",
-		"edgeControl": "邊緣裝置管理",
-		"devices": "管理邊緣裝置",
-		"approvals": "審批應用與 MCP 伺服器",
-		"edgeSettings": "邊緣設定",
-		"clusterConfig": "管理 Bifrost 叢集",
 		"adaptiveRouting": "管理自適應路由",
 		"adaptiveRoutingDashboard": "自適應路由指標",
 		"adaptiveRoutingSettings": "自適應路由設定",
@@ -131,16 +93,8 @@
 		"caching": "快取配置",
 		"security": "安全設定",
 		"warp": "Warp 代理設定",
-		"proxy": "代理配置",
-		"apiKeys": "API 金鑰管理",
 		"performanceTuning": "效能調優設定",
-		"featureFlags": "切換功能開關",
-		"branding": "自定義 Logo 與圖示",
-		"licenseInfo": "企業版許可證資訊"
-	},
-	"home": {
-		"unlockTitle": "解鎖你的個人主頁",
-		"unlockDescription": "此功能屬於 Bifrost 企業版許可證。主頁會向每位使用者展示自己的用量、金鑰、預算和存取權限。"
+		"featureFlags": "切換功能開關"
 	},
 	"search": {
 		"placeholder": "搜尋…",
@@ -166,12 +120,6 @@
 			"available": "{{name}} 現已可用。",
 			"viewNotes": "檢視釋出說明",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "需要生產環境部署幫助？",
-			"body": "我們可協助生產環境部署，包括定製整合與專屬支援。",
-			"bookPrefix": "預約產品演示請點選",
-			"here": "這裡"
 		}
 	},
 	"topbar": {
@@ -194,25 +142,14 @@
 	"titles": {
 		"dashboard": "儀表板",
 		"adaptiveRoutingSettings": "自適應路由設定",
-		"alertChannels": "告警渠道",
-		"alertHistory": "告警歷史",
-		"alertRules": "告警規則",
-		"clusterConfig": "叢集配置",
 		"settings": "設定",
-		"licenseInfo": "許可證資訊",
-		"edgeSettings": "邊緣設定",
-		"edgeDevices": "邊緣裝置",
-		"edgeApprovals": "邊緣審批",
-		"rolesPermissions": "角色與許可權",
 		"guardrailRules": "護欄規則",
 		"guardrailProviders": "護欄供應商",
 		"llmLogs": "LLM 日誌",
-		"logConnectors": "日誌聯結器",
 		"observabilityConnectors": "可觀測性聯結器",
 		"promptRepository": "提示詞倉庫",
 		"modelProviders": "模型供應商",
-		"routingTree": "路由樹",
-		"userProvisioning": "使用者配置"
+		"routingTree": "路由樹"
 	},
 	"error": {
 		"title": "出錯了",
@@ -406,10 +343,7 @@
 			"not_configured": {
 				"summary": "Warp 尚未設定。",
 				"cause": "未設定供應商和模型，或在設定中關閉了 Warp。",
-				"suggestions": [
-					"開啟 Warp 設定並選擇供應商和模型。",
-					"確認已開啟「啟用 Warp」。"
-				]
+				"suggestions": ["開啟 Warp 設定並選擇供應商和模型。", "確認已開啟「啟用 Warp」。"]
 			},
 			"max_iterations": {
 				"summary": "Warp 未能得出答案。",
@@ -424,11 +358,7 @@
 			"timeout": {
 				"summary": "耗時過長。",
 				"cause": "整個請求在 Warp 完成前已超過時間預算。時間範圍長、範圍寬會使每次查詢更慢，而 Warp 會執行多次查詢。",
-				"suggestions": [
-					"嘗試更短的時間範圍。",
-					"縮小到一個團隊、客戶或虛擬金鑰。",
-					"若模型本身較慢，可在 Warp 設定中提高請求逾時。"
-				]
+				"suggestions": ["嘗試更短的時間範圍。", "縮小到一個團隊、客戶或虛擬金鑰。", "若模型本身較慢，可在 Warp 設定中提高請求逾時。"]
 			},
 			"upstream_error": {
 				"summary": "無法連線到 Warp 的模型。",
@@ -442,10 +372,7 @@
 			"tool_error": {
 				"summary": "一次查詢失敗。",
 				"cause": "Warp 的某次資料查詢回傳了錯誤，且在剩餘步驟內無法復原。",
-				"suggestions": [
-					"嘗試更窄的時間範圍。",
-					"確認你提到的模型、金鑰或團隊確實存在。"
-				]
+				"suggestions": ["嘗試更窄的時間範圍。", "確認你提到的模型、金鑰或團隊確實存在。"]
 			},
 			"cancelled": {
 				"summary": "已停止。",
@@ -455,10 +382,7 @@
 			"unknown": {
 				"summary": "出了點問題。",
 				"cause": "Warp 回傳了錯誤，但沒有可辨識的錯誤碼。",
-				"suggestions": [
-					"再試一次該問題。",
-					"若持續發生，請連同下方詳情一併回報。"
-				]
+				"suggestions": ["再試一次該問題。", "若持續發生，請連同下方詳情一併回報。"]
 			}
 		}
 	}

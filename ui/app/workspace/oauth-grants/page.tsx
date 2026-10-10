@@ -11,9 +11,7 @@ import { toast } from "sonner";
 import GrantsTable from "./views/grantsTable";
 import { OAuthGrantFilters, OAuthGrantsFilterSidebar } from "./views/oauthGrantsFilterSidebar";
 import RevokeGrantDialog from "./views/revokeGrantDialog";
-
 const PAGE_SIZE = 50;
-
 export default function OAuthGrantsPage() {
 	const { t } = useTranslation("mcp");
 	const [urlState, setUrlState] = useQueryStates(
@@ -21,48 +19,41 @@ export default function OAuthGrantsPage() {
 			q: parseAsString.withDefault(""),
 			bf_mode: parseAsArrayOf(parseAsString).withDefault([]),
 			virtual_key_id: parseAsArrayOf(parseAsString).withDefault([]),
-			user_id: parseAsArrayOf(parseAsString).withDefault([]),
 			offset: parseAsInteger.withDefault(0),
 		},
 		{ history: "push" },
 	);
-
 	const debouncedSearch = useDebouncedValue(urlState.q, 300);
-
 	const filters: OAuthGrantFilters = useMemo(
-		() => ({ mode: urlState.bf_mode, virtual_key_id: urlState.virtual_key_id, user_id: urlState.user_id }),
-		[urlState.bf_mode, urlState.virtual_key_id, urlState.user_id],
+		() => ({
+			mode: urlState.bf_mode,
+			virtual_key_id: urlState.virtual_key_id,
+		}),
+		[urlState.bf_mode, urlState.virtual_key_id],
 	);
-
 	const setFilters = useCallback(
 		(newFilters: OAuthGrantFilters) => {
 			void setUrlState({
 				bf_mode: newFilters.mode.length ? newFilters.mode : null,
 				virtual_key_id: newFilters.virtual_key_id.length ? newFilters.virtual_key_id : null,
-				user_id: newFilters.user_id.length ? newFilters.user_id : null,
 				offset: 0,
 			});
 		},
 		[setUrlState],
 	);
-
 	const { data, isLoading, isFetching, isError, error } = useGetOAuth2GrantsQuery({
 		q: debouncedSearch || undefined,
 		bf_mode: filters.mode.length ? filters.mode : undefined,
 		virtual_key_id: filters.virtual_key_id.length ? filters.virtual_key_id : undefined,
-		user_id: filters.user_id.length ? filters.user_id : undefined,
 		limit: PAGE_SIZE,
 		offset: urlState.offset,
 	});
 	const [revokeGrant, { isLoading: revoking }] = useRevokeOAuth2GrantMutation();
-
 	const [pendingDelete, setPendingDelete] = useState<OAuth2GrantRow | null>(null);
 	const [pendingActionRowId, setPendingActionRowId] = useState<string | null>(null);
-
 	const page = data?.sessions ?? [];
 	const totalCount = data?.total_count ?? 0;
-	const hasActiveFilters = !!urlState.q || filters.mode.length > 0 || filters.virtual_key_id.length > 0 || filters.user_id.length > 0;
-
+	const hasActiveFilters = !!urlState.q || filters.mode.length > 0 || filters.virtual_key_id.length > 0;
 	// Snap the offset back into range when the total shrinks past the current
 	// page (e.g. a revoke removes the last row on the last page). Without this
 	// the page goes blank with the paginator and clear-filters affordances both
@@ -73,10 +64,8 @@ export default function OAuthGrantsPage() {
 			offset: totalCount === 0 ? 0 : Math.floor((totalCount - 1) / PAGE_SIZE) * PAGE_SIZE,
 		});
 	}, [totalCount, urlState.offset, data, setUrlState]);
-
-	const handleSearchChange = (value: string) => setUrlState({ q: value || null, offset: 0 });
+	const handleSearchChange = (value: string) => setUrlState({ q: value, offset: 0 });
 	const handleOffsetChange = (offset: number) => setUrlState({ offset });
-
 	const confirmRevoke = async () => {
 		if (!pendingDelete) return;
 		const row = pendingDelete;
@@ -91,14 +80,11 @@ export default function OAuthGrantsPage() {
 			setPendingActionRowId(null);
 		}
 	};
-
 	const content = (
 		<div className="flex h-full flex-col">
 			<RevokeGrantDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)} onConfirm={confirmRevoke} />
 
-			<PageTitle title={t("oauthGrants.title")}>
-				{t("oauthGrants.description")}
-			</PageTitle>
+			<PageTitle title={t("oauthGrants.title")}>{t("oauthGrants.description")}</PageTitle>
 
 			<div className="mb-4 flex items-center gap-3">
 				<div className="relative max-w-sm min-w-[200px] flex-1">
@@ -138,13 +124,11 @@ export default function OAuthGrantsPage() {
 			)}
 		</div>
 	);
-
 	// No grants at all and no active filters/search: render full-width without
 	// the filter sidebar, mirroring the MCP clients/sessions onboarding state.
 	if (!isLoading && totalCount === 0 && !hasActiveFilters) {
 		return <div className="mx-auto flex h-[calc(var(--app-content-viewport)_-_50px)] w-full max-w-7xl flex-col p-4 md:p-0">{content}</div>;
 	}
-
 	return (
 		<div className="dark:bg-card no-padding-parent no-border-parent h-[calc(var(--app-content-viewport)_-_var(--app-bottom-padding))]">
 			<div className="bg-background flex h-full w-full grow gap-3">

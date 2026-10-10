@@ -13,7 +13,6 @@ import type { DBKey, VirtualKey } from "@/lib/types/governance";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 export function ApiKeySelectorView({
 	providerKeys,
 	virtualKeys,
@@ -38,19 +37,19 @@ export function ApiKeySelectorView({
 }) {
 	const { t } = useTranslation("config");
 	const [query, setQuery] = useState("");
-
 	// Provider keys are already in memory, so they filter here. Virtual keys
 	// arrive from the server pre-narrowed by the same query.
 	const apiKeyOptions = useMemo(() => {
 		if (requireVirtualKey) return [];
-		const opts = [{ label: t("promptRepo.autoDefault"), value: "__auto__" }, ...providerKeys.map((k) => ({ label: k.name, value: k.key_id }))];
+		const opts = [
+			{ label: t("promptRepo.autoDefault"), value: "__auto__" },
+			...providerKeys.map((k) => ({ label: k.name, value: k.key_id })),
+		];
 		if (!query) return opts;
 		const q = query.toLowerCase();
 		return opts.filter((o) => o.label.toLowerCase().includes(q));
 	}, [providerKeys, requireVirtualKey, query, t]);
-
 	const virtualKeyOptions = useMemo(() => virtualKeys.map((vk) => ({ label: vk.name, value: vk.value })), [virtualKeys]);
-
 	// Only one page of virtual keys is loaded at a time, so the selected key can
 	// drop out of the list as the search narrows. Names seen once are kept so the
 	// trigger doesn't lose its label.
@@ -58,7 +57,6 @@ export function ApiKeySelectorView({
 	useEffect(() => {
 		for (const o of virtualKeyOptions) labelCacheRef.current.set(o.value, o.label);
 	}, [virtualKeyOptions]);
-
 	const handleSearchChange = useCallback(
 		(v: string) => {
 			setQuery(v);
@@ -66,7 +64,6 @@ export function ApiKeySelectorView({
 		},
 		[onSearchChange],
 	);
-
 	const getLabel = useCallback(
 		(val: string | null) => {
 			if (!val) return "";
@@ -80,9 +77,7 @@ export function ApiKeySelectorView({
 		},
 		[providerKeys, virtualKeys, requireVirtualKey, t],
 	);
-
 	const hasResults = apiKeyOptions.length > 0 || virtualKeyOptions.length > 0;
-
 	return (
 		<div className="flex flex-col gap-2">
 			<Label className="text-muted-foreground text-xs font-medium uppercase">
@@ -134,7 +129,9 @@ export function ApiKeySelectorView({
 								{t("promptRepo.searchingDots")}
 							</div>
 						)}
-						{!isSearching && !hasResults && <div className="text-muted-foreground py-6 text-center text-sm">{t("promptRepo.noResultsFoundDot")}</div>}
+						{!isSearching && !hasResults && (
+							<div className="text-muted-foreground py-6 text-center text-sm">{t("promptRepo.noResultsFoundDot")}</div>
+						)}
 					</ComboboxList>
 				</ComboboxContent>
 			</Combobox>

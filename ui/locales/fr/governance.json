@@ -5,7 +5,6 @@
 		"bookDemo": "Réserver une démo",
 		"bookDemoAria": "Réserver une démo (ouvre Calendly dans un nouvel onglet)"
 	},
-	"unlockSharedDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Nous aimerions en savoir plus sur votre cas d’usage et sur la façon dont nous pouvons vous aider.",
 	"customers": {
 		"title": "Clients",
 		"description": "Gérez les comptes clients avec leurs propres équipes, budgets et contrôles d’accès.",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "Rechercher des webhooks…"
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "Débloquez les canaux d’alerte pour une surveillance proactive",
-		"channelsUnlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Configurez des alertes Slack, PagerDuty, OpsGenie et webhook pour anticiper les problèmes de budget et de performance.",
-		"rulesUnlockTitle": "Débloquez les règles d’alerte pour une surveillance proactive",
-		"rulesUnlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Définissez des règles d’alerte pour détecter les problèmes de budget, de latence et de dégradation avant qu’ils ne deviennent des incidents.",
-		"historyUnlockTitle": "Débloquez l’historique des alertes pour une surveillance proactive",
-		"historyUnlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Consultez les résultats de livraison des alertes, les échecs et les événements de résolution en un seul endroit."
-	},
 	"guardrails": {
 		"unlockTitle": "Débloquez les garde-fous pour une meilleure sécurité"
-	},
-	"auditLogs": {
-		"unlockTitle": "Débloquez les journaux d’audit pour une meilleure conformité"
-	},
-	"rbac": {
-		"unlockTitle": "Débloquez les rôles et permissions pour une meilleure sécurité"
-	},
-	"projects": {
-		"unlockTitle": "Débloquez les projets pour un accès et des dépenses cadrés",
-		"unlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Un projet est quelque chose qu’une requête choisit : il accorde un accès en plus de ce que l’appelant détient déjà, et décide sur quel ledger la dépense est imputée."
-	},
-	"userRankings": {
-		"unlockTitle": "Débloquez les classements utilisateurs pour une meilleure visibilité"
-	},
-	"promptDeployments": {
-		"unlockTitle": "Débloquez les déploiements d’invites pour un meilleur versionnement et des tests A/B."
-	},
-	"connectorsUnlock": {
-		"splunk": "Débloquez l’ingestion native de données Splunk pour une meilleure observabilité",
-		"pubsub": "Débloquez le streaming de traces Google Cloud Pub/Sub",
-		"datadog": "Débloquez l’ingestion native de données Datadog pour une meilleure observabilité",
-		"bigquery": "Débloquez l’ingestion native de données BigQuery pour l’analytique",
-		"kafka": "Débloquez le streaming natif de journaux Kafka pour une observabilité en temps réel",
-		"kafkaDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Diffusez les traces de requêtes terminées en JSON vers un topic Kafka pour l’analytique en temps réel, les alertes et le traitement en aval."
-	},
-	"accessProfiles": {
-		"unlockTitle": "Débloquez les profils d’accès pour de meilleures performances",
-		"unlockDescription": "Cette fonctionnalité fait partie de la licence Enterprise de Bifrost. Créez des profils d’accès pour contrôler l’accès à vos ressources."
-	},
-	"users": {
-		"unlockTitle": "Débloquez les utilisateurs et la gouvernance utilisateur",
-		"unlockDescription": "Gérez les utilisateurs, définissez des budgets et limites de débit par utilisateur, et contrôlez l’accès avec une gouvernance de niveau entreprise. Cette fonctionnalité fait partie de la licence Enterprise de Bifrost."
-	},
-	"businessUnits": {
-		"unlockTitle": "Débloquez les unités métier et la gouvernance avancée",
-		"unlockDescription": "Gérez les utilisateurs et les unités métier avec notre gouvernance de niveau entreprise. Cette fonctionnalité fait partie de la licence Enterprise de Bifrost."
 	},
 	"sheet": {
 		"saving": "Enregistrement…",

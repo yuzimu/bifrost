@@ -389,7 +389,7 @@ interface ComboboxSelectBaseProps {
 	optionTestId?: (value: string) => string;
 	// Forwarded to the trigger button so a form label (FormControl / htmlFor) can target it.
 	id?: string;
-	// Accessible name for the trigger when no visible label is associated with it.
+
 	"aria-label"?: string;
 }
 

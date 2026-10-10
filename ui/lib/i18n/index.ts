@@ -1,11 +1,8 @@
 import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
-
 import { NAMESPACES, resources } from "./resources";
-
 export const LOCALE_STORAGE_KEY = "bifrost.locale";
-
 export const SUPPORTED_LOCALES = [
 	{ code: "en", label: "English" },
 	{ code: "zh-CN", label: "简体中文" },
@@ -19,22 +16,16 @@ export const SUPPORTED_LOCALES = [
 	{ code: "it", label: "Italiano" },
 	{ code: "ru", label: "Русский" },
 ] as const;
-
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]["code"];
-
 export const DEFAULT_LOCALE: SupportedLocale = "en";
-
 const supportedLocaleCodes: readonly string[] = SUPPORTED_LOCALES.map((locale) => locale.code);
-
 export function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
 	return !!value && supportedLocaleCodes.includes(value);
 }
-
 export function getLocale(): SupportedLocale {
 	const current = i18n.resolvedLanguage ?? i18n.language;
 	return isSupportedLocale(current) ? current : DEFAULT_LOCALE;
 }
-
 /** 切换界面语言并保存浏览器的语言偏好。 */
 export async function changeLocale(locale: SupportedLocale): Promise<SupportedLocale> {
 	await i18n.changeLanguage(locale);
@@ -43,17 +34,14 @@ export async function changeLocale(locale: SupportedLocale): Promise<SupportedLo
 	}
 	return getLocale();
 }
-
 /** 语言属性跟随界面有效语言，供辅助技术识别当前内容语言。 */
 function syncDocumentLanguage(): void {
 	if (typeof document !== "undefined") {
 		document.documentElement.lang = getLocale();
 	}
 }
-
 i18n.on("initialized", syncDocumentLanguage);
 i18n.on("languageChanged", syncDocumentLanguage);
-
 if (!i18n.isInitialized) {
 	void i18n
 		.use(LanguageDetector)
@@ -79,9 +67,7 @@ if (!i18n.isInitialized) {
 			},
 		});
 }
-
 syncDocumentLanguage();
-
 export { NAMESPACES };
 export type { I18nNamespace } from "./resources";
 export default i18n;

@@ -18,12 +18,10 @@ import { CappedBarStack } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import type { ChartType } from "./chartTypeToggle";
 import { NoChartData } from "./noChartData";
-
 // Sanitize model names to avoid Recharts interpreting dots/brackets as path separators
 function sanitizeModelKey(model: string): string {
 	return model.replace(/[.\[\]]/g, "_");
 }
-
 interface ModelUsageChartProps {
 	data: ModelHistogramResponse | null;
 	chartType: ChartType;
@@ -31,14 +29,11 @@ interface ModelUsageChartProps {
 	endTime: number;
 	selectedModel: string;
 }
-
 function CustomTooltip({ active, payload, selectedModel, displayModels }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -95,14 +90,12 @@ function CustomTooltip({ active, payload, selectedModel, displayModels }: any) {
 		</div>
 	);
 }
-
 function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedModel }: ModelUsageChartProps) {
 	const { i18n } = useTranslation("observability");
 	const { chartData, displayModels } = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return { chartData: [], displayModels: [] };
 		}
-
 		let displayList: string[];
 		let topSet: Set<string> | null = null;
 		if (selectedModel === "all") {
@@ -112,14 +105,12 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 		} else {
 			displayList = data.models;
 		}
-
 		const processed = data.buckets.map((bucket, index) => {
 			const item: any = {
 				...bucket,
 				index,
 				formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 			};
-
 			if (selectedModel === "all") {
 				let otherTotal = 0;
 				if (topSet && bucket.by_model) {
@@ -144,43 +135,39 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 			}
 			return item;
 		});
-
 		return { chartData: processed, displayModels: displayList };
 	}, [data, selectedModel, i18n.resolvedLanguage]);
-
 	if (!data?.buckets || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	const commonProps = {
 		data: chartData,
 		margin: { top: 6, right: 4, left: 4, bottom: 0 },
 	};
-
 	return (
 		<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}-${selectedModel}`}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				{chartType === "bar" ? (
 					<BarChart {...commonProps} barCategoryGap={1}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={44}
 							tickFormatter={(v) => formatCompactNumber(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip
 							content={<CustomTooltip selectedModel={selectedModel} displayModels={displayModels} />}
@@ -190,7 +177,7 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 							<CappedBarStack buckets={chartData.length}>
 								{displayModels.map((model, idx) => (
 									<Bar
-										isAnimationActive={false}
+										isAnimationActive
 										key={model}
 										dataKey={`model_${sanitizeModelKey(model)}`}
 										fill={model === OTHER_SERIES_KEY ? OTHER_SERIES_COLOR : getModelColor(idx)}
@@ -201,33 +188,33 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 							</CappedBarStack>
 						) : (
 							<CappedBarStack buckets={chartData.length}>
-								<Bar isAnimationActive={false} dataKey="success" fill={CHART_COLORS.success} fillOpacity={0.9} barSize={30} />
-								<Bar isAnimationActive={false} dataKey="error" fill={CHART_COLORS.error} fillOpacity={0.9} barSize={30} />
-								<Bar isAnimationActive={false} dataKey="cancelled" fill={CHART_COLORS.cancelled} fillOpacity={0.9} barSize={30} />
+								<Bar isAnimationActive dataKey="success" fill={CHART_COLORS.success} fillOpacity={0.9} barSize={30} />
+								<Bar isAnimationActive dataKey="error" fill={CHART_COLORS.error} fillOpacity={0.9} barSize={30} />
+								<Bar isAnimationActive dataKey="cancelled" fill={CHART_COLORS.cancelled} fillOpacity={0.9} barSize={30} />
 							</CappedBarStack>
 						)}
 					</BarChart>
 				) : (
 					<AreaChart {...commonProps}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={44}
 							tickFormatter={(v) => formatCompactNumber(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip
 							content={<CustomTooltip selectedModel={selectedModel} displayModels={displayModels} />}
@@ -238,7 +225,7 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 								const color = model === OTHER_SERIES_KEY ? OTHER_SERIES_COLOR : getModelColor(idx);
 								return (
 									<Area
-										isAnimationActive={false}
+										isAnimationActive
 										key={model}
 										type="monotone"
 										dataKey={`model_${sanitizeModelKey(model)}`}
@@ -252,7 +239,7 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 						) : (
 							<>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="success"
 									stackId="1"
@@ -261,7 +248,7 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 									fillOpacity={0.7}
 								/>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="error"
 									stackId="1"
@@ -270,7 +257,7 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 									fillOpacity={0.7}
 								/>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="cancelled"
 									stackId="1"
@@ -286,5 +273,4 @@ function ModelUsageChartImpl({ data, chartType, startTime, endTime, selectedMode
 		</ChartErrorBoundary>
 	);
 }
-
 export const ModelUsageChart = memo(ModelUsageChartImpl);

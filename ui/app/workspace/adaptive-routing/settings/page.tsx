@@ -1,9 +1,5 @@
-import LoadBalancerSettingsView from "@enterprise/components/load-balancer/loadBalancerSettingsView";
+import { AdaptiveSettingsView } from "../components/adaptiveRoutingView";
 
 export default function AdaptiveRoutingSettingsPage() {
-	return (
-		<div className="no-padding-parent flex w-full p-4">
-			<LoadBalancerSettingsView />
-		</div>
-	);
+	return <AdaptiveSettingsView />;
 }

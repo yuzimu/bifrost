@@ -14,12 +14,10 @@ import { useWarp } from "@/lib/contexts/warpContext";
 import { useGetWarpConfigQuery, useGetWarpLogIndexStatusQuery, useLazyGetWarpConversationQuery } from "@/lib/store/apis/warpApi";
 import type { WarpConversation } from "@/lib/types/warp";
 import { cn } from "@/lib/utils";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { ArrowDown, Database, History, Loader2, SquarePen, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 /** 保留模型选择、权限及队列状态，按界面语言显示面板文案。 */
 export default function WarpPanel() {
 	const { t } = useTranslation("shell");
@@ -34,7 +32,6 @@ export default function WarpPanel() {
 		setControlsHeight(controlsNode.offsetHeight);
 		return () => observer.disconnect();
 	}, [controlsNode]);
-
 	const warp = useWarp();
 	const {
 		data: config,
@@ -45,15 +42,11 @@ export default function WarpPanel() {
 		refetch: refetchConfig,
 		// Refetched each time the dock opens, so models an administrator added or removed since show up.
 	} = useGetWarpConfigQuery(undefined, { refetchOnMountOrArgChange: true });
-	// Changing Warp's settings is Warp Update; everyone else gets the panel without the routes into them.
-	const canConfigure = useRbac(RbacResource.Warp, RbacOperation.Update);
-
 	// The launcher unmounts when the dock opens, so focus would otherwise fall back to the body.
 	const closeRef = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (warp?.isOpen) closeRef.current?.focus();
 	}, [warp?.isOpen]);
-
 	const {
 		streamingText,
 		streamingToolCalls,
@@ -67,15 +60,11 @@ export default function WarpPanel() {
 		resetConversation,
 		openConversation,
 	} = useWarpStream();
-
 	const { containerRef, contentRef, isPinned, scrollToBottom } = useWarpAutoScroll();
-
 	const [showHistory, setShowHistory] = useState(false);
 	const activeConversationId = warp?.conversationId || undefined;
 	const [loadConversation] = useLazyGetWarpConversationQuery();
-
 	const isConfigured = config?.configured ?? false;
-
 	const models = useMemo(() => warpModels(config), [config]);
 	const selectedModel = resolveWarpModel(models, warp?.selectedModelKey ?? null);
 	const requestModel = warpModelForRequest(models, selectedModel);
@@ -88,7 +77,6 @@ export default function WarpPanel() {
 		sentModelRef.current = false;
 		void refetchConfig();
 	}, [error, refetchConfig]);
-
 	const [indexPollMs, setIndexPollMs] = useState(30000);
 	const { data: indexStatus, isError: isIndexStatusError } = useGetWarpLogIndexStatusQuery(undefined, {
 		skip: !isConfigured,
@@ -100,7 +88,6 @@ export default function WarpPanel() {
 	const indexChip = indexStatus;
 	// A missing chip reads as "all fine", so a failed status request shows an explicit notice instead.
 	const indexStatusUnavailable = !indexChip && isIndexStatusError;
-
 	const [queue, setQueue] = useState<string[]>([]);
 	// Blocks the drain during a stored load, or a follow-up is filed under the thread being left.
 	const [isOpeningStored, setIsOpeningStored] = useState(false);
@@ -124,9 +111,7 @@ export default function WarpPanel() {
 		setQueue(rest);
 		askRef.current?.(next);
 	}, [isStreaming, queue, question, error, isOpeningStored]);
-
 	if (!warp) return null;
-
 	const openStored = async (conversation: WarpConversation) => {
 		// Clear the queue only after a successful load, so a failed open keeps queued messages.
 		setIsOpeningStored(true);
@@ -151,7 +136,6 @@ export default function WarpPanel() {
 	};
 	// "Turned off" and "never set up" both report configured:false but need different fixes.
 	const isDisabledButComplete = !!config && !config.enabled && !!config.provider && !!config.model;
-
 	const ask = (text: string, label?: string) => {
 		abandonStoredLoad();
 		const history = warp.turns;
@@ -168,7 +152,6 @@ export default function WarpPanel() {
 		void send(history, text, requestModel);
 	};
 	askRef.current = ask;
-
 	// The queue does not auto-drain after an error; this is the manual way to resume it.
 	const resumeQueue = () => {
 		const [next, ...rest] = queue;
@@ -176,7 +159,6 @@ export default function WarpPanel() {
 		setQueue(rest);
 		askRef.current?.(next);
 	};
-
 	return (
 		<div className="flex h-full min-h-0 w-full flex-col" data-testid="warp-panel">
 			<header className="flex h-13 shrink-0 items-center justify-between gap-2 border-b px-4">
@@ -248,7 +230,7 @@ export default function WarpPanel() {
 			</header>
 
 			{/* A refetch only replaces the view while the cached config says "not set up": that is the
-			    stale answer worth hiding. A configured Warp keeps its transcript and composer on screen. */}
+            stale answer worth hiding. A configured Warp keeps its transcript and composer on screen. */}
 			{isConfigLoading || (isConfigFetching && !isConfigured) ? (
 				// An undefined config reads as unconfigured, so without this the setup prompt flashes on open.
 				<div className="flex min-h-0 flex-1 items-center justify-center px-6" data-testid="warp-config-loading">
@@ -281,7 +263,7 @@ export default function WarpPanel() {
 						<WarpIcon className="size-5" />
 					</span>
 					<p className="text-sm font-medium">{isDisabledButComplete ? t("warp.panel.turnedOff") : t("warp.panel.notSetUp")}</p>
-					{canConfigure ? (
+					{
 						<>
 							<p className="text-muted-foreground text-xs">
 								{isDisabledButComplete ? t("warp.panel.enableHint") : t("warp.panel.chooseModel")}
@@ -290,11 +272,7 @@ export default function WarpPanel() {
 								<Link to="/workspace/config/warp">{isDisabledButComplete ? t("warp.panel.openSettings") : t("warp.panel.configure")}</Link>
 							</Button>
 						</>
-					) : (
-						<p className="text-muted-foreground text-xs" data-testid="warp-ask-admin">
-							{isDisabledButComplete ? t("warp.panel.askAdminEnable") : t("warp.panel.askAdminConfigure")}
-						</p>
-					)}
+					}
 				</div>
 			) : (
 				<div className="relative flex min-h-0 flex-1 flex-col">
@@ -402,7 +380,7 @@ export default function WarpPanel() {
 							models={models}
 							selectedModel={selectedModel}
 							onSelectModel={(model) => warp.selectModel(warpModelKey(model))}
-							canConfigure={canConfigure}
+							canConfigure={true}
 							onSend={ask}
 							onQueue={(text) => setQueue((current) => [...current, text])}
 							// Stopping also drops queued follow-ups so they don't fire right after the cut.

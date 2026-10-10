@@ -9,24 +9,19 @@ import {
 } from "@/components/ui/alertDialog";
 import { getErrorMessage, useDeleteProviderMutation } from "@/lib/store";
 import { ModelProvider } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { AlertDialogTitle } from "@radix-ui/react-alert-dialog";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-
 interface Props {
 	show: boolean;
 	onCancel: () => void;
 	onDelete: () => void;
 	provider: ModelProvider;
 }
-
 export default function ConfirmDeleteProviderDialog({ show, onCancel, onDelete, provider }: Props) {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const [deleteProvider, { isLoading: isDeletingProvider }] = useDeleteProviderMutation();
-	const hasDeleteAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Delete);
-
 	const onDeleteHandler = () => {
 		deleteProvider(provider.name)
 			.unwrap()
@@ -39,7 +34,6 @@ export default function ConfirmDeleteProviderDialog({ show, onCancel, onDelete, 
 				});
 			});
 	};
-
 	return (
 		<AlertDialog open={show}>
 			<AlertDialogContent>
@@ -49,7 +43,7 @@ export default function ConfirmDeleteProviderDialog({ show, onCancel, onDelete, 
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel onClick={onCancel}>{tc("cancel")}</AlertDialogCancel>
-					<AlertDialogAction onClick={onDeleteHandler} disabled={isDeletingProvider || !hasDeleteAccess}>
+					<AlertDialogAction onClick={onDeleteHandler} disabled={isDeletingProvider}>
 						{isDeletingProvider ? t("providers.deleting") : tc("delete")}
 					</AlertDialogAction>
 				</AlertDialogFooter>

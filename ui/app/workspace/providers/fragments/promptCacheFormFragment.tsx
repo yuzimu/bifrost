@@ -7,7 +7,6 @@ import { getErrorMessage, setProviderFormDirtyState, useAppDispatch } from "@/li
 import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import type { CacheControlInjectionPoint, ModelProvider } from "@/lib/types/config";
 import { promptCacheFormSchema, type PromptCacheFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect } from "react";
@@ -15,48 +14,37 @@ import { useFieldArray, useForm, type Resolver } from "react-hook-form";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface PromptCacheFormFragmentProps {
 	provider: ModelProvider;
 }
-
 // Sentinel for "no TTL set", since a Select cannot hold undefined as a value.
 const TTL_DEFAULT = "default";
-
 const ROLES = ["system", "developer", "user", "assistant"] as const;
-
 const toFormValues = (provider: ModelProvider): PromptCacheFormSchema => ({
 	auto_inject: provider.prompt_cache?.auto_inject ?? false,
 	ttl: provider.prompt_cache?.ttl ?? TTL_DEFAULT,
 	cache_control_injection_points: provider.prompt_cache?.cache_control_injection_points ?? [],
 });
-
 export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
-
 	const form = useForm<PromptCacheFormSchema, any, PromptCacheFormSchema>({
 		resolver: zodResolver(promptCacheFormSchema) as Resolver<PromptCacheFormSchema, any, PromptCacheFormSchema>,
 		mode: "onChange",
 		reValidateMode: "onChange",
 		defaultValues: toFormValues(provider),
 	});
-
 	const { fields, append, remove } = useFieldArray({
 		control: form.control,
 		name: "cache_control_injection_points",
 	});
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	useEffect(() => {
 		form.reset(toFormValues(provider));
 	}, [form, provider.name, provider.prompt_cache]);
-
 	const onSubmit = (data: PromptCacheFormSchema) => {
 		const points = (data.cache_control_injection_points ?? []) as CacheControlInjectionPoint[];
 		updateProvider(
@@ -80,7 +68,6 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4 md:px-6" data-testid="provider-config-prompt-cache-content">
@@ -100,7 +87,6 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 											data-testid="provider-prompt-cache-auto-inject-switch"
 											size="md"
 											checked={field.value}
-											disabled={!hasUpdateProviderAccess}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
 												form.trigger("auto_inject");
@@ -119,7 +105,7 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 						render={({ field }) => (
 							<FormItem>
 								<FormLabel>{t("providers.promptCache.cacheTtl")}</FormLabel>
-								<Select value={field.value ?? TTL_DEFAULT} onValueChange={field.onChange} disabled={!hasUpdateProviderAccess}>
+								<Select value={field.value ?? TTL_DEFAULT} onValueChange={field.onChange}>
 									<FormControl>
 										<SelectTrigger data-testid="provider-prompt-cache-ttl-select" className="w-56">
 											<SelectValue />
@@ -156,11 +142,7 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 									render={({ field }) => (
 										<FormItem className="flex-1">
 											<FormLabel className="text-xs">{t("providers.promptCache.role")}</FormLabel>
-											<Select
-												value={field.value ?? ""}
-												onValueChange={(v) => field.onChange(v === "" ? undefined : v)}
-												disabled={!hasUpdateProviderAccess}
-											>
+											<Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v === "" ? undefined : v)}>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder={t("providers.promptCache.anyRole")} />
@@ -188,7 +170,6 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 													type="number"
 													placeholder={t("providers.promptCache.indexPlaceholder")}
 													value={field.value ?? ""}
-													disabled={!hasUpdateProviderAccess}
 													onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
 												/>
 											</FormControl>
@@ -199,7 +180,6 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 									type="button"
 									variant="outline"
 									size="icon"
-									disabled={!hasUpdateProviderAccess}
 									onClick={() => remove(index)}
 									data-testid={`provider-prompt-cache-point-remove-${index}`}
 								>
@@ -216,7 +196,6 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 							type="button"
 							variant="outline"
 							size="sm"
-							disabled={!hasUpdateProviderAccess}
 							onClick={() => append({ location: "message", role: undefined, index: undefined })}
 							data-testid="provider-prompt-cache-point-add"
 						>
@@ -229,7 +208,7 @@ export function PromptCacheFormFragment({ provider }: PromptCacheFormFragmentPro
 				<div className="flex justify-end space-x-2 pb-6">
 					<Button
 						type="submit"
-						disabled={!form.formState.isDirty || !form.formState.isValid || !hasUpdateProviderAccess || isUpdatingProvider}
+						disabled={!form.formState.isDirty || !form.formState.isValid || isUpdatingProvider}
 						isLoading={isUpdatingProvider}
 					>
 						{t("providers.savePromptCaching")}

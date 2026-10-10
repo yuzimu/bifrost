@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "Accueil",
 		"observability": "Observabilité",
 		"dashboard": "Tableau de bord",
 		"llmLogs": "Journaux LLM",
@@ -28,30 +27,14 @@
 		"oauthGrants": "Autorisations OAuth MCP",
 		"mcpSettings": "Paramètres MCP",
 		"plugins": "Modules d’extension",
-		"alerting": "Alertes",
-		"channels": "Canaux",
-		"rules": "Règles",
-		"history": "Historique",
 		"governance": "Gouvernance",
 		"virtualKeys": "Clés virtuelles",
-		"users": "Utilisateurs",
 		"teams": "Équipes",
-		"businessUnits": "Unités commerciales",
 		"customers": "Clients",
-		"userProvisioning": "Provisionnement des utilisateurs",
-		"rolesPermissions": "Rôles et permissions",
-		"accessProfiles": "Profils d’accès",
-		"projects": "Projets",
-		"auditLogs": "Journaux d’audit",
 		"guardrails": "Garde-fous",
 		"guardrailRules": "Règles",
 		"guardrailProviders": "Fournisseurs",
 		"webhooks": "Points de terminaison webhook",
-		"edgeControl": "Contrôle Edge",
-		"devices": "Appareils",
-		"approvals": "Approbations",
-		"edgeSettings": "Paramètres Edge",
-		"clusterConfig": "Config. du cluster",
 		"adaptiveRouting": "Routage adaptatif",
 		"adaptiveRoutingDashboard": "Tableau de bord",
 		"adaptiveRoutingSettings": "Paramètres",
@@ -63,15 +46,10 @@
 		"caching": "Cache",
 		"security": "Sécurité",
 		"warp": "Warp",
-		"proxy": "Proxy",
-		"apiKeys": "Clés API",
 		"performanceTuning": "Réglage des performances",
-		"featureFlags": "Indicateurs de fonctionnalités",
-		"branding": "Image de marque",
-		"licenseInfo": "Infos licence"
+		"featureFlags": "Indicateurs de fonctionnalités"
 	},
 	"navDesc": {
-		"home": "Votre utilisation, vos clés, budgets et accès",
 		"observability": "Journaux de requêtes et monitoring",
 		"dashboard": "Tableau de bord",
 		"llmLogs": "Journaux et monitoring des requêtes LLM",
@@ -96,30 +74,14 @@
 		"oauthGrants": "Autorisations OAuth en aval",
 		"mcpSettings": "Configuration MCP",
 		"plugins": "Gérer les plugins personnalisés",
-		"alerting": "Gérer les canaux, règles et historiques d’alertes",
-		"channels": "Configurer les canaux de notification",
-		"rules": "Définir les règles d’alerte",
-		"history": "Consulter l’historique de livraison des alertes",
 		"governance": "Clés virtuelles, utilisateurs, équipes, clients et rôles",
 		"virtualKeys": "Gérer les clés virtuelles et l’accès",
-		"users": "Gérer les utilisateurs",
 		"teams": "Gérer les équipes",
-		"businessUnits": "Gérer les unités commerciales",
 		"customers": "Gérer les clients",
-		"userProvisioning": "Gestion et provisionnement des utilisateurs",
-		"rolesPermissions": "Rôles et permissions des utilisateurs",
-		"accessProfiles": "Gérer les profils d’accès des rôles",
-		"projects": "Limiter les requêtes à l’accès et au budget d’un projet",
-		"auditLogs": "Journaux d’audit et conformité",
 		"guardrails": "Configuration des garde-fous",
 		"guardrailRules": "Règles de garde-fous",
 		"guardrailProviders": "Configuration des fournisseurs de garde-fous",
 		"webhooks": "Points de terminaison webhook pour tâches asynchrones",
-		"edgeControl": "Gestion des appareils Edge",
-		"devices": "Gérer les appareils Edge",
-		"approvals": "Approuver les applications et serveurs MCP",
-		"edgeSettings": "Paramètres Edge",
-		"clusterConfig": "Gérer le cluster Bifrost",
 		"adaptiveRouting": "Gérer le routage adaptatif",
 		"adaptiveRoutingDashboard": "Métriques du routage adaptatif",
 		"adaptiveRoutingSettings": "Paramètres du routage adaptatif",
@@ -131,16 +93,8 @@
 		"caching": "Configuration du cache",
 		"security": "Paramètres de sécurité",
 		"warp": "Configuration de l'agent Warp",
-		"proxy": "Configuration du proxy",
-		"apiKeys": "Gestion des clés API",
 		"performanceTuning": "Paramètres de réglage des performances",
-		"featureFlags": "Activer ou désactiver les feature flags",
-		"branding": "Logo et icône personnalisés",
-		"licenseInfo": "Informations sur la licence Enterprise"
-	},
-	"home": {
-		"unlockTitle": "Débloquez votre page d'accueil personnelle",
-		"unlockDescription": "Cette fonctionnalité fait partie de la licence entreprise Bifrost. L'accueil montre à chaque utilisateur sa propre utilisation, ses clés, ses budgets et ses accès."
+		"featureFlags": "Activer ou désactiver les feature flags"
 	},
 	"search": {
 		"placeholder": "Rechercher…",
@@ -166,12 +120,6 @@
 			"available": "{{name}} est maintenant disponible.",
 			"viewNotes": "Voir les notes de version",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "Besoin d’aide pour la mise en production ?",
-			"body": "Nous proposons une aide à la mise en production, y compris des intégrations personnalisées et un support dédié.",
-			"bookPrefix": "Réservez une démo avec notre équipe",
-			"here": "ici"
 		}
 	},
 	"topbar": {
@@ -194,25 +142,14 @@
 	"titles": {
 		"dashboard": "Tableau de bord",
 		"adaptiveRoutingSettings": "Paramètres du routage adaptatif",
-		"alertChannels": "Canaux d’alerte",
-		"alertHistory": "Historique des alertes",
-		"alertRules": "Règles d’alerte",
-		"clusterConfig": "Config. du cluster",
 		"settings": "Paramètres",
-		"licenseInfo": "Infos licence",
-		"edgeSettings": "Paramètres Edge",
-		"edgeDevices": "Appareils Edge",
-		"edgeApprovals": "Approbations Edge",
-		"rolesPermissions": "Rôles et permissions",
 		"guardrailRules": "Règles de garde-fous",
 		"guardrailProviders": "Fournisseurs de garde-fous",
 		"llmLogs": "Journaux LLM",
-		"logConnectors": "Connecteurs de journaux",
 		"observabilityConnectors": "Connecteurs d’observabilité",
 		"promptRepository": "Dépôt de prompts",
 		"modelProviders": "Fournisseurs de modèles",
-		"routingTree": "Arbre de routage",
-		"userProvisioning": "Provisionnement des utilisateurs"
+		"routingTree": "Arbre de routage"
 	},
 	"error": {
 		"title": "Une erreur s’est produite",
@@ -455,10 +392,7 @@
 			"unknown": {
 				"summary": "Une erreur s'est produite.",
 				"cause": "Warp a renvoyé une erreur sans code reconnu.",
-				"suggestions": [
-					"Réessayez la question.",
-					"Si cela continue, signalez-le avec les détails ci-dessous."
-				]
+				"suggestions": ["Réessayez la question.", "Si cela continue, signalez-le avec les détails ci-dessous."]
 			}
 		}
 	}

@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "Inicio",
 		"observability": "Observabilidad",
 		"dashboard": "Panel",
 		"llmLogs": "Registros LLM",
@@ -28,30 +27,14 @@
 		"oauthGrants": "Concesiones OAuth",
 		"mcpSettings": "Ajustes MCP",
 		"plugins": "Complementos",
-		"alerting": "Alertas",
-		"channels": "Canales",
-		"rules": "Reglas",
-		"history": "Historial",
 		"governance": "Gobernanza",
 		"virtualKeys": "Claves virtuales",
-		"users": "Usuarios",
 		"teams": "Equipos",
-		"businessUnits": "Unidades de negocio",
 		"customers": "Clientes",
-		"userProvisioning": "Aprovisionamiento de usuarios",
-		"rolesPermissions": "Roles y permisos",
-		"accessProfiles": "Perfiles de acceso",
-		"projects": "Proyectos",
-		"auditLogs": "Registros de auditoría",
 		"guardrails": "Barreras de protección",
 		"guardrailRules": "Reglas",
 		"guardrailProviders": "Proveedores",
 		"webhooks": "Webhooks",
-		"edgeControl": "Control perimetral",
-		"devices": "Dispositivos",
-		"approvals": "Aprobaciones",
-		"edgeSettings": "Ajustes perimetrales",
-		"clusterConfig": "Configuración del clúster",
 		"adaptiveRouting": "Enrutamiento adaptativo",
 		"adaptiveRoutingDashboard": "Panel",
 		"adaptiveRoutingSettings": "Ajustes",
@@ -63,15 +46,10 @@
 		"caching": "Caché",
 		"security": "Seguridad",
 		"warp": "Warp",
-		"proxy": "Proxy",
-		"apiKeys": "Claves API",
 		"performanceTuning": "Ajuste de rendimiento",
-		"featureFlags": "Indicadores de funciones",
-		"branding": "Marca",
-		"licenseInfo": "Información de licencia"
+		"featureFlags": "Indicadores de funciones"
 	},
 	"navDesc": {
-		"home": "Tu uso, claves, presupuestos y acceso",
 		"observability": "Registros de solicitudes y monitorización",
 		"dashboard": "Panel",
 		"llmLogs": "Registros y monitorización de solicitudes LLM",
@@ -96,30 +74,14 @@
 		"oauthGrants": "Concesiones OAuth posteriores",
 		"mcpSettings": "Configuración MCP",
 		"plugins": "Gestionar complementos personalizados",
-		"alerting": "Gestionar canales, reglas e historial de alertas",
-		"channels": "Configurar canales de notificación",
-		"rules": "Definir reglas de alerta",
-		"history": "Revisar el historial de entrega de alertas",
 		"governance": "Claves virtuales, usuarios, equipos, clientes y roles",
 		"virtualKeys": "Gestionar claves virtuales y acceso",
-		"users": "Gestionar usuarios",
 		"teams": "Gestionar equipos",
-		"businessUnits": "Gestionar unidades de negocio",
 		"customers": "Gestionar clientes",
-		"userProvisioning": "Gestión y aprovisionamiento de usuarios",
-		"rolesPermissions": "Roles y permisos de usuario",
-		"accessProfiles": "Gestionar perfiles de acceso para roles",
-		"projects": "Limitar solicitudes al acceso y presupuesto de un proyecto",
-		"auditLogs": "Registros de auditoría y cumplimiento",
 		"guardrails": "Configuración de barreras de protección",
 		"guardrailRules": "Reglas de barreras de protección",
 		"guardrailProviders": "Configuración de proveedores de barreras",
 		"webhooks": "Endpoints webhook para trabajos asíncronos",
-		"edgeControl": "Gestión de dispositivos perimetrales",
-		"devices": "Gestionar dispositivos perimetrales",
-		"approvals": "Aprobar apps y servidores MCP",
-		"edgeSettings": "Ajustes perimetrales",
-		"clusterConfig": "Gestionar el clúster de Bifrost",
 		"adaptiveRouting": "Gestionar el enrutamiento adaptativo",
 		"adaptiveRoutingDashboard": "Métricas de enrutamiento adaptativo",
 		"adaptiveRoutingSettings": "Ajustes de enrutamiento adaptativo",
@@ -131,16 +93,8 @@
 		"caching": "Configuración de caché",
 		"security": "Ajustes de seguridad",
 		"warp": "Configuración del agente Warp",
-		"proxy": "Configuración del proxy",
-		"apiKeys": "Gestión de claves API",
 		"performanceTuning": "Ajustes de rendimiento",
-		"featureFlags": "Activar o desactivar indicadores de funciones",
-		"branding": "Logo e icono personalizados",
-		"licenseInfo": "Información de la licencia Enterprise"
-	},
-	"home": {
-		"unlockTitle": "Desbloquea tu página de inicio personal",
-		"unlockDescription": "Esta función forma parte de la licencia empresarial de Bifrost. Inicio muestra a cada usuario su propio uso, claves, presupuestos y acceso."
+		"featureFlags": "Activar o desactivar indicadores de funciones"
 	},
 	"search": {
 		"placeholder": "Buscar...",
@@ -166,12 +120,6 @@
 			"available": "{{name}} ya está disponible.",
 			"viewNotes": "Ver notas de la versión",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "¿Necesitas ayuda con la configuración en producción?",
-			"body": "Ofrecemos ayuda con la configuración en producción, incluidas integraciones personalizadas y soporte dedicado.",
-			"bookPrefix": "Reserva una demo con nuestro equipo",
-			"here": "aquí"
 		}
 	},
 	"topbar": {
@@ -194,25 +142,14 @@
 	"titles": {
 		"dashboard": "Panel",
 		"adaptiveRoutingSettings": "Ajustes de enrutamiento adaptativo",
-		"alertChannels": "Canales de alerta",
-		"alertHistory": "Historial de alertas",
-		"alertRules": "Reglas de alerta",
-		"clusterConfig": "Configuración del clúster",
 		"settings": "Ajustes",
-		"licenseInfo": "Información de licencia",
-		"edgeSettings": "Ajustes perimetrales",
-		"edgeDevices": "Dispositivos perimetrales",
-		"edgeApprovals": "Aprobaciones perimetrales",
-		"rolesPermissions": "Roles y permisos",
 		"guardrailRules": "Reglas de barreras de protección",
 		"guardrailProviders": "Proveedores de barreras",
 		"llmLogs": "Registros LLM",
-		"logConnectors": "Conectores de registros",
 		"observabilityConnectors": "Conectores de observabilidad",
 		"promptRepository": "Repositorio de prompts",
 		"modelProviders": "Proveedores de modelos",
-		"routingTree": "Árbol de enrutamiento",
-		"userProvisioning": "Aprovisionamiento de usuarios"
+		"routingTree": "Árbol de enrutamiento"
 	},
 	"error": {
 		"title": "Algo salió mal",
@@ -406,10 +343,7 @@
 			"not_configured": {
 				"summary": "Warp aún no está configurado.",
 				"cause": "No hay proveedor ni modelo definidos, o Warp está desactivado en la configuración.",
-				"suggestions": [
-					"Abre los ajustes de Warp y elige un proveedor y un modelo.",
-					"Asegúrate de que Habilitar Warp esté activado."
-				]
+				"suggestions": ["Abre los ajustes de Warp y elige un proveedor y un modelo.", "Asegúrate de que Habilitar Warp esté activado."]
 			},
 			"max_iterations": {
 				"summary": "Warp no pudo llegar a una respuesta.",
@@ -455,10 +389,7 @@
 			"unknown": {
 				"summary": "Algo salió mal.",
 				"cause": "Warp devolvió un error sin un código reconocido.",
-				"suggestions": [
-					"Vuelve a intentar la pregunta.",
-					"Si sigue ocurriendo, infórmalo con los detalles de abajo."
-				]
+				"suggestions": ["Vuelve a intentar la pregunta.", "Si sigue ocurriendo, infórmalo con los detalles de abajo."]
 			}
 		}
 	}

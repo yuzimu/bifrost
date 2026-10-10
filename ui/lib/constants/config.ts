@@ -1,38 +1,5 @@
 import { BaseProvider, ConcurrencyAndBufferSize, NetworkConfig } from "@/lib/types/config";
 import { ProviderName } from "./logs";
-
-/**
- * Parse a trial expiry string with strict validation.
- * Accepts either a bare date (YYYY-MM-DD) or a full RFC3339 timestamp
- * (YYYY-MM-DDTHH:mm:ssZ) — the Docker build injects the latter, since the Go
- * side needs an RFC3339 value. Only the calendar date is significant for the
- * banner, so any time component is ignored and the date is taken at local
- * midnight. Returns null if the string is empty, malformed, or represents an
- * invalid date.
- */
-function parseTrialExpiry(dateStr: string | undefined): Date | null {
-	if (!dateStr || !dateStr.trim()) return null;
-
-	// Accept YYYY-MM-DD optionally followed by a time component (e.g. the
-	// RFC3339 "T00:00:00Z" suffix), and capture just the date part.
-	const dateRegex = /^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/;
-	const match = dateRegex.exec(dateStr.trim());
-	if (!match) return null;
-
-	const [, yearStr, monthStr, dayStr] = match;
-	const year = Number(yearStr);
-	const month = Number(monthStr);
-	const day = Number(dayStr);
-	const date = new Date(year, month - 1, day);
-
-	// Validate the date components match (catches invalid dates like 2024-02-30)
-	if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-		return null;
-	}
-
-	return date;
-}
-
 // Model placeholders based on provider type
 export const ModelPlaceholders = {
 	default: "e.g. gpt-4, gpt-3.5-turbo. Leave blank for all models.",
@@ -70,7 +37,6 @@ export const ModelPlaceholders = {
 	"github-copilot": "e.g. gpt-5.5, claude-sonnet-4-6",
 	typesafe: "e.g. jev-1.13.0, jev-latest, jev-preview",
 };
-
 export const isKeyRequiredByProvider: Record<ProviderName, boolean> = {
 	anthropic: true,
 	azure: true,
@@ -106,7 +72,6 @@ export const isKeyRequiredByProvider: Record<ProviderName, boolean> = {
 	"github-copilot": false,
 	typesafe: true,
 };
-
 export const DefaultNetworkConfig = {
 	base_url: "",
 	default_request_timeout_in_seconds: 300,
@@ -122,12 +87,10 @@ export const DefaultNetworkConfig = {
 	http2_ping_interval_in_seconds: 0,
 	allow_private_network: false,
 } satisfies NetworkConfig;
-
 export const DefaultPerformanceConfig = {
 	concurrency: 1000,
 	buffer_size: 5000,
 } satisfies ConcurrencyAndBufferSize;
-
 // Each entry sets its own border to match its family; without it the badge
 // falls back to the default variant's border-primary (green), which clashes
 // on the red/amber/blue states.
@@ -153,7 +116,6 @@ export const MCP_STATUS_COLORS: Record<string, string> = {
 	// just another flavor of unhealthy.
 	degraded: "bg-blue-100 text-blue-800 border-blue-200",
 };
-
 // Credential row statuses (the admin/shared OAuth token or the admin header
 // values a server holds on its own behalf), in the same soft-pill palette as
 // MCP_STATUS_COLORS so a credential badge reads like every other status
@@ -170,7 +132,6 @@ export const MCP_CREDENTIAL_STATUS_COLORS: Record<string, string> = {
 	// purpose: an unrecognized status must not read as usable.
 	unknown: "bg-gray-100 text-gray-800 border-gray-200",
 };
-
 // Mapping of what IS supported by each base provider
 export const PROVIDER_SUPPORTED_REQUESTS: Record<BaseProvider, string[]> = {
 	openai: [
@@ -288,6 +249,3 @@ export const PROVIDER_SUPPORTED_REQUESTS: Record<BaseProvider, string[]> = {
 	],
 	typesafe: ["list_models", "decisions"],
 };
-
-export const IS_ENTERPRISE = process.env.BIFROST_IS_ENTERPRISE === "true";
-export const TRIAL_EXPIRY = parseTrialExpiry(process.env.BIFROST_ENTERPRISE_TRIAL_EXPIRY);

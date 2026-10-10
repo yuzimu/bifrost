@@ -781,16 +781,6 @@
 			"searchUsers": "Cerca per nome o email"
 		}
 	},
-	"toolGroups": {
-		"title": "Gruppi di strumenti MCP",
-		"description": "Configura gruppi di strumenti per i server MCP per organizzare e governare gli strumenti.",
-		"unlockTitle": "Sblocca gruppi di strumenti MCP",
-		"unlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Configura gruppi di strumenti per i server MCP per organizzare i tuoi strumenti MCP e governarli nella tua organizzazione."
-	},
-	"authConfig": {
-		"unlockTitle": "Sblocca config autenticazione MCP",
-		"unlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Configura l'autenticazione per i server MCP per proteggere le tue connessioni MCP."
-	},
 	"credentials": {
 		"justNow": "proprio ora",
 		"minutesAgo": "{{minutes}} min fa",

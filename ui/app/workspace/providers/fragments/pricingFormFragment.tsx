@@ -5,23 +5,19 @@ import { getErrorMessage, setProviderFormDirtyState, useAppDispatch } from "@/li
 import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import { ModelProvider } from "@/lib/types/config";
 import { pricingFormSchema, type PricingFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
-
 interface PricingFormFragmentProps {
 	provider: ModelProvider;
 }
-
 /** 展示本地化定价设置，沿用供应商更新权限与提交载荷。 */
 export function PricingFormFragment({ provider }: PricingFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const form = useForm<PricingFormSchema, any, PricingFormSchema>({
 		resolver: zodResolver(pricingFormSchema) as Resolver<PricingFormSchema, any, PricingFormSchema>,
@@ -31,18 +27,15 @@ export function PricingFormFragment({ provider }: PricingFormFragmentProps) {
 			ignore_provider_cost: provider.ignore_provider_cost ?? false,
 		},
 	});
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(form.formState.isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	useEffect(() => {
 		form.reset({
 			ignore_provider_cost: provider.ignore_provider_cost ?? false,
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [provider.name, provider.ignore_provider_cost]);
-
 	/** 保存定价配置并展示当前语言的提交结果。 */
 	const onSubmit = (data: PricingFormSchema) => {
 		const updatedProvider = buildProviderUpdatePayload(provider, {
@@ -60,7 +53,6 @@ export function PricingFormFragment({ provider }: PricingFormFragmentProps) {
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6" data-testid="provider-config-pricing-content">
@@ -80,7 +72,7 @@ export function PricingFormFragment({ provider }: PricingFormFragmentProps) {
 											data-testid="provider-pricing-ignore-provider-cost-switch"
 											size="md"
 											checked={field.value}
-											disabled={!hasUpdateProviderAccess || isUpdatingProvider}
+											disabled={isUpdatingProvider}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
 												form.trigger("ignore_provider_cost");
@@ -95,11 +87,7 @@ export function PricingFormFragment({ provider }: PricingFormFragmentProps) {
 				</div>
 
 				<div className="flex justify-end space-x-2">
-					<Button
-						type="submit"
-						disabled={!form.formState.isDirty || !hasUpdateProviderAccess || isUpdatingProvider}
-						isLoading={isUpdatingProvider}
-					>
+					<Button type="submit" disabled={!form.formState.isDirty || isUpdatingProvider} isLoading={isUpdatingProvider}>
 						{t("providers.pricing.save")}
 					</Button>
 				</div>

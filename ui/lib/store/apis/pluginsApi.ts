@@ -12,7 +12,7 @@ export const pluginsApi = baseApi.injectEndpoints({
 
 		// Get the names of all currently loaded plugins (sanitized to match the names
 		// embedded in their trace span names). Used by the plugin tracing sheet so it
-		// lists every plugin that actually emits spans, including enterprise plugins.
+
 		getLoadedPlugins: builder.query<string[], void>({
 			query: () => "/plugins/loaded",
 			providesTags: ["Plugins"],

@@ -18,7 +18,6 @@ import { CappedBarStack } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import type { ChartType } from "./chartTypeToggle";
 import { NoChartData } from "./noChartData";
-
 interface ProviderTokenChartProps {
 	data: ProviderTokenHistogramResponse | null;
 	chartType: ChartType;
@@ -26,13 +25,10 @@ interface ProviderTokenChartProps {
 	endTime: number;
 	selectedProvider: string;
 }
-
 function AllProvidersTooltip({ active, payload, displayProviders }: any) {
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -57,17 +53,13 @@ function AllProvidersTooltip({ active, payload, displayProviders }: any) {
 		</div>
 	);
 }
-
 function SingleProviderTooltip({ active, payload, provider }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	const stats = data.by_provider?.[provider];
 	if (!stats) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -94,14 +86,12 @@ function SingleProviderTooltip({ active, payload, provider }: any) {
 		</div>
 	);
 }
-
 function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedProvider }: ProviderTokenChartProps) {
 	const { i18n } = useTranslation("observability");
 	const { chartData, mode, displayProviders } = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return { chartData: [], mode: "all" as const, displayProviders: [] };
 		}
-
 		const isSingleProvider = selectedProvider !== "all";
 		let providers: string[];
 		let hasOther = false;
@@ -112,14 +102,12 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 			hasOther = providers[providers.length - 1] === OTHER_SERIES_KEY;
 		}
 		const topSet = new Set(providers);
-
 		const processed = data.buckets.map((bucket, index) => {
 			const item: any = {
 				...bucket,
 				index,
 				formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 			};
-
 			if (isSingleProvider) {
 				const stats = bucket.by_provider?.[selectedProvider];
 				item.prompt_tokens = stats?.prompt_tokens || 0;
@@ -137,63 +125,52 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 						provider === OTHER_SERIES_KEY ? (item[OTHER_SERIES_KEY] ?? 0) : (bucket.by_provider?.[provider]?.total_tokens ?? 0);
 				});
 			}
-
 			return item;
 		});
-
 		return {
 			chartData: processed,
 			mode: isSingleProvider ? ("single" as const) : ("all" as const),
 			displayProviders: providers,
 		};
 	}, [data, selectedProvider, i18n.resolvedLanguage]);
-
 	if (!data?.buckets || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	const commonProps = {
 		data: chartData,
 		margin: { top: 6, right: 4, left: 4, bottom: 0 },
 	};
-
 	return (
 		<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}-${selectedProvider}`}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				{chartType === "bar" ? (
 					<BarChart {...commonProps} barCategoryGap={1}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={50}
 							tickFormatter={(v) => formatCompactNumber(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						{mode === "single" ? (
 							<>
 								<Tooltip content={<SingleProviderTooltip provider={selectedProvider} />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
 								<CappedBarStack buckets={chartData.length}>
-									<Bar isAnimationActive={false} dataKey="prompt_tokens" fill={CHART_COLORS.promptTokens} fillOpacity={0.9} barSize={30} />
-									<Bar
-										isAnimationActive={false}
-										dataKey="completion_tokens"
-										fill={CHART_COLORS.completionTokens}
-										fillOpacity={0.9}
-										barSize={30}
-									/>
+									<Bar isAnimationActive dataKey="prompt_tokens" fill={CHART_COLORS.promptTokens} fillOpacity={0.9} barSize={30} />
+									<Bar isAnimationActive dataKey="completion_tokens" fill={CHART_COLORS.completionTokens} fillOpacity={0.9} barSize={30} />
 								</CappedBarStack>
 							</>
 						) : (
@@ -205,7 +182,7 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 								<CappedBarStack buckets={chartData.length}>
 									{displayProviders.map((provider, idx) => (
 										<Bar
-											isAnimationActive={false}
+											isAnimationActive
 											key={provider}
 											dataKey={`provider_${idx}`}
 											fill={provider === OTHER_SERIES_KEY ? OTHER_SERIES_COLOR : getModelColor(idx)}
@@ -219,31 +196,31 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 					</BarChart>
 				) : (
 					<AreaChart {...commonProps}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={50}
 							tickFormatter={(v) => formatCompactNumber(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						{mode === "single" ? (
 							<>
 								<Tooltip content={<SingleProviderTooltip provider={selectedProvider} />} />
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="completion_tokens"
 									stackId="1"
@@ -252,7 +229,7 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 									fillOpacity={0.7}
 								/>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="prompt_tokens"
 									stackId="1"
@@ -268,7 +245,7 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 									const color = provider === OTHER_SERIES_KEY ? OTHER_SERIES_COLOR : getModelColor(idx);
 									return (
 										<Area
-											isAnimationActive={false}
+											isAnimationActive
 											key={provider}
 											type="monotone"
 											dataKey={`provider_${idx}`}
@@ -287,5 +264,4 @@ function ProviderTokenChartImpl({ data, chartType, startTime, endTime, selectedP
 		</ChartErrorBoundary>
 	);
 }
-
 export const ProviderTokenChart = memo(ProviderTokenChartImpl);

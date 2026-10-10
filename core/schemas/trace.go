@@ -5,6 +5,7 @@ import (
 	"maps"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -22,7 +23,40 @@ type Trace struct {
 	RequestHeaders        map[string]string // Lowercased request headers, populated only when a connector opts in
 	PluginLogs            []PluginLogEntry  // Plugin log entries accumulated during request processing
 	redactionReplacements RedactionMapsByPhase
+	guardrailOutputReview *GuardrailOutputReview
+	guardrailOutputDenied bool
 	mu                    sync.Mutex // Mutex for thread-safe span operations
+}
+
+const BifrostContextKeyGuardrailOutputReview BifrostContextKey = "bifrost-guardrail-output-review"
+
+// GuardrailOutputReview 只保存审查状态，跨取消和 trace 完成共享，不携带请求内容。
+type GuardrailOutputReview struct {
+	approved atomic.Bool
+}
+
+// Approve 仅在完整评估和所有脱敏注册均成功后释放出口门禁。
+func (r *GuardrailOutputReview) Approve() { r.approved.Store(true) }
+
+func (r *GuardrailOutputReview) Pending() bool { return r != nil && !r.approved.Load() }
+
+// GuardrailOutputUnreviewed 对取消请求保守禁存，避免已释放的映射被异步日志回读。
+func GuardrailOutputUnreviewed(ctx *BifrostContext) bool {
+	if ctx == nil {
+		return false
+	}
+	review, _ := ctx.Value(BifrostContextKeyGuardrailOutputReview).(*GuardrailOutputReview)
+	return review != nil && (review.Pending() || ctx.Err() != nil)
+}
+
+// SetGuardrailOutputReview 在真实 trace 上保留小型状态句柄，不依赖 guardrail manager 生命周期。
+func (t *Trace) SetGuardrailOutputReview(review *GuardrailOutputReview) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.guardrailOutputReview != nil && t.guardrailOutputReview != review && t.guardrailOutputReview.Pending() {
+		t.guardrailOutputDenied = true
+	}
+	t.guardrailOutputReview = review
 }
 
 // Trace-level attribute keys. Unlike span attributes, trace attributes are never
@@ -214,8 +248,12 @@ func (t *Trace) SetRedactionReplacements(phase RedactionPhase, replacements map[
 // ApplyRedactionReplacements redacts content attributes on every span in the trace and clears the replacement map.
 func (t *Trace) ApplyRedactionReplacements() {
 	t.mu.Lock()
+	pending := t.guardrailOutputDenied || t.guardrailOutputReview.Pending()
 	if !t.redactionReplacements.HasReplacements() {
 		t.mu.Unlock()
+		if pending {
+			t.suppressUnreviewedOutput()
+		}
 		return
 	}
 	replacements := t.redactionReplacements.Clone()
@@ -230,6 +268,68 @@ func (t *Trace) ApplyRedactionReplacements() {
 			continue
 		}
 		redactSpanAttributes(span, replacements.Input, replacements.Output)
+	}
+	if pending {
+		t.suppressUnreviewedOutput()
+	}
+}
+
+// suppressUnreviewedOutput 原地移除未经审查的出口内容，保留身份、用量、状态和时序。
+func (t *Trace) suppressUnreviewedOutput() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	suppressOutputAttributes(t.Attributes)
+	suppressOutputSpan(t.RootSpan)
+	for _, span := range t.Spans {
+		if span != t.RootSpan {
+			suppressOutputSpan(span)
+		}
+	}
+	if t.RootSpan != nil {
+		t.RootSpan.SetAttribute("bifrost.guardrails.output_review", "unreviewed_content_suppressed")
+	}
+}
+
+// suppressOutputAttributes 复用内容阶段分类，也移除可能包含输出原文的错误消息。
+func suppressOutputAttributes(attrs map[string]any) {
+	for key := range attrs {
+		scope := traceContentAttributeScopeForKey(key)
+		if scope == traceContentAttributeScopeOutput || scope == traceContentAttributeScopeMixed || key == "error.message" || key == AttrError {
+			delete(attrs, key)
+		}
+	}
+}
+
+// suppressOutputSpan 在 span 锁下清理晚到内容，typed payload 仅浅拷贝必要字段。
+func suppressOutputSpan(span *Span) {
+	if span == nil {
+		return
+	}
+	span.mu.Lock()
+	defer span.mu.Unlock()
+	suppressOutputAttributes(span.Attributes)
+	if span.Status == SpanStatusError && span.StatusMsg != "" {
+		span.StatusMsg = "guardrail output content not reviewed"
+	}
+	for i := range span.Events {
+		suppressOutputAttributes(span.Events[i].Attributes)
+	}
+	if span.LLM != nil {
+		llm := *span.LLM
+		llm.OutputMessages, llm.ReasoningText, llm.RawResponse, llm.ResponsesEcho = nil, "", "", nil
+		llm.Extra = maps.Clone(llm.Extra)
+		suppressOutputAttributes(llm.Extra)
+		if llm.Error != nil {
+			err := *llm.Error
+			if err.Detail != nil {
+				detail := *err.Detail
+				detail.Message = "guardrail output content not reviewed"
+				detail.Error, detail.Param, detail.EventID = nil, nil, nil
+				err.Detail = &detail
+			}
+			llm.Error = &err
+		}
+		span.LLM = &llm
 	}
 }
 
@@ -288,6 +388,7 @@ func (t *Trace) SnapshotForExport() *Trace {
 	}
 	spans := append([]*Span(nil), t.Spans...)
 	rootSpan := t.RootSpan
+	suppressOutput := t.guardrailOutputDenied || t.guardrailOutputReview.Pending()
 	t.mu.Unlock()
 
 	spanCopies := make(map[*Span]*Span, len(spans))
@@ -306,6 +407,9 @@ func (t *Trace) SnapshotForExport() *Trace {
 		} else {
 			clone.RootSpan = rootSpan.snapshotForExport()
 		}
+	}
+	if suppressOutput {
+		clone.suppressUnreviewedOutput()
 	}
 	return clone
 }
@@ -486,6 +590,8 @@ func (t *Trace) Reset() {
 	t.Attributes = nil
 	t.RequestHeaders = nil
 	t.redactionReplacements = RedactionMapsByPhase{}
+	t.guardrailOutputReview = nil
+	t.guardrailOutputDenied = false
 	for i := range t.PluginLogs {
 		t.PluginLogs[i] = PluginLogEntry{}
 	}

@@ -1,16 +1,13 @@
-import { COMPACT_NUMBER_FORMAT, formatCompactNumber as formatNumber } from "@/lib/utils/numbers";
 import { ArrowDown, ArrowUp, ArrowUpDown, Minus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
+import { COMPACT_NUMBER_FORMAT, formatCompactNumber as formatNumber } from "@/lib/utils/numbers";
 export { formatNumber, COMPACT_NUMBER_FORMAT };
-
 export function formatCost(value: number): string {
 	if (value >= 1) return `$${value.toFixed(2)}`;
 	if (value >= 0.01) return `$${value.toFixed(3)}`;
 	if (value > 0) return `$${value.toFixed(4)}`;
 	return "$0.00";
 }
-
 export function TrendBadge({
 	value,
 	positiveIsGood = true,
@@ -29,7 +26,6 @@ export function TrendBadge({
 			</span>
 		);
 	}
-
 	if (value === 0) {
 		return (
 			<span className="text-muted-foreground inline-flex items-center gap-0.5 text-xs">
@@ -37,7 +33,6 @@ export function TrendBadge({
 			</span>
 		);
 	}
-
 	const isPositive = value > 0;
 	const isGood = positiveIsGood ? isPositive : !isPositive;
 	return (
@@ -47,7 +42,6 @@ export function TrendBadge({
 		</span>
 	);
 }
-
 export function SortableHeader<T extends string>({
 	label,
 	field,

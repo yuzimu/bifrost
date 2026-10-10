@@ -161,8 +161,14 @@
 		"providerScope": "{{name}} (provider)",
 		"modelScope": "{{name}} (model)",
 		"fields": {
-			"model": { "label": "Model", "placeholder": "e.g., gpt-4, claude-3-sonnet" },
-			"provider": { "label": "Provider", "placeholder": "Select provider" },
+			"model": {
+				"label": "Model",
+				"placeholder": "e.g., gpt-4, claude-3-sonnet"
+			},
+			"provider": {
+				"label": "Provider",
+				"placeholder": "Select provider"
+			},
 			"request_type": {
 				"label": "Request Type",
 				"placeholder": "Select request type",
@@ -187,8 +193,14 @@
 				"placeholder": "e.g., 50",
 				"description": "Check budget usage as percentage. Checked against max of model and provider configs."
 			},
-			"complexity_tier": { "label": "Complexity Tier", "placeholder": "Select complexity tier" },
-			"params": { "label": "Query Parameter", "placeholder": "e.g., api_key, user_id" }
+			"complexity_tier": {
+				"label": "Complexity Tier",
+				"placeholder": "Select complexity tier"
+			},
+			"params": {
+				"label": "Query Parameter",
+				"placeholder": "e.g., api_key, user_id"
+			}
 		},
 		"values": {
 			"text_completion": "Text Completion",
@@ -2004,5 +2016,24 @@
 		"scopeGlobal": "Global",
 		"clearFallbackApiKey": "Clear API key for fallback {{n}}",
 		"pinnedKeyTitle": "Pinned key: {{id}}"
+	},
+	"routingOperators": {
+		"=": "equals",
+		"!=": "does not equal",
+		">": "greater than",
+		"<": "less than",
+		">=": "greater than or equal",
+		"<=": "less than or equal",
+		"in": "is in list",
+		"notIn": "is not in list",
+		"contains": "contains",
+		"beginsWith": "begins with",
+		"endsWith": "ends with",
+		"matches": "matches (regex)",
+		"null": "does not exist",
+		"notNull": "exists"
+	},
+	"routingDisplay": {
+		"ttftStreaming": "{{ms}} ms (streaming)"
 	}
 }

@@ -24,20 +24,17 @@ import {
 } from "@/lib/store/apis/providersApi";
 import { ModelProvider } from "@/lib/types/config";
 import { cn } from "@/lib/utils";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { AlertCircle, CheckCircle2, EllipsisIcon, PencilIcon, PlusIcon, RefreshCwIcon, TrashIcon } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { toast } from "sonner";
 import AddNewKeySheet from "../dialogs/addNewKeySheet";
 import { useTranslation } from "react-i18next";
-
 interface Props {
 	className?: string;
 	provider: ModelProvider;
 	headerActions?: ReactNode;
 	isKeyless?: boolean;
 }
-
 /** 本地化密钥操作标签，保留菜单操作和权限判断。 */
 function ProviderKeyActionsMenu({
 	keyId,
@@ -55,7 +52,6 @@ function ProviderKeyActionsMenu({
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const [isOpen, setIsOpen] = useState(false);
-
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild>
@@ -96,7 +92,6 @@ function ProviderKeyActionsMenu({
 		</DropdownMenu>
 	);
 }
-
 export default function ModelProviderKeysTableView({ provider, className, headerActions, isKeyless }: Props) {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
@@ -106,8 +101,6 @@ export default function ModelProviderKeysTableView({ provider, className, header
 	const entityLabel = t(isVLLM ? "providers.entityModel" : isOllamaOrSGL ? "providers.entityServer" : "providers.entityKey");
 	const entityLabelPlural = t(isVLLM ? "providers.entityModels" : isOllamaOrSGL ? "providers.entityServers" : "providers.entityKeys");
 	const EntityLabel = t(isVLLM ? "providers.entityModelCap" : isOllamaOrSGL ? "providers.entityServerCap" : "providers.entityKeyCap");
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
-	const hasDeleteProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Delete);
 	const [updateProviderKey, { isLoading: isUpdatingProviderKey }] = useUpdateProviderKeyMutation();
 	const [deleteProviderKey, { isLoading: isDeletingProviderKey }] = useDeleteProviderKeyMutation();
 	const [refreshProviderModels, { isLoading: isRefreshingProvider }] = useRefreshProviderModelsMutation();
@@ -116,18 +109,27 @@ export default function ModelProviderKeysTableView({ provider, className, header
 	const isMutatingProviderKey = isUpdatingProviderKey || isDeletingProviderKey;
 	const [togglingKeyIds, setTogglingKeyIds] = useState<Set<string>>(new Set());
 	const [refreshingKeyIds, setRefreshingKeyIds] = useState<Set<string>>(new Set());
-	const [showAddNewKeyDialog, setShowAddNewKeyDialog] = useState<{ show: boolean; keyId: string | null } | undefined>(undefined);
-	const [showDeleteKeyDialog, setShowDeleteKeyDialog] = useState<{ show: boolean; keyId: string } | undefined>(undefined);
-
+	const [showAddNewKeyDialog, setShowAddNewKeyDialog] = useState<
+		| {
+				show: boolean;
+				keyId: string | null;
+		  }
+		| undefined
+	>(undefined);
+	const [showDeleteKeyDialog, setShowDeleteKeyDialog] = useState<
+		| {
+				show: boolean;
+				keyId: string;
+		  }
+		| undefined
+	>(undefined);
 	function handleAddKey() {
 		setShowAddNewKeyDialog({ show: true, keyId: null });
 	}
-
 	// The server serialises refreshes per provider and answers 409 while one is
 	// running, so the whole group is disabled during either kind of refresh
 	// rather than letting a second click bounce off the backend.
 	const isRefreshing = isRefreshingProvider || refreshingKeyIds.size > 0;
-
 	async function handleRefreshProviderModels() {
 		try {
 			await refreshProviderModels(provider.name).unwrap();
@@ -141,7 +143,6 @@ export default function ModelProviderKeysTableView({ provider, className, header
 			toast.error(t("providers.failedRefreshModelList"), { description: getErrorMessage(err) });
 		}
 	}
-
 	async function handleRefreshKeyModels(keyId: string, keyName: string) {
 		setRefreshingKeyIds((prev) => new Set(prev).add(keyId));
 		try {
@@ -159,7 +160,6 @@ export default function ModelProviderKeysTableView({ provider, className, header
 			});
 		}
 	}
-
 	return (
 		<div className={cn("w-full", className)}>
 			{showDeleteKeyDialog && (
@@ -174,7 +174,7 @@ export default function ModelProviderKeysTableView({ provider, className, header
 								{tc("cancel")}
 							</AlertDialogCancel>
 							<AlertDialogAction
-								disabled={isMutatingProviderKey || !hasDeleteProviderAccess}
+								disabled={isMutatingProviderKey}
 								onClick={() => {
 									deleteProviderKey({
 										provider: provider.name,
@@ -212,7 +212,7 @@ export default function ModelProviderKeysTableView({ provider, className, header
 					<div className="flex items-center gap-2">{t("providers.configuredEntities", { entities: entityLabelPlural })}</div>
 					<div className="flex min-w-0 flex-wrap items-center gap-2">
 						{headerActions}
-						{hasUpdateProviderAccess ? (
+						{
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<Button
@@ -231,12 +231,11 @@ export default function ModelProviderKeysTableView({ provider, className, header
 								</TooltipTrigger>
 								<TooltipContent className="max-w-xs">{t("providers.refreshTooltip")}</TooltipContent>
 							</Tooltip>
-						) : null}
-						{!isKeyless && hasUpdateProviderAccess ? (
+						}
+						{!isKeyless ? (
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<Button
-										disabled={!hasUpdateProviderAccess}
 										data-testid="add-key-btn"
 										aria-label={t("providers.addKeyEntity", { entity: EntityLabel })}
 										className="size-9 px-0 @3xl/card-header:h-9 @3xl/card-header:w-auto @3xl/card-header:px-4"
@@ -323,7 +322,6 @@ export default function ModelProviderKeysTableView({ provider, className, header
 															(key.value?.type && key.value.type !== "plain_text");
 														const isEnvResolutionError =
 															hasSecretVarConfig && key.description && /not set|empty|missing/i.test(key.description);
-
 														return isEnvResolutionError ? (
 															<Tooltip>
 																<TooltipTrigger asChild>
@@ -372,7 +370,7 @@ export default function ModelProviderKeysTableView({ provider, className, header
 												data-testid="key-enabled-switch"
 												checked={isKeyEnabled}
 												size="md"
-												disabled={!hasUpdateProviderAccess || togglingKeyIds.has(key.id)}
+												disabled={togglingKeyIds.has(key.id)}
 												onAsyncCheckedChange={async (checked) => {
 													setTogglingKeyIds((prev) => new Set(prev).add(key.id));
 													await updateProviderKey({
@@ -405,11 +403,11 @@ export default function ModelProviderKeysTableView({ provider, className, header
 										</TableCell>
 										<TableCell className="text-right">
 											<div className="flex items-center justify-end space-x-2">
-												{hasUpdateProviderAccess ? (
+												{
 													<Tooltip>
 														<TooltipTrigger asChild>
 															{/* A disabled button receives no hover or focus events, so the
-															    tooltip is triggered from a focusable wrapper instead. */}
+                            tooltip is triggered from a focusable wrapper instead. */}
 															<span tabIndex={!isKeyEnabled ? 0 : undefined}>
 																<Button
 																	variant="ghost"
@@ -434,16 +432,16 @@ export default function ModelProviderKeysTableView({ provider, className, header
 																: t("providers.enableToRefresh", { entity: entityLabel })}
 														</TooltipContent>
 													</Tooltip>
-												) : null}
-												{hasUpdateProviderAccess || hasDeleteProviderAccess ? (
+												}
+												{
 													<ProviderKeyActionsMenu
 														keyId={key.id}
-														hasUpdateAccess={hasUpdateProviderAccess}
-														hasDeleteAccess={hasDeleteProviderAccess}
+														hasUpdateAccess={true}
+														hasDeleteAccess={true}
 														onEdit={(keyId) => setShowAddNewKeyDialog({ show: true, keyId })}
 														onDelete={(keyId) => setShowDeleteKeyDialog({ show: true, keyId })}
 													/>
-												) : null}
+												}
 											</div>
 										</TableCell>
 									</TableRow>

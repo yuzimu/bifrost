@@ -49,9 +49,7 @@ import {
 	type DecisionProviderState,
 } from "../formSchema";
 import { FieldLabel, InfoTip, SectionHeading } from "./formPrimitives";
-
 // The Complexity Router page's sections. Each binds to the page's single form.
-
 // The three tier lists sit side by side, so each is a fixed-height scroll
 // container rather than a fixed number of phrases: phrases wrap to different
 // numbers of lines, and equal counts would leave the columns visibly uneven.
@@ -62,26 +60,21 @@ import { FieldLabel, InfoTip, SectionHeading } from "./formPrimitives";
 // is a flex column whose description grows to absorb the difference,
 // bottom-aligning all three lists at any column width.
 const PHRASE_LIST_HEIGHT = 300;
-
 // Each decision-model tier card stacks two lists, so each gets under half the phrase
 // list's height and a card stays about as tall as a phrase card.
 const DECISION_LIST_HEIGHT = 140;
-
 const DECISION_TIER_LABELS: Record<DecisionTier, string> = {
 	SIMPLE: "routing.complexityUi.tierSimple",
 	MEDIUM: "routing.complexityUi.tierMedium",
 	COMPLEX: "routing.complexityUi.tierComplex",
 };
-
 function testIdPart(value: string) {
 	return value.replace(/_/g, "-");
 }
-
 interface PhraseTierGridProps {
 	control: Control<AnalyzerFormValues>;
 	errors: FieldErrors<AnalyzerFormValues>["keywords"];
 }
-
 /** 保留各层参考短语编辑器，并在渲染时翻译标签与校验文案。 */
 export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
 	const { t } = useTranslation("models");
@@ -94,7 +87,7 @@ export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
 			</Alert>
 
 			{/* Root-level phrase issues such as cross-tier duplicates have no single
-			    field to attach to, so they render above the lists. */}
+            field to attach to, so they render above the lists. */}
 			{errors?.message && (
 				<p className="text-destructive text-xs" data-testid="complexity-router-keywords-error">
 					{errors.message}
@@ -102,8 +95,8 @@ export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
 			)}
 
 			{/* One column per tier, side by side: the three lists are read against
-			    each other, and equal-width columns keep a phrase's tier obvious
-			    from its position. */}
+            each other, and equal-width columns keep a phrase's tier obvious
+            from its position. */}
 			<div className="grid items-stretch gap-3 md:grid-cols-3">
 				{TIER_PHRASE_LIST_DEFINITIONS.map(({ key }) => {
 					const fieldError = errors?.[key as KeywordListKey];
@@ -132,7 +125,7 @@ export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
 											value={field.value}
 											onValueChange={field.onChange}
 											listHeight={PHRASE_LIST_HEIGHT}
-											submitOnComma={false}
+											submitOnComma
 											placeholder={tcpx("phrasePlaceholder")}
 											aria-invalid={fieldError ? true : undefined}
 											aria-describedby={fieldError ? errorId : undefined}
@@ -153,7 +146,6 @@ export function PhraseTierGrid({ control, errors }: PhraseTierGridProps) {
 		</div>
 	);
 }
-
 interface LLMPromptSectionProps {
 	control: Control<AnalyzerFormValues>;
 	error: FieldError | undefined;
@@ -165,7 +157,6 @@ interface LLMPromptSectionProps {
 	onEdit: () => void;
 	onReset: () => void;
 }
-
 /** 翻译回退分类器编辑器的说明，不改动用户提示词。 */
 export function LLMPromptSection({ control, error, canUpdate, defaultPrompt, livePrompt, onEdit, onReset }: LLMPromptSectionProps) {
 	const { t } = useTranslation("models");
@@ -223,13 +214,11 @@ export function LLMPromptSection({ control, error, canUpdate, defaultPrompt, liv
 		</div>
 	);
 }
-
 interface SessionRoutingCardProps {
 	control: Control<AnalyzerFormValues>;
 	errors: FieldErrors<AnalyzerFormValues>["session"];
 	canUpdate: boolean;
 }
-
 /** 两类分类器共用会话路由开关，说明随界面语言切换。 */
 export function SessionRoutingCard({ control, errors, canUpdate }: SessionRoutingCardProps) {
 	const { t } = useTranslation("models");
@@ -262,9 +251,7 @@ export function SessionRoutingCard({ control, errors, canUpdate }: SessionRoutin
 		</div>
 	);
 }
-
 const LAYA_MODELS: readonly string[] = SELF_HOSTED_DECISION_MODELS[0].models;
-
 interface DecisionFieldsProps {
 	control: Control<AnalyzerFormValues>;
 	register: UseFormRegister<AnalyzerFormValues>;
@@ -277,7 +264,6 @@ interface DecisionFieldsProps {
 	// what those keys may serve.
 	providerKeyIds: string[];
 }
-
 // DecisionFields holds the decision model's settings: which model answers, and
 // how much conversation it sees and for how long. They apply wherever the
 // decision model runs, as the primary classifier or as the semantic fallback, so
@@ -294,7 +280,6 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 	const servesJev = providerName === "typesafe" || providerName === "openrouter";
 	const servesClef = clefModelFromProvider(provider) !== undefined;
 	const selfHosted = provider !== undefined && !servesJev && !servesClef;
-
 	const { data: listed } = useGetModelsQuery(
 		{ provider: providerName, keys: providerKeyIds.length > 0 ? providerKeyIds : undefined, limit: 50 },
 		{ skip: !selfHosted },
@@ -304,7 +289,6 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 	useEffect(() => {
 		if (selfHosted && !model && listedModels.length > 0) setValue("decision.model", listedModels[0], { shouldDirty: true });
 	}, [selfHosted, model, listedModels, setValue]);
-
 	return (
 		<div className="grid gap-4 sm:grid-cols-2" data-testid="complexity-router-decision-fields">
 			<div className="space-y-2">
@@ -490,11 +474,9 @@ export function DecisionFields({ control, register, setValue, errors, canUpdate,
 		</div>
 	);
 }
-
 // The recommendation matches the semantic phrase callout, so both classifiers
 // open the same way. The line under it says where the cards' content goes.
 type DecisionListField = "signals" | "examples";
-
 // Signals are traits to look for; examples are requests that have them. The
 // tooltips say so because the two lists otherwise read as interchangeable.
 const DECISION_LIST_FIELDS: Array<{
@@ -516,14 +498,12 @@ const DECISION_LIST_FIELDS: Array<{
 		tooltip: "decisionUi.examplesHelp",
 	},
 ];
-
 // sameList compares lists by value and order, matching the gateway's check
 // for whether an override equals the shipped default.
 function sameList(a: string[] | undefined, b: string[] | undefined) {
 	if (!a || !b || a.length !== b.length) return false;
 	return a.every((value, index) => value === b[index]);
 }
-
 interface DecisionDefinitionFieldProps {
 	tier: DecisionTier;
 	control: Control<AnalyzerFormValues>;
@@ -532,7 +512,6 @@ interface DecisionDefinitionFieldProps {
 	edited: boolean;
 	onReset: () => void;
 }
-
 // DecisionDefinitionField shows a tier's definition as plain text, like the
 // semantic cards' tier descriptions, and turns into a textarea only while it
 // is being edited. An invalid definition stays open so its error is visible.
@@ -629,7 +608,6 @@ function DecisionDefinitionField({ tier, control, error, canUpdate, edited, onRe
 		/>
 	);
 }
-
 interface DecisionGuidanceSectionProps {
 	control: Control<AnalyzerFormValues>;
 	setValue: UseFormSetValue<AnalyzerFormValues>;
@@ -643,7 +621,6 @@ interface DecisionGuidanceSectionProps {
 	// the fallback shares the page with other sections, so it keeps a heading.
 	variant: "primary" | "fallback";
 }
-
 // DecisionGuidanceSection edits the half of Decision's request an operator may tune:
 // each tier's definition, signals, and examples. The question, decision and
 // context rules, and answer contract stay fixed server-side. It mirrors the phrase grid
@@ -661,14 +638,12 @@ export function DecisionGuidanceSection({
 	const { t } = useTranslation("models");
 	const criteria = useWatch({ control, name: "decision.criteria" });
 	const [fallbackOpen, setFallbackOpen] = useState(false);
-
 	const isDefaultDefinition = (tier: DecisionTier) => criteria?.[tier]?.definition === defaults?.criteria[tier].definition;
 	const isDefaultList = (tier: DecisionTier, field: DecisionListField) =>
 		!!defaults && sameList(criteria?.[tier]?.[field], defaults.criteria[tier][field]);
 	const isAllDefault = COMPLEXITY_TIER_VALUES.every(
 		(tier) => isDefaultDefinition(tier) && DECISION_LIST_FIELDS.every(({ field }) => isDefaultList(tier, field)),
 	);
-
 	const resetList = (tier: DecisionTier, field: DecisionListField) => {
 		if (!defaults) return;
 		setValue(`decision.criteria.${tier}.${field}`, [...defaults.criteria[tier][field]], { shouldDirty: true, shouldValidate: true });
@@ -683,7 +658,6 @@ export function DecisionGuidanceSection({
 			for (const { field } of DECISION_LIST_FIELDS) resetList(tier, field);
 		}
 	};
-
 	// Empty editors would read as "the decision model receives nothing" and invite saving that. Until
 	// the shipped guidance is known, say so instead; saving meanwhile keeps
 	// whatever is stored, because unseeded guidance is omitted from the payload.
@@ -762,7 +736,7 @@ export function DecisionGuidanceSection({
 														value={field.value}
 														onValueChange={field.onChange}
 														listHeight={DECISION_LIST_HEIGHT}
-														submitOnComma={false}
+														submitOnComma
 														placeholder={atLimit ? t("decisionUi.limitReached", { count: MAX_DECISION_CRITERIA_ITEMS }) : t(placeholder)}
 														readOnly={!canUpdate}
 														disabled={!canUpdate || atLimit}
@@ -805,7 +779,6 @@ export function DecisionGuidanceSection({
 			)}
 		</>
 	);
-
 	// The primary guidance is the step's main content and restores from the
 	// page footer, as the semantic phrases do.
 	if (variant === "primary") {
@@ -815,7 +788,6 @@ export function DecisionGuidanceSection({
 			</div>
 		);
 	}
-
 	// The fallback shares the page with the semantic phrase grid, so it folds
 	// away until opened; an invalid field forces it open so its error is never
 	// hidden. The footer's Restore defaults resets the phrases, so the fallback
@@ -860,13 +832,17 @@ export function DecisionGuidanceSection({
 		</Collapsible>
 	);
 }
-
-const DECISION_PROVIDER_PROBLEMS: Record<Exclude<DecisionProviderState, "configured">, { message: string; action: string }> = {
+const DECISION_PROVIDER_PROBLEMS: Record<
+	Exclude<DecisionProviderState, "configured">,
+	{
+		message: string;
+		action: string;
+	}
+> = {
 	missing: { message: "decisionUi.providerMissing", action: "decisionUi.setupProvider" },
 	failing: { message: "decisionUi.providerFailing", action: "decisionUi.reviewProvider" },
 	"no-enabled-key": { message: "decisionUi.providerNoKey", action: "decisionUi.reviewKeys" },
 };
-
 // DecisionProviderAlert explains why the decision model cannot run, and links
 // straight to its provider's page. That page opens a blank setup form when the
 // provider does not exist yet, so one click lands on the fix either way.
@@ -890,9 +866,7 @@ export function DecisionProviderAlert({ state, provider }: { state: DecisionProv
 		</Alert>
 	);
 }
-
 type Classifier = AnalyzerFormValues["classifier"];
-
 const CLASSIFIER_OPTIONS: {
 	value: Classifier;
 	title: string;
@@ -909,7 +883,6 @@ const CLASSIFIER_OPTIONS: {
 		description: "decisionUi.semanticDescription",
 	},
 ];
-
 // ClassifierChoice is the one decision everything else depends on, so each
 // option is an explained card rather than an entry in a dropdown. Anything a
 // choice still needs is reported once, below the cards, after it is picked.
@@ -949,13 +922,15 @@ export function ClassifierChoice({ value, onChange }: { value: Classifier | unde
 		</div>
 	);
 }
-
 interface StepRailProps {
-	steps: { key: string; title: string; enabled: boolean }[];
+	steps: {
+		key: string;
+		title: string;
+		enabled: boolean;
+	}[];
 	currentIndex: number;
 	onSelect: (index: number) => void;
 }
-
 // StepRail is the page's step nav. It takes the row style of the Edge inventory
 // nav, and is narrower still: two short labels need little width, and every
 // pixel it gives back goes to the phrase lists.

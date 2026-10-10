@@ -23,7 +23,6 @@ import {
 import { useLazyGetLogByIdQuery, useLazyGetLogsQuery } from "@/lib/store/apis/logsApi";
 import type { DisplayLogEntry, LogEntry, LogFilters, Pagination } from "@/lib/types/logs";
 import { dateUtils } from "@/lib/types/logs";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useLocation } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { parseAsSafeArrayOf, parseAsSafeString } from "@/lib/queryParamsParser";
@@ -31,24 +30,17 @@ import { getLiveToggleState } from "@/lib/utils/timeRange";
 import { parseAsBoolean, parseAsFloat, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 // A fallback chain is a handful of attempts, so one page covers every realistic
 // chain. Capped at the list endpoint's own maximum.
 const chainChildrenPageLimit = 1000;
-
 export default function LogsPage() {
 	const { t } = useTranslation("observability");
 	const [error, setError] = useState<string | null>(null);
 	const [showEmptyState, setShowEmptyState] = useState(false);
 	const hasCheckedEmptyState = useRef(false);
-
-	const hasDeleteAccess = useRbac(RbacResource.Logs, RbacOperation.Delete);
-	const hasRevealAccess = useRbac(RbacResource.Logs, RbacOperation.Reveal);
-
 	const [deleteLogs] = useDeleteLogsMutation();
 	// Lazy query kept only for handleLogNavigate (fetches adjacent pages on demand)
 	const [triggerGetLogs] = useLazyGetLogsQuery();
-
 	const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 	const [sessionHighlightedLogId, setSessionHighlightedLogId] = useState<string | null>(null);
 	// Stable handler so SessionDetailsSheet's loadSessionPage useCallback doesn't
@@ -65,17 +57,13 @@ export default function LogsPage() {
 	const [isChartOpen, setIsChartOpen] = useState(true);
 	const [triggerGetLogById] = useLazyGetLogByIdQuery();
 	const [fetchedLog, setFetchedLog] = useState<LogEntry | null>(null);
-
 	// Track if user has manually modified the time range
 	const userModifiedTimeRange = useRef<boolean>(false);
-
 	// Memoize default time range to prevent recalculation on every render
 	// This is crucial to avoid triggering refetches when the sheet opens/closes
 	const defaultTimeRange = useMemo(() => dateUtils.getDefaultTimeRange(), []);
-
 	const { search } = useLocation();
 	const hasExplicitTimeRange = (search as Record<string, unknown>)?.start_time && (search as Record<string, unknown>)?.end_time;
-
 	// URL state management with nuqs - all filters and pagination in URL
 	const [urlState, setUrlState] = useQueryStates(
 		{
@@ -98,11 +86,8 @@ export default function LogsPage() {
 			agent_names: parseAsSafeArrayOf.withDefault([]),
 			session_id: parseAsSafeString.withDefault(""),
 			agent_correlation_id: parseAsSafeString.withDefault(""),
-			user_ids: parseAsSafeArrayOf.withDefault([]),
 			team_ids: parseAsSafeArrayOf.withDefault([]),
 			customer_ids: parseAsSafeArrayOf.withDefault([]),
-			business_unit_ids: parseAsSafeArrayOf.withDefault([]),
-			project_ids: parseAsSafeArrayOf.withDefault([]),
 			content_search: parseAsSafeString.withDefault(""),
 			request_id: parseAsSafeString.withDefault(""),
 			// No default: these are genuinely unset most of the time, and 0 is a
@@ -133,15 +118,13 @@ export default function LogsPage() {
 			shallow: false,
 		},
 	);
-
 	// Derive selectedLog: find in current logs array, or fetch by ID from API
-	const selectedLogId = urlState.selected_log || null;
+	const selectedLogId = urlState.selected_log;
 	const activeLogFetchId = useRef<string | null>(null);
 	const polling = urlState.polling;
 	// Grouped view collapses fallback chains under their root. Disabled while a
 	// session filter is active — that view is already scoped to one chain/session.
 	const grouped = urlState.grouped && !urlState.parent_request_id && !urlState.session_id;
-
 	// Convert URL state to filters and pagination for API calls
 	const filters: LogFilters = useMemo(
 		() => ({
@@ -164,11 +147,8 @@ export default function LogsPage() {
 			agent_names: urlState.agent_names,
 			session_id: urlState.session_id,
 			agent_correlation_id: urlState.agent_correlation_id,
-			user_ids: urlState.user_ids,
 			team_ids: urlState.team_ids,
 			customer_ids: urlState.customer_ids,
-			business_unit_ids: urlState.business_unit_ids,
-			project_ids: urlState.project_ids,
 			content_search: urlState.content_search,
 			request_id: urlState.request_id,
 			min_latency: urlState.min_latency ?? undefined,
@@ -216,11 +196,8 @@ export default function LogsPage() {
 			urlState.agent_names,
 			urlState.session_id,
 			urlState.agent_correlation_id,
-			urlState.user_ids,
 			urlState.team_ids,
 			urlState.customer_ids,
-			urlState.business_unit_ids,
-			urlState.project_ids,
 			urlState.content_search,
 			urlState.request_id,
 			urlState.parent_request_id,
@@ -238,7 +215,6 @@ export default function LogsPage() {
 			urlState.period,
 		],
 	);
-
 	const pagination: Pagination = useMemo(
 		() => ({
 			limit: urlState.limit,
@@ -248,9 +224,7 @@ export default function LogsPage() {
 		}),
 		[urlState.limit, urlState.offset, urlState.sort_by, urlState.order],
 	);
-
 	const period = urlState.period;
-
 	// Helper to update filters in URL
 	const setFilters = useCallback(
 		(newFilters: LogFilters) => {
@@ -262,7 +236,6 @@ export default function LogsPage() {
 			if (timeChanged) {
 				userModifiedTimeRange.current = true;
 			}
-
 			setUrlState({
 				// Clear the period and apply the absolute range only when an explicit one is provided
 				...(timeChanged && {
@@ -289,11 +262,8 @@ export default function LogsPage() {
 				agent_names: newFilters.agent_names || [],
 				session_id: newFilters.session_id || "",
 				agent_correlation_id: newFilters.agent_correlation_id || "",
-				user_ids: newFilters.user_ids || [],
 				team_ids: newFilters.team_ids || [],
 				customer_ids: newFilters.customer_ids || [],
-				business_unit_ids: newFilters.business_unit_ids || [],
-				project_ids: newFilters.project_ids || [],
 				content_search: newFilters.content_search || "",
 				request_id: newFilters.request_id || "",
 				min_latency: newFilters.min_latency ?? null,
@@ -310,7 +280,6 @@ export default function LogsPage() {
 		},
 		[setUrlState, filters],
 	);
-
 	// Helper to update pagination in URL
 	const setPagination = useCallback(
 		(newPagination: Pagination) => {
@@ -323,7 +292,6 @@ export default function LogsPage() {
 		},
 		[setUrlState],
 	);
-
 	// Handler for time range changes from the volume chart
 	const handleTimeRangeChange = useCallback(
 		(startTime: number, endTime: number) => {
@@ -338,7 +306,6 @@ export default function LogsPage() {
 		},
 		[setUrlState],
 	);
-
 	// Handler for resetting zoom to default 1h view
 	const handleResetZoom = useCallback(() => {
 		const now = Math.floor(Date.now() / 1000);
@@ -351,7 +318,6 @@ export default function LogsPage() {
 			polling: true,
 		});
 	}, [setUrlState]);
-
 	// Zoomed only when a custom absolute range is active (period cleared) and
 	// the range is meaningfully narrower than 1h.
 	const isZoomed = useMemo(() => {
@@ -360,7 +326,6 @@ export default function LogsPage() {
 		const defaultRange = 1 * 60 * 60;
 		return currentRange < defaultRange * 0.9;
 	}, [urlState.start_time, urlState.end_time, urlState.period]);
-
 	const {
 		data: logsData,
 		isFetching: logsIsFetching,
@@ -378,7 +343,6 @@ export default function LogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const {
 		data: stats,
 		isFetching: statsIsFetching,
@@ -394,7 +358,6 @@ export default function LogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	// Sparkline sources for the metric strip. The request series reuses the
 	// histogram already fetched below for the volume chart, so only latency and
 	// cost add a request.
@@ -409,7 +372,6 @@ export default function LogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const {
 		data: costHistogram,
 		isFetching: costIsFetching,
@@ -421,7 +383,6 @@ export default function LogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const {
 		data: histogram,
 		isLoading: histogramIsLoading,
@@ -436,7 +397,6 @@ export default function LogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	// The metric strip reads three separate queries, so refreshing only the stats
 	// would leave its latency and cost sparklines showing an older window beside
 	// freshly updated numbers. Listing them in one place is what keeps that from
@@ -447,14 +407,12 @@ export default function LogsPage() {
 		refetchLatencyHistogram();
 		refetchCostHistogram();
 	}, [refetchStats, refetchLatencyHistogram, refetchCostHistogram]);
-
 	/** Everything the page displays, for the actions that invalidate all of it. */
 	const refreshAll = useCallback(() => {
 		refetchLogs();
 		refreshStrip();
 		refetchHistogram();
 	}, [refetchLogs, refreshStrip, refetchHistogram]);
-
 	// Set showEmptyState on first response; clear it as soon as logs appear.
 	useEffect(() => {
 		if (!logsData) return;
@@ -465,7 +423,6 @@ export default function LogsPage() {
 			setShowEmptyState(false);
 		}
 	}, [logsData, showEmptyState]);
-
 	const handleFilterByParentRequestId = useCallback(
 		(parentRequestId: string) => {
 			setSelectedSessionId(null);
@@ -478,7 +435,6 @@ export default function LogsPage() {
 		},
 		[filters, setFilters, setUrlState],
 	);
-
 	const handleFilterBySessionId = useCallback(
 		(sessionId: string) => {
 			setSelectedSessionId(null);
@@ -491,7 +447,6 @@ export default function LogsPage() {
 		},
 		[filters, setFilters, setUrlState],
 	);
-
 	// --- Grouped view: chain expansion state -------------------------------
 	// Children of an expanded root, keyed by root log id. Loaded lazily through
 	// the list endpoint with the active filters plus parent_request_id, not the
@@ -503,7 +458,6 @@ export default function LogsPage() {
 	const [chainChildren, setChainChildren] = useState<Record<string, LogEntry[]>>({});
 	const [loadingChainIds, setLoadingChainIds] = useState<Set<string>>(new Set());
 	const [triggerGetChainChildren] = useLazyGetLogsQuery();
-
 	// Grouped view also collapses sessions: the earliest request in a session
 	// stands for it, and expanding lists the session's other requests. Kept
 	// separate from the chain state because a session member can expand its own
@@ -512,13 +466,11 @@ export default function LogsPage() {
 	const [sessionMembers, setSessionMembers] = useState<Record<string, LogEntry[]>>({});
 	const [loadingSessionIds, setLoadingSessionIds] = useState<Set<string>>(new Set());
 	const [triggerGetSessionMembers] = useLazyGetLogsQuery();
-
 	// Bumped by the reset below, and captured by every expansion request. A request
 	// in flight when the filters change resolves against the cleared caches, so
 	// without this its old-filter rows would land in the new page's cache — and the
 	// "already cached" guard would then serve them for as long as the row stays put.
 	const expansionGeneration = useRef(0);
-
 	// Collapse everything when the page of roots changes — expanded ids from the
 	// previous page are meaningless and cached children may be stale.
 	useEffect(() => {
@@ -530,7 +482,6 @@ export default function LogsPage() {
 		setSessionMembers({});
 		setLoadingSessionIds(new Set());
 	}, [filters, pagination, grouped]);
-
 	// Shared by both expanders: a session root loads its own attempts alongside
 	// its session peers, and a peer loads its attempts when expanded in place.
 	const loadChainChildren = useCallback(
@@ -540,7 +491,13 @@ export default function LogsPage() {
 			setLoadingChainIds((prev) => new Set(prev).add(log.id));
 			triggerGetChainChildren({
 				filters: { ...filters, parent_request_id: log.id },
-				pagination: { ...pagination, limit: chainChildrenPageLimit, offset: 0, sort_by: "timestamp", order: "asc" },
+				pagination: {
+					...pagination,
+					limit: chainChildrenPageLimit,
+					offset: 0,
+					sort_by: "timestamp",
+					order: "asc",
+				},
 			}).then((result) => {
 				if (generation !== expansionGeneration.current) return;
 				setLoadingChainIds((prev) => {
@@ -562,7 +519,6 @@ export default function LogsPage() {
 		},
 		[chainChildren, loadingChainIds, triggerGetChainChildren, filters, pagination],
 	);
-
 	const handleToggleChain = useCallback(
 		(log: LogEntry) => {
 			const isExpanded = expandedChainIds.has(log.id);
@@ -580,7 +536,6 @@ export default function LogsPage() {
 		},
 		[expandedChainIds, loadChainChildren],
 	);
-
 	// Expanding a session lists the session's other root requests, and the
 	// session root's own fallback attempts alongside them — the session chevron
 	// replaces the chain chevron on that row, so this is the only way to reach
@@ -600,15 +555,19 @@ export default function LogsPage() {
 				return next;
 			});
 			if (isExpanded || !log.session_id) return;
-
 			if ((log.child_count ?? 0) > 0) loadChainChildren(log);
-
 			if (sessionMembers[log.id] || loadingSessionIds.has(log.id)) return;
 			const generation = expansionGeneration.current;
 			setLoadingSessionIds((prev) => new Set(prev).add(log.id));
 			triggerGetSessionMembers({
 				filters: { ...filters, session_id: log.session_id },
-				pagination: { ...pagination, limit: chainChildrenPageLimit, offset: 0, sort_by: "timestamp", order: "asc" },
+				pagination: {
+					...pagination,
+					limit: chainChildrenPageLimit,
+					offset: 0,
+					sort_by: "timestamp",
+					order: "asc",
+				},
 				rootsOnly: true,
 				groupSessions: false,
 			}).then((result) => {
@@ -635,7 +594,6 @@ export default function LogsPage() {
 		},
 		[expandedSessionIds, sessionMembers, loadingSessionIds, triggerGetSessionMembers, loadChainChildren, filters, pagination],
 	);
-
 	const handleDelete = useCallback(
 		async (log: LogEntry) => {
 			try {
@@ -650,7 +608,6 @@ export default function LogsPage() {
 		},
 		[deleteLogs, urlState.selected_log, setUrlState, refreshAll],
 	);
-
 	const handlePollToggle = useCallback(
 		(enabled: boolean) => {
 			const next = getLiveToggleState(enabled, urlState.period);
@@ -662,7 +619,6 @@ export default function LogsPage() {
 		},
 		[setUrlState, refreshAll, urlState.period],
 	);
-
 	// Period selection: store relative period + fresh timestamps in URL (bypasses setFilters
 	// so userModifiedTimeRange stays false and tab-focus refresh keeps working)
 	const handlePeriodChange = useCallback(
@@ -685,17 +641,14 @@ export default function LogsPage() {
 		},
 		[setUrlState],
 	);
-
 	// Only need metadata_keys here (used to render dynamic columns even when the
 	// current page has no rows). Scope the request to that one dimension.
 	const { data: filterData } = useGetAvailableFilterDataQuery({ dimensions: ["metadata_keys"] });
-
 	// Get metadata keys from filterdata API so columns always show even with no data on current page
 	const metadataKeys = useMemo(() => {
 		if (!filterData?.metadata_keys) return [];
 		return Object.keys(filterData.metadata_keys).sort();
 	}, [filterData?.metadata_keys]);
-
 	const { data: userAgentMappingsData } = useGetUserAgentMappingsQuery();
 	const customAppIcons = useMemo(() => {
 		const icons: Record<string, string> = {};
@@ -706,17 +659,14 @@ export default function LogsPage() {
 		}
 		return icons;
 	}, [userAgentMappingsData?.mappings]);
-
 	const columns = useMemo(
-		() => createColumns(handleDelete, hasDeleteAccess, metadataKeys, customAppIcons, grouped, handleFilterBySessionId, t),
-		[customAppIcons, handleDelete, hasDeleteAccess, metadataKeys, grouped, handleFilterBySessionId, t],
+		() => createColumns(handleDelete, true, metadataKeys, customAppIcons, grouped, handleFilterBySessionId, t),
+		[customAppIcons, handleDelete, metadataKeys, grouped, handleFilterBySessionId, t],
 	);
-
 	const columnIds = useMemo(
 		() => columns.map((col) => ("id" in col && col.id ? col.id : "accessorKey" in col ? String(col.accessorKey) : "")).filter(Boolean),
 		[columns],
 	);
-
 	const COLUMN_LABELS: Record<string, string> = useMemo(
 		() => ({
 			timestamp: t("labels.time"),
@@ -734,17 +684,10 @@ export default function LogsPage() {
 			routing_rule: t("labels.routingRule"),
 			team: t("labels.team"),
 			customer: t("labels.customer"),
-			user: t("labels.user"),
-			business_unit: t("labels.businessUnit"),
 		}),
 		[t],
 	);
-
-	const DEFAULT_HIDDEN_COLUMNS = useMemo(
-		() => ["session", "service_tier", "virtual_key", "routing_rule", "team", "customer", "user", "business_unit", "project"],
-		[],
-	);
-
+	const DEFAULT_HIDDEN_COLUMNS = useMemo(() => ["session", "service_tier", "virtual_key", "routing_rule", "team", "customer"], []);
 	const {
 		entries: columnEntries,
 		columnOrder,
@@ -761,14 +704,12 @@ export default function LogsPage() {
 		defaultHidden: DEFAULT_HIDDEN_COLUMNS,
 		fixedColumns: {
 			...(grouped ? { left: ["expand"] } : {}),
-			...(hasDeleteAccess ? { right: ["actions"] } : {}),
+			...{ right: ["actions"] },
 		},
 	});
-
 	// Navigation for log detail sheet
 	const logs = logsData?.logs ?? [];
 	const totalItems = logsData?.stats?.total_requests ?? 0;
-
 	// Grouped view: splice loaded children in below their expanded root. Children
 	// are marked so the table can indent them; they don't affect pagination.
 	const displayLogs: DisplayLogEntry[] = useMemo(() => {
@@ -815,7 +756,6 @@ export default function LogsPage() {
 		}
 		return out;
 	}, [logs, grouped, expandedChainIds, chainChildren, expandedSessionIds, sessionMembers]);
-
 	const tableMeta = useMemo(
 		() => ({
 			expandedChainIds,
@@ -847,7 +787,6 @@ export default function LogsPage() {
 		}
 		return null;
 	}, [selectedLogId, logs, chainChildren, sessionMembers]);
-
 	useEffect(() => {
 		if (!selectedLogId || selectedLogFromData) {
 			setFetchedLog(null);
@@ -866,11 +805,8 @@ export default function LogsPage() {
 			}
 		});
 	}, [selectedLogId, selectedLogFromData, triggerGetLogById]);
-
 	const selectedLog = selectedLogFromData ?? fetchedLog;
-
 	const selectedLogIndex = useMemo(() => (selectedLogId ? logs.findIndex((l) => l.id === selectedLogId) : -1), [selectedLogId, logs]);
-
 	const handleLogNavigate = useCallback(
 		(direction: "prev" | "next") => {
 			const currentLogId = selectedLogId || "";
@@ -932,7 +868,6 @@ export default function LogsPage() {
 		},
 		[selectedLogId, selectedLogIndex, logs, pagination, totalItems, filters, grouped, setUrlState, triggerGetLogs],
 	);
-
 	return (
 		// Below lg the strip, the volume chart and the table cannot all share one
 		// viewport-height column - the table collapses to a couple of rows. There the
@@ -976,10 +911,10 @@ export default function LogsPage() {
 							/>
 						</div>
 						{/* The four queries resolve independently, so `data` can hold the
-						    previous window's result for one of them while another has already
-						    moved on - the strip is dimmed until every one of them agrees on
-						    the current filters. Switching them to `currentData` instead would
-						    empty the strip to zeros on every filter change. */}
+                previous window's result for one of them while another has already
+                moved on - the strip is dimmed until every one of them agrees on
+                the current filters. Switching them to `currentData` instead would
+                empty the strip to zeros on every filter change. */}
 						<MetricStrip
 							stats={stats}
 							requestHistogram={histogram ?? undefined}
@@ -1014,8 +949,8 @@ export default function LogsPage() {
 						)}
 
 						{/* The min-height is what makes the table usable on a scrolling page:
-						    without it the flex child shrinks to its content and the strip plus
-						    the chart leave it a few rows tall. */}
+                without it the flex child shrinks to its content and the strip plus
+                the chart leave it a few rows tall. */}
 						<div className="min-h-[28rem] flex-1 lg:min-h-0">
 							<LogsDataTable
 								columns={columns}
@@ -1060,8 +995,8 @@ export default function LogsPage() {
 						log={selectedLog}
 						open={selectedLog !== null}
 						onOpenChange={(open) => !open && setUrlState({ selected_log: "" })}
-						handleDelete={hasDeleteAccess ? handleDelete : undefined}
-						canReveal={hasRevealAccess}
+						handleDelete={handleDelete}
+						canReveal={true}
 						onNavigate={handleLogNavigate}
 						hasPrev={selectedLogIndex > 0 || (selectedLogIndex !== -1 && pagination.offset > 0)}
 						hasNext={selectedLogIndex !== -1 && (selectedLogIndex < logs.length - 1 || pagination.offset + pagination.limit < totalItems)}

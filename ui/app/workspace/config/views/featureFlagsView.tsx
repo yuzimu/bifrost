@@ -6,19 +6,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { getErrorMessage } from "@/lib/store";
 import { useListFeatureFlagsQuery, useUpdateFeatureFlagMutation } from "@/lib/store/apis/featureFlagsApi";
 import type { FeatureFlagStatus } from "@/lib/types/featureFlag";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import { Crown, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
+/** 仅提供 OSS registry 的开关，不改写已持久化的企业字段。 */
 export default function FeatureFlagsView() {
 	const { t } = useTranslation("config");
-	const hasUpdateAccess = useRbac(RbacResource.FeatureFlags, RbacOperation.Update);
 	const { data, isLoading, isError, error } = useListFeatureFlagsQuery();
 	const [updateFeatureFlag] = useUpdateFeatureFlagMutation();
-
-	const flags = data?.flags ?? [];
-
+	const flags = (data?.flags ?? []).filter((flag) => !flag.enterprise_only);
 	async function handleToggle(flag: FeatureFlagStatus, checked: boolean) {
 		try {
 			await updateFeatureFlag({ id: flag.id, enabled: checked }).unwrap();
@@ -32,7 +28,6 @@ export default function FeatureFlagsView() {
 			toast.error(getErrorMessage(err));
 		}
 	}
-
 	return (
 		<div className="w-full space-y-4">
 			<PageTitle title={t("featureFlags.title")}>{t("featureFlags.description")}</PageTitle>
@@ -57,7 +52,7 @@ export default function FeatureFlagsView() {
 									</TableCell>
 								</TableRow>
 							) : (
-								flags.map((flag) => <FeatureFlagRow key={flag.id} flag={flag} canUpdate={hasUpdateAccess} onToggle={handleToggle} />)
+								flags.map((flag) => <FeatureFlagRow key={flag.id} flag={flag} canUpdate={true} onToggle={handleToggle} />)
 							)}
 						</TableBody>
 					</Table>
@@ -66,18 +61,15 @@ export default function FeatureFlagsView() {
 		</div>
 	);
 }
-
 interface FeatureFlagRowProps {
 	flag: FeatureFlagStatus;
 	canUpdate: boolean;
 	onToggle: (flag: FeatureFlagStatus, checked: boolean) => Promise<void>;
 }
-
 function FeatureFlagRow({ flag, canUpdate, onToggle }: FeatureFlagRowProps) {
 	const { t } = useTranslation("config");
 	const disabled = flag.locked || !flag.registered || !canUpdate;
 	const primaryLabel = flag.display_name || flag.id;
-
 	return (
 		<TableRow className="group hover:bg-muted/50 transition-colors">
 			<TableCell className="align-top whitespace-normal">
@@ -86,8 +78,7 @@ function FeatureFlagRow({ flag, canUpdate, onToggle }: FeatureFlagRowProps) {
 						<span className="text-sm font-medium">{primaryLabel}</span>
 						{flag.display_name && <span className="text-muted-foreground font-mono text-xs break-all">{flag.id}</span>}
 						<SourceBadge source={flag.source} />
-						{flag.enterprise_only && <EnterpriseBadge />}
-						{flag.locked && !flag.enterprise_only && <LockedBadge />}
+						{flag.locked && <LockedBadge />}
 						{!flag.registered && <UnregisteredBadge />}
 					</div>
 					{flag.description && <p className="text-muted-foreground text-sm break-words">{flag.description}</p>}
@@ -107,7 +98,6 @@ function FeatureFlagRow({ flag, canUpdate, onToggle }: FeatureFlagRowProps) {
 		</TableRow>
 	);
 }
-
 function SourceBadge({ source }: { source: FeatureFlagStatus["source"] }) {
 	const { t } = useTranslation("config");
 	return (
@@ -116,7 +106,6 @@ function SourceBadge({ source }: { source: FeatureFlagStatus["source"] }) {
 		</Badge>
 	);
 }
-
 function LockedBadge() {
 	const { t } = useTranslation("config");
 	return (
@@ -131,22 +120,6 @@ function LockedBadge() {
 		</Tooltip>
 	);
 }
-
-function EnterpriseBadge() {
-	const { t } = useTranslation("config");
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<Badge variant="secondary" className="flex items-center gap-1 text-xs">
-					<Crown className="size-3" />
-					{t("featureFlags.enterpriseOnly")}
-				</Badge>
-			</TooltipTrigger>
-			<TooltipContent>{t("featureFlags.enterpriseHelp")}</TooltipContent>
-		</Tooltip>
-	);
-}
-
 function UnregisteredBadge() {
 	const { t } = useTranslation("config");
 	return (

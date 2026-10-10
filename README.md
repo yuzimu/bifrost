@@ -10,9 +10,9 @@
 [![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/maximhq/bifrost?utm_source=badge)
 [![License](https://img.shields.io/github/license/maximhq/bifrost)](LICENSE)
 
-## The fastest way to build AI applications that never go down
+## Open-Source AI Gateway
 
-Bifrost is a high-performance AI gateway that unifies access to 23+ providers (OpenAI, Anthropic, AWS Bedrock, Google Vertex, and more) through a single OpenAI-compatible API. Deploy in seconds with zero configuration and get automatic failover, load balancing, semantic caching, and enterprise-grade features.
+Bifrost unifies LLM providers through an OpenAI-compatible API. This fork retains the open-source gateway, provider integrations, MCP, authenticated management, virtual-key governance, caching, and observability. Its guardrails, adaptive routing, and circuit-breaker capabilities are implemented locally without an enterprise license. See [Fork Architecture](docs/fork/architecture.mdx) for supported behavior and limitations.
 
 ## Quick Start
 
@@ -57,22 +57,15 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 ---
 
-## Enterprise Deployments
+## Fork Capabilities
 
-Bifrost supports enterprise-grade, private deployments for teams running production AI systems at scale.
-In addition to private networking, custom security controls, and governance, enterprise deployments unlock advanced capabilities including adaptive load balancing, clustering, guardrails, MCP gateway, and other features designed for enterprise-grade scale and reliability.
+- **Guardrails:** local policy evaluation, request blocking, and response redaction.
+- **Adaptive Routing:** process-local observations used within authorized provider and key pools.
+- **Circuit Breakers:** configured response-header signals suppress subsequent eligible attempts.
 
-<img src=".github/assets/features.png" alt="Book a Demo" width="100%" style="margin-top:5px;"/>
+Configurations use existing plugin persistence. Cluster coordination, SSO/SCIM provisioning, enterprise audit pipelines, and private enterprise connectors are not provided. The fork does not claim equivalence with private source code, undocumented weighting formulas, or enterprise performance.
 
-
-<div align="center" style="display: flex; flex-direction: column;">
-  <a href="https://calendly.com/maximai/bifrost-demo">
-    <img src=".github/assets/book-demo-button.png" alt="Book a Demo" width="170" style="margin-top:5px;"/>
-  </a>
-  <div>
-  <a href="https://www.getmaxim.ai/bifrost/enterprise" target="_blank" rel="noopener noreferrer">Explore enterprise capabilities</a>
-  </div>
-</div>
+The NPX and Docker commands below refer to upstream distributions. Build this checkout to use fork-specific capabilities.
 
 ---
 
@@ -90,13 +83,12 @@ In addition to private networking, custom security controls, and governance, ent
 - **[Model Context Protocol (MCP)](https://docs.getbifrost.ai/mcp/overview)** - Enable AI models to use external tools (filesystem, web search, databases)
 - **[Semantic Caching](https://docs.getbifrost.ai/features/semantic-caching)** - Intelligent response caching based on semantic similarity to reduce costs and latency
 - **[Multimodal Support](https://docs.getbifrost.ai/quickstart/gateway/streaming)** - Support for text, images, audio, and streaming, all behind a common interface.
-- **[Custom Plugins](https://docs.getbifrost.ai/enterprise/custom-plugins)** - Extensible middleware architecture for analytics, monitoring, and custom logic
+- **[Custom Plugins](docs/plugins/writing-go-plugin.mdx)** - Extensible middleware architecture for analytics, monitoring, and custom logic
 - **[Governance](https://docs.getbifrost.ai/features/governance/virtual-keys)** - Usage tracking, rate limiting, and fine-grained access control
 
-### Enterprise & Security
+### Governance & Security
 
 - **[Budget Management](https://docs.getbifrost.ai/features/governance/budget-and-limits)** - Hierarchical cost control with virtual keys, teams, and customer budgets
-- **[User Provisioning (OIDC)](https://docs.getbifrost.ai/enterprise/user-provisioning)** - OAuth 2.0 / OIDC login with background directory sync for teams, roles, and business units
 - **[Observability](https://docs.getbifrost.ai/features/observability/default)** - Native Prometheus metrics, distributed tracing, and comprehensive logging
 - **[Secrets Management](https://docs.getbifrost.ai/deployment-guides/config-json#environment-variable-references)** - Secure API key management with environment variables and deployment secrets
 
@@ -197,7 +189,7 @@ go get github.com/maximhq/bifrost/core
 
 ## Performance
 
-Bifrost adds virtually zero overhead to your AI requests. In sustained 5,000 RPS benchmarks, the gateway added only **11 µs** of overhead per request.
+The following figures are upstream-published benchmarks, not measurements of this fork or its additional policy evaluation. Local rules, remote judges, persistence, and streaming policies have separate costs.
 
 | Metric | t3.medium | t3.xlarge | Improvement |
 |--------|-----------|-----------|-------------|
@@ -244,10 +236,10 @@ Bifrost adds virtually zero overhead to your AI requests. In sustained 5,000 RPS
 - [LiteLLM SDK](https://docs.getbifrost.ai/integrations/litellm-sdk) - LiteLLM integration
 - [LangChain SDK](https://docs.getbifrost.ai/integrations/langchain-sdk) - LangChain integration
 
-### Enterprise
+### Extensions & Deployment
 
-- [Custom Plugins](https://docs.getbifrost.ai/enterprise/custom-plugins) - Extend functionality
-- [Clustering](https://docs.getbifrost.ai/enterprise/clustering) - Multi-node deployment
+- [Custom Plugins](docs/plugins/writing-go-plugin.mdx) - Extend functionality
+- [Fork Architecture](docs/fork/architecture.mdx) - Supported features and boundaries
 - [Secrets Management](https://docs.getbifrost.ai/deployment-guides/config-json#environment-variable-references) - Secure key management
 - [Production Deployment](https://docs.getbifrost.ai/deployment-guides/k8s) - Scaling and monitoring
 

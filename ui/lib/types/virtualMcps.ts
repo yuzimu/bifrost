@@ -30,7 +30,6 @@ export interface VirtualMCPRequest {
 	tools: VirtualMCPToolSpec[];
 }
 
-// One access-profile template that grants a Virtual MCP (enterprise reverse lookup).
 export interface VirtualMCPAccessProfileUsage {
 	id: number;
 	name: string;

@@ -6,23 +6,19 @@ import { Info, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UseFormReturn } from "react-hook-form";
-
 interface PluginFormData {
 	name: string;
 	path: string;
 	config?: string;
 	hasConfig: boolean;
 }
-
 interface PluginFormFragmentProps {
 	form: UseFormReturn<PluginFormData>;
 	isEditMode?: boolean;
 }
-
 export function PluginFormFragment({ form, isEditMode = false }: PluginFormFragmentProps) {
 	const { t } = useTranslation("governance");
-	const [showConfig, setShowConfig] = useState(form.getValues("hasConfig") || false);
-
+	const [showConfig, setShowConfig] = useState(form.getValues("hasConfig"));
 	return (
 		<div className="space-y-4">
 			<div className="bg-muted/50 flex items-start gap-2 rounded-md border p-3">

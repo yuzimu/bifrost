@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "ホーム",
 		"observability": "オブザーバビリティ",
 		"dashboard": "ダッシュボード",
 		"llmLogs": "LLM ログ",
@@ -28,30 +27,14 @@
 		"oauthGrants": "OAuth グラント",
 		"mcpSettings": "MCP 設定",
 		"plugins": "プラグイン",
-		"alerting": "アラート",
-		"channels": "チャネル",
-		"rules": "ルール",
-		"history": "履歴",
 		"governance": "ガバナンス",
 		"virtualKeys": "仮想キー",
-		"users": "ユーザー",
 		"teams": "チーム",
-		"businessUnits": "ビジネスユニット",
 		"customers": "顧客",
-		"userProvisioning": "ユーザープロビジョニング",
-		"rolesPermissions": "ロールと権限",
-		"accessProfiles": "アクセスプロファイル",
-		"projects": "プロジェクト",
-		"auditLogs": "監査ログ",
 		"guardrails": "ガードレール",
 		"guardrailRules": "ルール",
 		"guardrailProviders": "プロバイダー",
 		"webhooks": "Webhook",
-		"edgeControl": "エッジ制御",
-		"devices": "デバイス",
-		"approvals": "承認",
-		"edgeSettings": "エッジ設定",
-		"clusterConfig": "クラスター設定",
 		"adaptiveRouting": "適応型ルーティング",
 		"adaptiveRoutingDashboard": "ダッシュボード",
 		"adaptiveRoutingSettings": "設定",
@@ -63,15 +46,10 @@
 		"caching": "キャッシュ",
 		"security": "セキュリティ",
 		"warp": "Warp",
-		"proxy": "プロキシ",
-		"apiKeys": "API キー",
 		"performanceTuning": "パフォーマンス調整",
-		"featureFlags": "フィーチャーフラグ",
-		"branding": "ブランディング",
-		"licenseInfo": "ライセンス情報"
+		"featureFlags": "フィーチャーフラグ"
 	},
 	"navDesc": {
-		"home": "自分の利用量、キー、予算、アクセス",
 		"observability": "リクエストログと監視",
 		"dashboard": "ダッシュボード",
 		"llmLogs": "LLM リクエストログと監視",
@@ -96,30 +74,14 @@
 		"oauthGrants": "ダウンストリーム OAuth グラント",
 		"mcpSettings": "MCP 構成",
 		"plugins": "カスタムプラグインを管理",
-		"alerting": "アラートチャネル、ルール、履歴を管理",
-		"channels": "通知チャネルを構成",
-		"rules": "アラートルールを定義",
-		"history": "アラート配信履歴を確認",
 		"governance": "仮想キー、ユーザー、チーム、顧客、ロール",
 		"virtualKeys": "仮想キーとアクセスを管理",
-		"users": "ユーザーを管理",
 		"teams": "チームを管理",
-		"businessUnits": "ビジネスユニットを管理",
 		"customers": "顧客を管理",
-		"userProvisioning": "ユーザー管理とプロビジョニング",
-		"rolesPermissions": "ユーザーロールと権限",
-		"accessProfiles": "ロール向けアクセスプロファイルを管理",
-		"projects": "リクエストをプロジェクトのアクセスと予算に紐づけ",
-		"auditLogs": "監査ログとコンプライアンス",
 		"guardrails": "ガードレール構成",
 		"guardrailRules": "ガードレールルール",
 		"guardrailProviders": "ガードレールプロバイダー構成",
 		"webhooks": "非同期ジョブの webhook エンドポイント",
-		"edgeControl": "エッジデバイス管理",
-		"devices": "エッジデバイスを管理",
-		"approvals": "アプリと MCP サーバーを承認",
-		"edgeSettings": "エッジ設定",
-		"clusterConfig": "Bifrost クラスターを管理",
 		"adaptiveRouting": "適応型ルーティングを管理",
 		"adaptiveRoutingDashboard": "適応型ルーティングの指標",
 		"adaptiveRoutingSettings": "適応型ルーティング設定",
@@ -131,16 +93,8 @@
 		"caching": "キャッシュ構成",
 		"security": "セキュリティ設定",
 		"warp": "Warp エージェントの設定",
-		"proxy": "プロキシ構成",
-		"apiKeys": "API キー管理",
 		"performanceTuning": "パフォーマンス調整設定",
-		"featureFlags": "フィーチャーフラグの切り替え",
-		"branding": "カスタムロゴとアイコン",
-		"licenseInfo": "エンタープライズライセンス情報"
-	},
-	"home": {
-		"unlockTitle": "個人用ホームを解除",
-		"unlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。ホームでは、各ユーザー自身の利用量、キー、予算、アクセスが表示されます。"
+		"featureFlags": "フィーチャーフラグの切り替え"
 	},
 	"search": {
 		"placeholder": "検索…",
@@ -166,12 +120,6 @@
 			"available": "{{name}} が利用可能になりました。",
 			"viewNotes": "リリースノートを表示",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "本番セットアップの支援が必要ですか？",
-			"body": "カスタム連携や専任サポートを含む本番セットアップの支援を提供しています。",
-			"bookPrefix": "チームとのデモを予約",
-			"here": "こちら"
 		}
 	},
 	"topbar": {
@@ -194,25 +142,14 @@
 	"titles": {
 		"dashboard": "ダッシュボード",
 		"adaptiveRoutingSettings": "適応型ルーティング設定",
-		"alertChannels": "アラートチャネル",
-		"alertHistory": "アラート履歴",
-		"alertRules": "アラートルール",
-		"clusterConfig": "クラスター設定",
 		"settings": "設定",
-		"licenseInfo": "ライセンス情報",
-		"edgeSettings": "エッジ設定",
-		"edgeDevices": "エッジデバイス",
-		"edgeApprovals": "エッジ承認",
-		"rolesPermissions": "ロールと権限",
 		"guardrailRules": "ガードレールルール",
 		"guardrailProviders": "ガードレールプロバイダー",
 		"llmLogs": "LLM ログ",
-		"logConnectors": "ログコネクタ",
 		"observabilityConnectors": "オブザーバビリティコネクタ",
 		"promptRepository": "プロンプトリポジトリ",
 		"modelProviders": "モデルプロバイダー",
-		"routingTree": "ルーティングツリー",
-		"userProvisioning": "ユーザープロビジョニング"
+		"routingTree": "ルーティングツリー"
 	},
 	"error": {
 		"title": "問題が発生しました",
@@ -442,10 +379,7 @@
 			"tool_error": {
 				"summary": "クエリが失敗しました。",
 				"cause": "Warp のデータクエリの一つがエラーを返し、残りのステップ内で回復できませんでした。",
-				"suggestions": [
-					"より狭い時間範囲を試してください。",
-					"指定したモデル、キー、チームが実際に存在するか確認してください。"
-				]
+				"suggestions": ["より狭い時間範囲を試してください。", "指定したモデル、キー、チームが実際に存在するか確認してください。"]
 			},
 			"cancelled": {
 				"summary": "停止しました。",
@@ -455,10 +389,7 @@
 			"unknown": {
 				"summary": "問題が発生しました。",
 				"cause": "Warp が認識されないコードでエラーを返しました。",
-				"suggestions": [
-					"質問を再度試してください。",
-					"繰り返す場合は、下記の詳細とともに報告してください。"
-				]
+				"suggestions": ["質問を再度試してください。", "繰り返す場合は、下記の詳細とともに報告してください。"]
 			}
 		}
 	}

@@ -5,10 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DottedSeparator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import { getErrorMessage, useCreateMCPLibraryEntryMutation } from "@/lib/store";
 import type { CreateMCPLibraryEntryRequest, MCPAuthType, MCPConnectionType } from "@/lib/types/mcp";
-import { useGetSCIMProvidersQuery } from "@enterprise/lib/store/apis/scimApi";
 import { Info } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -22,7 +20,6 @@ import {
 	SectionHeader,
 	StdioRuntimeNotice,
 } from "../../views/mcpClientFormFields";
-
 interface MCPLibraryAddServerFormData {
 	name: string;
 	description: string;
@@ -39,12 +36,10 @@ interface MCPLibraryAddServerFormData {
 	docs_url: string;
 	tags: string;
 }
-
 interface MCPLibraryAddServerSheetProps {
 	open: boolean;
 	onClose: () => void;
 }
-
 const DEFAULTS: MCPLibraryAddServerFormData = {
 	name: "",
 	description: "",
@@ -61,7 +56,6 @@ const DEFAULTS: MCPLibraryAddServerFormData = {
 	docs_url: "",
 	tags: "",
 };
-
 // Split a comma/newline-separated string into a trimmed, non-empty list.
 function parseList(text: string): string[] {
 	return text
@@ -69,7 +63,6 @@ function parseList(text: string): string[] {
 		.map((s) => s.trim())
 		.filter(Boolean);
 }
-
 /**
  * Publishes a library listing: a reusable description of an MCP server that
  * members can later install. Deliberately mirrors the layout and auth
@@ -80,29 +73,19 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 	const { t } = useTranslation("mcp");
 	const { t: tc } = useTranslation("common");
 	const [createEntry, { isLoading }] = useCreateMCPLibraryEntryMutation();
-
-	// Token exchange is backed by the deployment's identity-provider
-	// integration, so the option only renders when one is enabled, same gate
-	// as the create-server sheet.
-	const { data: scimProviders } = useGetSCIMProvidersQuery(undefined, { skip: !IS_ENTERPRISE });
-	const idpConfigured = !!scimProviders?.find((p) => (p as { enabled?: boolean }).enabled);
-
 	const methods = useForm<MCPLibraryAddServerFormData>({ defaultValues: DEFAULTS });
 	const { control, handleSubmit, watch, setValue, reset } = methods;
-
 	useEffect(() => {
 		if (open) reset(DEFAULTS);
 	}, [open, reset]);
-
 	const connectionType = watch("connection_type");
 	const authType = watch("auth_type");
 	const isStdio = connectionType === "stdio";
 	const authKind = authKindOf(authType);
 	const authScope = authScopeOf(authType);
 	const needsHeaderKeys = authKind === "headers";
-
 	const applyAuthKind = (kind: MCPAuthKind) => {
-		if (kind === "none" || kind === "token_exchange") {
+		if (kind === "none") {
 			setValue("auth_type", kind);
 			return;
 		}
@@ -112,7 +95,6 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 		}
 		setValue("auth_type", authScope === "per_user" ? "per_user_headers" : "headers");
 	};
-
 	const applyAuthScope = (scope: MCPAuthScope) => {
 		if (authKind === "oauth") {
 			setValue("auth_type", scope === "per_user" ? "per_user_oauth" : "oauth");
@@ -120,7 +102,6 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 			setValue("auth_type", scope === "per_user" ? "per_user_headers" : "headers");
 		}
 	};
-
 	const onSubmit = async (data: MCPLibraryAddServerFormData) => {
 		const tags = parseList(data.tags);
 		const payload: CreateMCPLibraryEntryRequest = {
@@ -134,7 +115,6 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 			docs_url: data.docs_url.trim() || undefined,
 			tags: tags.length ? tags : undefined,
 		};
-
 		if (isStdio) {
 			payload.stdio_config = {
 				command: data.command.trim(),
@@ -144,11 +124,9 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 		} else {
 			payload.connection_url = data.connection_url.trim();
 		}
-
 		if (needsHeaderKeys) {
 			payload.required_header_keys = parseList(data.required_header_keys);
 		}
-
 		try {
 			await createEntry(payload).unwrap();
 			toast.success(t("library.add.addedToast"));
@@ -157,15 +135,12 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	return (
 		<Sheet open={open} onOpenChange={(sheetOpen) => !sheetOpen && onClose()}>
 			<SheetContent className="flex w-full flex-col gap-4 overflow-x-hidden p-0 pt-4">
 				<SheetHeader className="flex flex-col items-start px-0 py-4" headerClassName="mb-0 sticky px-4 md:px-8 -top-4 bg-card z-10">
 					<SheetTitle>{t("library.add.title")}</SheetTitle>
-					<SheetDescription>
-						{t("library.add.description")}
-					</SheetDescription>
+					<SheetDescription>{t("library.add.description")}</SheetDescription>
 				</SheetHeader>
 
 				<Form {...methods}>
@@ -174,9 +149,7 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 							<div className="rounded-lg border border-blue-200 bg-blue-50 p-3" data-testid="mcp-add-listing-notice">
 								<div className="flex items-start gap-2">
 									<Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-700" />
-									<p className="text-xs text-blue-900">
-										{t("library.add.notice")}
-									</p>
+									<p className="text-xs text-blue-900">{t("library.add.notice")}</p>
 								</div>
 							</div>
 
@@ -208,7 +181,11 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 											<FormItem>
 												<FormLabel>{t("library.add.descriptionLabel")}</FormLabel>
 												<FormControl>
-													<Textarea {...field} placeholder={t("library.add.descriptionPlaceholder")} data-testid="mcp-add-description-input" />
+													<Textarea
+														{...field}
+														placeholder={t("library.add.descriptionPlaceholder")}
+														data-testid="mcp-add-description-input"
+													/>
 												</FormControl>
 												<FormMessage />
 											</FormItem>
@@ -330,10 +307,7 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 
 									{/* Authentication */}
 									<div className="space-y-4">
-										<SectionHeader
-											title={t("library.add.authentication")}
-											description={t("library.add.authenticationDesc")}
-										/>
+										<SectionHeader title={t("library.add.authentication")} description={t("library.add.authenticationDesc")} />
 										<div className="space-y-4 rounded-md border p-4">
 											<FormItem className="w-full">
 												<FormLabel>{t("registry.form.authenticationType")}</FormLabel>
@@ -347,14 +321,11 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 														<SelectItem value="none">{t("registry.filter.none")}</SelectItem>
 														<SelectItem value="headers">{t("registry.filter.headers")}</SelectItem>
 														<SelectItem value="oauth">{t("registry.form.oauth20")}</SelectItem>
-														{IS_ENTERPRISE && idpConfigured && (
-															<SelectItem value="token_exchange">{t("registry.form.tokenExchangeObo")}</SelectItem>
-														)}
 													</SelectContent>
 												</Select>
 											</FormItem>
 
-											{authKind !== "none" && authKind !== "token_exchange" && (
+											{authKind !== "none" && (
 												<FormItem className="w-full">
 													<FormLabel>{t("registry.columns.authScope")}</FormLabel>
 													<Select value={authScope} onValueChange={(value: MCPAuthScope) => applyAuthScope(value)}>
@@ -379,7 +350,11 @@ export function MCPLibraryAddServerSheet({ open, onClose }: MCPLibraryAddServerS
 														<FormItem>
 															<FormLabel>{t("library.add.requiredHeaderNames")}</FormLabel>
 															<FormControl>
-																<Input {...field} placeholder={t("library.add.headerNamesPlaceholder")} data-testid="mcp-add-header-keys-input" />
+																<Input
+																	{...field}
+																	placeholder={t("library.add.headerNamesPlaceholder")}
+																	data-testid="mcp-add-header-keys-input"
+																/>
 															</FormControl>
 															<p className="text-muted-foreground text-xs">{t("library.add.namesOnly")}</p>
 															<FormMessage />

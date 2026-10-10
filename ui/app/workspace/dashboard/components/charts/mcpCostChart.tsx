@@ -7,21 +7,17 @@ import { barShape } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import type { ChartType } from "./chartTypeToggle";
 import { NoChartData } from "./noChartData";
-
 interface MCPCostChartProps {
 	data: MCPCostHistogramResponse | null;
 	chartType: ChartType;
 	startTime: number;
 	endTime: number;
 }
-
 function CustomTooltip({ active, payload }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -37,83 +33,78 @@ function CustomTooltip({ active, payload }: any) {
 		</div>
 	);
 }
-
 function MCPCostChartImpl({ data, chartType, startTime, endTime }: MCPCostChartProps) {
 	const { i18n } = useTranslation("observability");
 	const chartData = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return [];
 		}
-
 		return data.buckets.map((bucket, index) => ({
 			...bucket,
 			index,
 			formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 		}));
 	}, [data, i18n.resolvedLanguage]);
-
 	if (!data?.buckets || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	const commonProps = {
 		data: chartData,
 		margin: { top: 6, right: 4, left: 4, bottom: 0 },
 	};
-
 	return (
 		<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}-${chartType}`}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				{chartType === "bar" ? (
 					<BarChart {...commonProps} barCategoryGap={1}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={50}
 							tickFormatter={(v) => formatCost(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 0.01)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip content={<CustomTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
-						<Bar isAnimationActive={false} dataKey="total_cost" fill={CHART_COLORS.cost} fillOpacity={0.9} shape={barShape} barSize={30} />
+						<Bar isAnimationActive dataKey="total_cost" fill={CHART_COLORS.cost} fillOpacity={0.9} shape={barShape} barSize={30} />
 					</BarChart>
 				) : (
 					<AreaChart {...commonProps}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={50}
 							tickFormatter={(v) => formatCost(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 0.01)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip content={<CustomTooltip />} />
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="total_cost"
 							stroke={CHART_COLORS.cost}

@@ -111,14 +111,26 @@
 	"codeModeLimits": {
 		"title": "Code Mode Limits",
 		"description": "Limits on each code execution. Leave a field empty to use its default. Executions are not limited in how many run at once.",
-		"max_source_bytes": { "label": "Max Source Size (bytes)", "description": "Largest code a single execution may submit." },
-		"max_steps": { "label": "Max Computation Steps", "description": "Interpreter steps per execution, including work inside builtins." },
+		"max_source_bytes": {
+			"label": "Max Source Size (bytes)",
+			"description": "Largest code a single execution may submit."
+		},
+		"max_steps": {
+			"label": "Max Computation Steps",
+			"description": "Interpreter steps per execution, including work inside builtins."
+		},
 		"max_memory_bytes": {
 			"label": "Max Memory (bytes)",
 			"description": "Estimated allocation budget per execution. Every concurrent execution gets its own budget."
 		},
-		"max_log_bytes": { "label": "Max Log Output (bytes)", "description": "Print and tool log output per execution, including newlines." },
-		"max_tool_calls": { "label": "Max Tool Calls", "description": "Nested MCP tool calls per execution." },
+		"max_log_bytes": {
+			"label": "Max Log Output (bytes)",
+			"description": "Print and tool log output per execution, including newlines."
+		},
+		"max_tool_calls": {
+			"label": "Max Tool Calls",
+			"description": "Nested MCP tool calls per execution."
+		},
 		"max_value_bytes": {
 			"label": "Max Value Size (bytes)",
 			"description": "Size budget for each tool payload and converted result. Must be at least {{min}}."
@@ -139,24 +151,6 @@
 	"configNotLoaded": "Configuration not loaded",
 	"configNotLoadedRefresh": "Configuration not loaded. Please refresh and try again.",
 	"learnMore": "Learn more",
-	"enterprise": {
-		"sharedDescription": "This feature is a part of the Bifrost enterprise license. We would love to know more about your use case and how we can help you.",
-		"readMore": "Read more",
-		"bookDemo": "Book a demo",
-		"readMoreAria": "Read more about this feature (opens in new tab)",
-		"bookDemoAria": "Book a demo (opens Calendly in new tab)",
-		"clusterTitle": "Unlock cluster mode to scale reliably",
-		"adaptiveRoutingTitle": "Unlock adaptive routing for better performance",
-		"scimTitle": "Unlock SCIM based access management for user provisioning",
-		"edgeConfigTitle": "Unlock edge control to govern devices at the edge",
-		"edgeDevicesTitle": "Unlock edge control to manage your devices",
-		"edgeInventoryTitle": "Unlock edge control to approve apps and MCP servers",
-		"brandingTitle": "Unlock custom branding",
-		"brandingDescription": "Replace the Bifrost logo with your own across the dashboard and login screen. This feature is a part of the Bifrost enterprise license. We would love to know more about your use case and how we can help you.",
-		"licenseTitle": "Unlock license management",
-		"apiKeysTitle": "Scope Based API Keys",
-		"apiKeysDescription": "Need granular access control with scope-based API keys? Enterprise customers can create multiple API keys with specific permissions for different services, teams, or environments."
-	},
 	"clientSettings": {
 		"title": "Client Settings",
 		"description": "Configure client behavior and request handling.",
@@ -426,7 +420,12 @@
 		"toastSaved": "Compatibility settings updated successfully."
 	},
 	"featureFlags": {
-		"sources": { "default": "default", "db": "db", "remote": "remote", "file": "file" },
+		"sources": {
+			"default": "default",
+			"db": "db",
+			"remote": "remote",
+			"file": "file"
+		},
 		"enableAria": "Enable {{name}}",
 		"title": "Feature Flags",
 		"description": "Toggle in-process feature flags. Flags are declared in code; values can also be set via config.json or Helm, in which case they appear here as locked.",
@@ -437,8 +436,6 @@
 		"empty": "No feature flags found.",
 		"locked": "Locked",
 		"lockedHelp": "Value is pinned by config.json or Helm; edit your config to change it.",
-		"enterpriseOnly": "Enterprise",
-		"enterpriseHelp": "This flag gates an enterprise-only feature. Upgrade to enable it.",
 		"unregistered": "Unregistered",
 		"unregisteredHelp": "This id has no code registration. Restore the Register() call or clean up the stale value.",
 		"unregisteredNote": "No code currently reads this flag. The override is stored but inert until a Register() call is added.",
@@ -557,47 +554,6 @@
 		"syncIntervalMax": "Sync interval cannot exceed 8760 hours (1 year)",
 		"syncing": "Syncing...",
 		"forceSync": "Force Sync Now"
-	},
-	"proxy": {
-		"enterprise": "Enterprise",
-		"title": "Proxy Settings",
-		"description": "Configure global proxy settings for outbound requests.",
-		"enableProxy": "Enable Proxy",
-		"enableProxyHelp": "Enable global proxy for outbound HTTP requests.",
-		"proxyConfiguration": "Proxy Configuration",
-		"proxyType": "Proxy Type",
-		"httpHttps": "HTTP / HTTPS",
-		"proxyTypeHelp": "Select the proxy protocol type. Currently only HTTP proxy is supported.",
-		"selectType": "Select type",
-		"proxyUrl": "Proxy URL",
-		"proxyUrlHelp": "Full URL of the proxy server including protocol and port.",
-		"authentication": "Authentication (Optional)",
-		"username": "Username",
-		"password": "Password",
-		"usernamePlaceholder": "Proxy username",
-		"passwordPlaceholder": "Proxy password",
-		"advancedSettings": "Advanced Settings",
-		"noProxyHosts": "No Proxy Hosts",
-		"noProxyHostsHelp": "Comma-separated list of hosts that should bypass the proxy.",
-		"connectionTimeout": "Connection Timeout (seconds)",
-		"caCertificate": "CA Certificate (PEM) (Optional)",
-		"skipTls": "Skip TLS Verification",
-		"enableProxyFor": "Enable Proxy For",
-		"enableProxyForHelp": "Select which components should use the proxy for outbound requests.",
-		"scim": "SCIM",
-		"scimHelp": "Use proxy for SCIM directory sync requests.",
-		"scimEnterpriseOnly": "SCIM proxy support is available in Bifrost Enterprise.",
-		"inference": "Inference",
-		"inferenceHelp": "Use proxy for LLM inference requests to model providers.",
-		"comingSoon": "Coming soon",
-		"api": "API",
-		"apiHelp": "Use proxy for external API calls and webhooks.",
-		"noPermission": "You don't have permission to update settings",
-		"toastSaved": "Proxy configuration updated successfully.",
-		"connectionTimeoutHelp": "Timeout for establishing proxy connections. 0 means no timeout. Default is 60 seconds.",
-		"caCertificateHelp": "PEM-encoded CA certificate to trust for TLS connections through SSL-intercepting proxies.",
-		"skipTlsHelp": "Disable TLS certificate verification for HTTPS proxies. Not recommended for production.",
-		"unsupportedType": "{{type}} proxy is not yet supported. Please use HTTP proxy."
 	},
 	"userAgent": {
 		"title": "User Agent Mappings",
@@ -1069,7 +1025,14 @@
 		"makeDefault": "Make default",
 		"removeModel": "Remove model {{n}}",
 		"aboutField": "About {{label}}",
-		"efforts": { "none": "None", "minimal": "Minimal", "low": "Low", "medium": "Medium", "high": "High", "xhigh": "Extra high" },
+		"efforts": {
+			"none": "None",
+			"minimal": "Minimal",
+			"low": "Low",
+			"medium": "Medium",
+			"high": "High",
+			"xhigh": "Extra high"
+		},
 		"statuses": {
 			"idle": "Idle",
 			"pending": "Pending",
@@ -1181,5 +1144,8 @@
 			"retentionWhole": "Must be a whole number of days",
 			"retentionMin": "Must be 0 or more days (0 keeps the default)"
 		}
+	},
+	"enterprise": {
+		"adaptiveRoutingTitle": "Unlock adaptive routing for better performance"
 	}
 }

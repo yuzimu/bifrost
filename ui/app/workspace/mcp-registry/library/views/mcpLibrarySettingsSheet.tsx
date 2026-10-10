@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getErrorMessage, useForceSyncMCPLibraryMutation, useGetCoreConfigQuery, useUpdateCoreConfigMutation } from "@/lib/store";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -11,26 +10,21 @@ import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 import { toIntervalHours } from "./mcpLibrarySettingsSheet.utils";
-
 type MCPLibrarySettingsFormData = {
 	mcp_library_url: string;
 	mcp_library_sync_interval_hours: number;
 };
-
 interface MCPLibrarySettingsSheetProps {
 	open: boolean;
 	onClose: () => void;
 }
-
 export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsSheetProps) {
 	const { t } = useTranslation("mcp");
 	const { t: tc } = useTranslation("common");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig, isLoading: isConfigLoading, isError: isConfigError } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.framework_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [forceSyncMCPLibrary, { isLoading: isForceSyncing }] = useForceSyncMCPLibraryMutation();
-
 	const mcpLibrarySettingsSchema = useMemo(
 		() =>
 			z.object({
@@ -38,10 +32,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 				mcp_library_url: z
 					.string()
 					.trim()
-					.refine(
-						(value) => value === "" || value.startsWith("http://") || value.startsWith("https://"),
-						t("library.settings.urlInvalid"),
-					),
+					.refine((value) => value === "" || value.startsWith("http://") || value.startsWith("https://"), t("library.settings.urlInvalid")),
 				// 0 disables background syncing entirely. Force Sync Now still works.
 				// Anything else has to be at least an hour: transports/config.schema.json
 				// declares mcp_library_sync_interval as `anyOf: [{const: 0}, {minimum:
@@ -53,7 +44,6 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 			}),
 		[t],
 	);
-
 	const {
 		register,
 		trigger,
@@ -69,9 +59,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 		},
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	const formValues = watch();
-
 	useEffect(() => {
 		if (!open || !config) return;
 		reset({
@@ -79,14 +67,12 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 			mcp_library_sync_interval_hours: toIntervalHours(config.mcp_library_sync_interval),
 		});
 	}, [config, open, reset]);
-
 	const hasChanges = useMemo(() => {
 		if (!config || !isDirty) return false;
 		const serverUrl = config.mcp_library_url || "";
 		const serverInterval = toIntervalHours(config.mcp_library_sync_interval);
 		return formValues.mcp_library_url !== serverUrl || formValues.mcp_library_sync_interval_hours !== serverInterval;
 	}, [config, formValues, isDirty]);
-
 	const onSubmit = async (data: MCPLibrarySettingsFormData) => {
 		if (!bifrostConfig) {
 			toast.error(t("library.settings.loadFailed"));
@@ -107,7 +93,6 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const handleForceSync = async () => {
 		try {
 			await forceSyncMCPLibrary().unwrap();
@@ -116,7 +101,6 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	return (
 		<Sheet open={open} onOpenChange={(sheetOpen) => !sheetOpen && onClose()}>
 			<SheetContent className="flex w-full flex-col overflow-x-hidden px-0">
@@ -148,9 +132,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 						<div className="space-y-2 rounded-sm border p-4">
 							<div className="space-y-0.5">
 								<Label htmlFor="mcp-library-sync-interval">{t("library.settings.intervalLabel")}</Label>
-								<p className="text-muted-foreground text-sm">
-									{t("library.settings.intervalHelp")}
-								</p>
+								<p className="text-muted-foreground text-sm">{t("library.settings.intervalHelp")}</p>
 							</div>
 							<Input
 								id="mcp-library-sync-interval"
@@ -176,7 +158,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 								variant="outline"
 								type="button"
 								onClick={handleForceSync}
-								disabled={isForceSyncing || !hasSettingsUpdateAccess}
+								disabled={isForceSyncing}
 								data-testid="mcp-library-force-sync-btn"
 							>
 								{isForceSyncing ? t("library.settings.syncing") : t("library.settings.forceSync")}
@@ -186,7 +168,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 							</Button>
 							<Button
 								type="submit"
-								disabled={!hasChanges || isLoading || isConfigLoading || isConfigError || !hasSettingsUpdateAccess}
+								disabled={!hasChanges || isLoading || isConfigLoading || isConfigError}
 								data-testid="mcp-library-settings-save-btn"
 							>
 								{isLoading ? t("common.saving") : t("common.saveChanges")}

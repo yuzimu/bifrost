@@ -876,14 +876,6 @@ export const defaultFormState: FormState = {
  */
 export const PRESERVED_PATCH_KEYS: readonly string[] = ["peak_hours"];
 
-/**
- * `__proto__` and friends are never valid pricing field names, and assigning
- * them onto a plain object walks into `Object.prototype`'s accessor instead of
- * creating an own property: the value is silently dropped and the object's
- * prototype is mutated. JSON.parse does create `__proto__` as an own property,
- * so a patch fetched from the API can carry one. Refuse to carry these keys at
- * every point where an arbitrary patch key is copied.
- */
 export function isUnsafePatchKey(key: string): boolean {
 	return key === "__proto__" || key === "constructor" || key === "prototype";
 }

@@ -1,5 +1,4 @@
 "use client";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CodeEditor, type CompletionItem } from "@/components/ui/codeEditor";
@@ -24,7 +23,6 @@ import { FilePreviewPane } from "../components/filePreview";
 import { composeFrontmatter, type SkillFormReturn } from "../components/helpers";
 import { MetadataTableEditor } from "../components/metadataEditorTableView";
 import { FormSection, SkillMarkdown } from "../components/shared";
-
 export function SkillEditView({
 	form,
 	skillName,
@@ -58,15 +56,12 @@ export function SkillEditView({
 	const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
 	const [selectedDetailsPane, setSelectedDetailsPane] = useState<"details" | null>("details");
 	const selectedFile = selectedFileIndex != null ? (form.files[selectedFileIndex] ?? null) : null;
-
 	// The version is asked for in a popover anchored to the Save button (not in the form).
 	const [versionPopover, setVersionPopover] = useState<{
 		serve: boolean;
 	} | null>(null);
-
 	// Lets the file editor commit any buffered ("Save file") content before a version save.
 	const flushFileEditRef = useRef<(() => void) | null>(null);
-
 	// Which pane each validatable field lives in, so a failed save can surface
 	// the error instead of silently blocking from another tab.
 	const focusFieldError = (field: string): boolean => {
@@ -87,7 +82,6 @@ export function SkillEditView({
 				return false;
 		}
 	};
-
 	const openVersionPopover = (serve: boolean) => {
 		flushFileEditRef.current?.();
 		// Validate up front so an error hiding in another pane navigates into view
@@ -122,7 +116,6 @@ export function SkillEditView({
 		}
 		setVersionPopover({ serve });
 	};
-
 	// Closing the popover restores a valid version so a half-typed value can't
 	// make the next save attempt fail validation before the popover reopens.
 	const closeVersionPopover = () => {
@@ -137,7 +130,6 @@ export function SkillEditView({
 		successMessage: t("skillsRepo.copiedRawSkillMd"),
 		errorMessage: t("skillsRepo.copyRawSkillMdFailed"),
 	});
-
 	const previewContent =
 		composeFrontmatter({
 			name: form.name,
@@ -150,9 +142,7 @@ export function SkillEditView({
 		}) +
 		"\n\n" +
 		form.skillMdBody;
-
 	const filePathCompletions = buildFilePathCompletions(form.files, t);
-
 	const descriptionLength = form.description.length;
 	let descriptionLimitColor = "text-muted-foreground";
 	if (descriptionLength > 1024) {
@@ -160,7 +150,6 @@ export function SkillEditView({
 	} else if (descriptionLength > 900) {
 		descriptionLimitColor = "text-yellow-600 dark:text-yellow-500";
 	}
-
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden">
 			<div className="shrink-0 overflow-y-auto px-4">
@@ -298,7 +287,7 @@ export function SkillEditView({
 									onAddFile={form.addFile}
 									onRemoveFile={form.removeFile}
 									onUpdateFile={form.updateFile}
-									readOnly={false}
+									readOnly
 									selectedIndex={selectedDetailsPane == null ? selectedFileIndex : null}
 									onSelectFile={(index) => {
 										setSelectedDetailsPane(null);
@@ -360,7 +349,11 @@ export function SkillEditView({
 							/>
 						) : (
 							<div className="flex h-full min-h-0 flex-col overflow-hidden rounded-sm border">
-								<div className="flex h-9 shrink-0 items-center gap-1 border-b px-2" role="tablist" aria-label={t("skillsRepo.bodyEditorTabsAria")}>
+								<div
+									className="flex h-9 shrink-0 items-center gap-1 border-b px-2"
+									role="tablist"
+									aria-label={t("skillsRepo.bodyEditorTabsAria")}
+								>
 									<button
 										type="button"
 										className={cn(
@@ -523,7 +516,7 @@ export function SkillEditView({
 									isCreate={isCreate}
 									previousVersion={previousVersion}
 									isSaving={isSaving}
-									serve={false}
+									serve
 									onClose={closeVersionPopover}
 									onSave={(serve) => {
 										setVersionPopover(null);
@@ -566,10 +559,7 @@ export function SkillEditView({
 
 			{/* Preview SKILL.md Dialog */}
 			<Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-				<DialogContent
-					showCloseButton={false}
-					className="h-[90vh] w-full border-0 p-0 sm:w-[85vw] sm:max-w-[85vw] md:w-[75vw] md:max-w-[75vw]"
-				>
+				<DialogContent showCloseButton className="h-[90vh] w-full border-0 p-0 sm:w-[85vw] sm:max-w-[85vw] md:w-[75vw] md:max-w-[75vw]">
 					<DialogHeader className="sr-only">
 						<DialogTitle>{t("skillsRepo.skillMdPreview")}</DialogTitle>
 					</DialogHeader>
@@ -599,22 +589,26 @@ export function SkillEditView({
 		</div>
 	);
 }
-
 /** Build autocomplete items for referencing skill files with @[name](path) syntax. */
-function buildFilePathCompletions(files: SkillFileEntry[], t: (key: string, options?: { path: string }) => string): CompletionItem[] {
+function buildFilePathCompletions(
+	files: SkillFileEntry[],
+	t: (
+		key: string,
+		options?: {
+			path: string;
+		},
+	) => string,
+): CompletionItem[] {
 	const completions: CompletionItem[] = [];
 	const folderPaths = new Set<string>();
-
 	for (const file of files) {
 		if (!file.path) continue;
 		const pathParts = file.path.split("/").filter(Boolean);
 		const fileName = pathParts.at(-1) ?? file.path;
 		const rootRelativePath = `./${file.path}`;
-
 		for (let i = 0; i < pathParts.length - 1; i++) {
 			folderPaths.add(pathParts.slice(0, i + 1).join("/"));
 		}
-
 		completions.push({
 			label: fileName,
 			insertText: `@[${fileName}](${rootRelativePath})`,
@@ -623,7 +617,6 @@ function buildFilePathCompletions(files: SkillFileEntry[], t: (key: string, opti
 			documentation: t("skillsRepo.fullPath", { path: rootRelativePath }),
 		});
 	}
-
 	for (const folderPath of folderPaths) {
 		const folderName = folderPath.split("/").filter(Boolean).pop() ?? folderPath;
 		const rootRelativePath = `./${folderPath}/`;
@@ -635,10 +628,8 @@ function buildFilePathCompletions(files: SkillFileEntry[], t: (key: string, opti
 			documentation: t("skillsRepo.fullPath", { path: rootRelativePath }),
 		});
 	}
-
 	return completions.sort((a, b) => a.description?.localeCompare(b.description ?? "") ?? 0);
 }
-
 function DetailsEditorPane({
 	form,
 	descriptionLength,
@@ -762,7 +753,6 @@ function DetailsEditorPane({
 		</div>
 	);
 }
-
 /** The version input + confirm/cancel inside the version dialog. */
 function VersionPopoverBody({
 	form,
@@ -786,19 +776,15 @@ function VersionPopoverBody({
 	const bumpError = !isCreate && previousVersion ? validateVersionBump(form.version, previousVersion) : null;
 	const versionError = form.errors.version || bumpError;
 	const canSave = !!form.version.trim() && !versionError && !isSaving;
-
 	const submit = () => {
 		if (!canSave) return;
 		onSave(serve);
 	};
-
 	return (
 		<>
 			<div className="mb-3 flex flex-col gap-0.5">
 				<p className="text-sm font-medium">{isCreate ? t("skillsRepo.createSkillLower") : t("skillsRepo.saveNewVersion")}</p>
-				<p className="text-muted-foreground text-xs">
-					{isCreate ? t("skillsRepo.setInitialVersion") : t("skillsRepo.chooseNewVersion")}
-				</p>
+				<p className="text-muted-foreground text-xs">{isCreate ? t("skillsRepo.setInitialVersion") : t("skillsRepo.chooseNewVersion")}</p>
 			</div>
 			<div className="flex flex-col gap-1.5">
 				<Label className="text-muted-foreground text-xs">{t("skillsRepo.version")}</Label>

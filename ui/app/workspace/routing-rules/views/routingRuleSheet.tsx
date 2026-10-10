@@ -2,7 +2,6 @@
  * Routing Rule Dialog (Sheet)
  * Create/Edit form for routing rules
  */
-
 import { CustomerSelector } from "@/components/entitySelectors/customerSelector";
 import { TeamSelector } from "@/components/entitySelectors/teamSelector";
 import { VirtualKeySelector } from "@/components/entitySelectors/virtualKeySelector";
@@ -18,7 +17,6 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { resolveProviderIconKey } from "@/lib/constants/icons";
 import { getProviderLabel } from "@/lib/constants/logs";
-import { getUserPicker } from "@/lib/registries/userPicker";
 import { getErrorMessage } from "@/lib/store";
 import { useGetAllKeysQuery, useGetProvidersQuery } from "@/lib/store/apis/providersApi";
 import { useCreateRoutingRuleMutation, useGetRoutingRulesQuery, useUpdateRoutingRuleMutation } from "@/lib/store/apis/routingRulesApi";
@@ -43,30 +41,23 @@ import {
 } from "@/lib/utils/routingRules";
 import { validateRateLimitAndBudgetRules, validateRoutingRules } from "@/lib/utils/celConverterRouting";
 import { isValidRuleGroupType, normalizeRoutingRuleGroupQuery } from "@/lib/utils/routingRuleGroupQuery";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Plus, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Trans, useTranslation } from "react-i18next";
 import { RuleGroupType } from "react-querybuilder";
 import { toast } from "sonner";
-// Side-effect import: registers the enterprise user picker (no-op in OSS builds).
-import "@enterprise/lib/registrations/userPicker";
-
 interface RoutingRuleDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	editingRule?: RoutingRule | null;
 	onSuccess?: () => void;
 }
-
 const defaultQuery: RuleGroupType = {
 	combinator: "and",
 	rules: [],
 };
-
 type ConditionMode = "builder" | "cel";
-
 /**
  * Decides which conditions editor a rule opens in. Rules authored outside the visual
  * builder (e.g. via the API) have a CEL expression but no usable `query`; those open in
@@ -82,7 +73,6 @@ function initialConditionMode(rule?: RoutingRule | null): ConditionMode {
 	}
 	return rule.cel_expression?.trim() ? "cel" : "builder";
 }
-
 // Lazy-load CEL builder (heavy dependency tree).
 const CELRuleBuilderLazy = lazy(() =>
 	import("@/app/workspace/routing-rules/components/celBuilder/celRuleBuilder").then((mod) => ({
@@ -97,21 +87,19 @@ const CELRuleBuilder = (props: React.ComponentProps<typeof CELRuleBuilderLazy>) 
 		</Suspense>
 	);
 };
-
+/** 展示 OSS 规则作用域，历史未知值仅显示通用标签，不解析身份信息。 */
 function scopeNoun(scope: string, t: (key: string) => string) {
 	if (scope === "team") return t("routing.team");
 	if (scope === "customer") return t("routing.customer");
-	if (scope === "user") return t("routing.user");
-	return t("routing.scopeVirtualKey");
+	if (scope === "virtual_key") return t("routing.scopeVirtualKey");
+	return t("routing.scope");
 }
-
 const SCOPE_OPTION_KEYS: Record<string, string> = {
 	global: "routing.scopeGlobal",
 	team: "routing.scopeTeam",
 	customer: "routing.scopeCustomer",
 	virtual_key: "routing.scopeVirtualKey",
 };
-
 export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }: RoutingRuleDialogProps) {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
@@ -121,7 +109,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 	const { data: allKeysData = [] } = useGetAllKeysQuery();
 	const [createRoutingRule, { isLoading: isCreating }] = useCreateRoutingRuleMutation();
 	const [updateRoutingRule, { isLoading: isUpdating }] = useUpdateRoutingRuleMutation();
-
 	// State for targets and query (managed outside react-hook-form for complex nested structures)
 	const [targets, setTargets] = useState<RoutingTargetFormData[]>([{ ...DEFAULT_ROUTING_TARGET }]);
 	const [query, setQuery] = useState<RuleGroupType>(defaultQuery);
@@ -129,7 +116,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 	const [builderKey, setBuilderKey] = useState(0);
 	// Server-side CEL compile error, surfaced inline under the CEL editor instead of a toast.
 	const [celError, setCelError] = useState<string | null>(null);
-
 	const {
 		register,
 		trigger,
@@ -142,29 +128,20 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		defaultValues: DEFAULT_ROUTING_RULE_FORM_DATA,
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	// The TTFT input text as loaded from the rule; lets submit tell "untouched" from "edited".
 	const loadedTTFTInput = useRef("");
 	const [ttftEdited, setTtftEdited] = useState(false); // set once the user types in the field
-
 	const isEditing = !!editingRule;
 	const isLoading = isCreating || isUpdating;
-	const canCreate = useRbac(RbacResource.RoutingRules, RbacOperation.Create);
-	const canUpdate = useRbac(RbacResource.RoutingRules, RbacOperation.Update);
-	const hasRequiredAccess = isEditing ? canUpdate : canCreate;
+	const hasRequiredAccess = isEditing ? true : true;
 	const enabled = watch("enabled");
 	const chainRule = watch("chain_rule");
 	const scope = watch("scope");
 	const scopeId = watch("scope_id");
-
-	// Registered by the downstream build at module load; undefined in builds
-	// without a user directory, which hides the "User" scope option.
-	const UserPicker = getUserPicker();
 	const fallbacks = watch("fallbacks");
 	const ttftTimeoutInput = watch("ttft_timeout_ms");
 	const ttftDisplay = summarizeTTFTDisplay(editingRule?.targets, ttftTimeoutInput, ttftEdited);
 	const hasCompleteFallback = (fallbacks || []).some((fb) => (fb.provider ?? "").trim().length > 0);
-
 	// The selector lists the configured providers on its own. These are the extras: a
 	// provider the current targets, another rule's targets, or a fallback still names after
 	// it was deleted, so an existing rule keeps rendering what it actually points at.
@@ -182,17 +159,19 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		() =>
 			Array.from(referencedNames)
 				.filter((name) => !configuredNames.has(name))
-				.map((name) => ({ value: name, label: getProviderLabel(name), iconKey: resolveProviderIconKey(name) })),
+				.map((name) => ({
+					value: name,
+					label: getProviderLabel(name),
+					iconKey: resolveProviderIconKey(name),
+				})),
 		[referencedNames, configuredNames],
 	);
-
 	// The CEL builder still needs the flat union: it offers providers as literal values in an
 	// expression, where one a rule already names has to stay offerable.
 	const availableProviders = useMemo(
 		() => Array.from(new Set<string>([...configuredNames, ...referencedNames])),
 		[configuredNames, referencedNames],
 	);
-
 	// Initialize form data when editing rule changes
 	useEffect(() => {
 		if (editingRule) {
@@ -239,7 +218,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 			setCelError(null);
 		}
 	}, [editingRule, open, setValue, reset]);
-
 	const handleQueryChange = useCallback(
 		(expression: string, newQuery: RuleGroupType) => {
 			setValue("cel_expression", expression);
@@ -249,12 +227,10 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		},
 		[setValue],
 	);
-
 	const handleModeChange = useCallback((mode: ConditionMode) => {
 		setConditionMode(mode);
 		setCelError(null);
 	}, []);
-
 	const addTarget = () => {
 		const remaining = 1 - targets.reduce((sum, t) => sum + (t.weight || 0), 0);
 		setTargets((prev) => [
@@ -265,40 +241,32 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 			},
 		]);
 	};
-
 	const removeTarget = (index: number) => {
 		setTargets((prev) => prev.filter((_, i) => i !== index));
 	};
-
 	const updateTarget = (index: number, field: keyof RoutingTargetFormData, value: string | number) => {
 		setTargets((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
 	};
-
 	const updateFallback = (index: number, changes: Partial<RoutingFallbackFormData>) => {
 		setValue(
 			"fallbacks",
 			(fallbacks || []).map((fb, i) => (i === index ? { ...fb, ...changes } : fb)),
 		);
 	};
-
 	const removeFallback = (index: number) => {
 		setValue(
 			"fallbacks",
 			(fallbacks || []).filter((_, i) => i !== index),
 		);
 	};
-
 	const totalWeight = targets.reduce((sum, t) => sum + (t.weight || 0), 0);
-
 	const onSubmit = (data: RoutingRuleFormData) => {
 		setCelError(null);
-
 		// Validate scope_id is required when scope is not global
 		if (data.scope !== "global" && !data.scope_id?.trim()) {
 			toast.error(t("routing.scopeRequired", { scope: scopeNoun(data.scope, t) }));
 			return;
 		}
-
 		// Validate targets
 		if (targets.length === 0) {
 			toast.error(t("routing.atLeastOneTarget"));
@@ -314,7 +282,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 			toast.error(t("routing.weightsMustSum", { total: totalWeight.toFixed(4) }));
 			return;
 		}
-
 		// Builder-only validation: these inspect the visual query, which does not exist in
 		// raw-CEL mode. In CEL mode the expression is validated server-side on save instead.
 		if (conditionMode === "builder") {
@@ -324,7 +291,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 				toast.error(t("routing.invalidRegex", { errors: regexErrors.join("\n") }));
 				return;
 			}
-
 			// Validate rate limit and budget rules
 			const rateLimitErrors = validateRateLimitAndBudgetRules(query, t);
 			if (rateLimitErrors.length > 0) {
@@ -332,10 +298,8 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 				return;
 			}
 		}
-
 		// Filter out incomplete fallbacks (empty provider)
 		const validFallbacks = (data.fallbacks || []).filter((fb) => (fb.provider ?? "").trim().length > 0).map(denormalizeFallback);
-
 		const payload = {
 			name: data.name,
 			description: data.description,
@@ -357,7 +321,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 			chain_rule: data.chain_rule,
 			query: query,
 		};
-
 		const submitPromise =
 			isEditing && editingRule
 				? updateRoutingRule({
@@ -365,7 +328,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 						data: payload,
 					}).unwrap()
 				: createRoutingRule(payload).unwrap();
-
 		submitPromise
 			.then(() => {
 				toast.success(isEditing ? t("routing.updatedSuccess") : t("routing.createdSuccess"));
@@ -389,7 +351,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 				toast.error(message);
 			});
 	};
-
 	const handleCancel = () => {
 		reset();
 		setTargets([{ ...DEFAULT_ROUTING_TARGET }]);
@@ -399,7 +360,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		setCelError(null);
 		onOpenChange(false);
 	};
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent className="flex w-full min-w-1/2 flex-col gap-4 overflow-x-hidden p-0 pt-4">
@@ -476,7 +436,6 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 												{t(SCOPE_OPTION_KEYS[scopeOption.value] ?? scopeOption.label)}
 											</SelectItem>
 										))}
-										{(UserPicker || scope === "user") && <SelectItem value="user">{t("routing.user")}</SelectItem>}
 									</SelectContent>
 								</Select>
 							</div>
@@ -508,26 +467,12 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 									{scopeNoun(scope, t)} <span className="text-red-500">*</span>
 								</Label>
 								{/* A rule stores only its scope_id, so there is no name to seed
-								    these with — each selector resolves its own selection. */}
+            these with — each selector resolves its own selection. */}
 								{scope === "team" && <TeamSelector value={scopeId || ""} onChange={(value) => setValue("scope_id", value)} />}
 								{scope === "customer" && <CustomerSelector value={scopeId || ""} onChange={(value) => setValue("scope_id", value)} />}
 								{scope === "virtual_key" && <VirtualKeySelector value={scopeId || ""} onChange={(value) => setValue("scope_id", value)} />}
-								{scope === "user" &&
-									(UserPicker ? (
-										<UserPicker value={scopeId || ""} onChange={(value) => setValue("scope_id", value)} />
-									) : (
-										// No user directory in this build: keep a plain input so
-										// existing user-scoped rules remain editable.
-										<Input
-											id="scope_id"
-											data-testid="routing-rule-scope-user-input"
-											placeholder={t("routing.governanceUserId")}
-											value={scopeId || ""}
-											onChange={(e) => setValue("scope_id", e.target.value)}
-										/>
-									))}
 								{/* Teams, customers and virtual keys are all searched lazily inside their
-								    selectors, each of which surfaces its own empty state. */}
+            selectors, each of which surfaces its own empty state. */}
 								{errors.scope_id && <p className="text-destructive text-sm">{errors.scope_id.message}</p>}
 							</div>
 						)}
@@ -687,16 +632,18 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		</Sheet>
 	);
 }
-
 interface ProviderKeySelectProps {
 	idPrefix: string;
 	clearLabel: string;
 	provider?: string;
 	keyId?: string;
-	allKeys: Array<{ key_id: string; name: string; provider: string }>;
+	allKeys: Array<{
+		key_id: string;
+		name: string;
+		provider: string;
+	}>;
 	onChange: (keyId: string) => void;
 }
-
 /** Renders nothing until a provider is chosen, since keys are scoped to one. */
 function ProviderKeySelect({ idPrefix, clearLabel, provider, keyId, allKeys, onChange }: ProviderKeySelectProps) {
 	const { t } = useTranslation("models");
@@ -704,7 +651,6 @@ function ProviderKeySelect({ idPrefix, clearLabel, provider, keyId, allKeys, onC
 	if (!provider || (availableKeys.length === 0 && !keyId)) {
 		return null;
 	}
-
 	return (
 		<div className="space-y-1.5">
 			<Label id={`${idPrefix}-apikey-label`} className="text-xs">
@@ -750,20 +696,21 @@ function ProviderKeySelect({ idPrefix, clearLabel, provider, keyId, allKeys, onC
 		</div>
 	);
 }
-
 interface FallbackRowProps {
 	fallback: RoutingFallbackFormData;
 	index: number;
 	referencedProviderOptions: ProviderSelectorOption[];
-	allKeys: Array<{ key_id: string; name: string; provider: string }>;
+	allKeys: Array<{
+		key_id: string;
+		name: string;
+		provider: string;
+	}>;
 	onUpdate: (index: number, changes: Partial<RoutingFallbackFormData>) => void;
 	onRemove: (index: number) => void;
 }
-
 function FallbackRow({ fallback, index, referencedProviderOptions, allKeys, onUpdate, onRemove }: FallbackRowProps) {
 	const { t } = useTranslation("models");
 	const provider = fallback.provider || "";
-
 	return (
 		<div className="space-y-2 rounded-lg border p-3" data-testid={`routing-fallback-${index}`}>
 			<div className="flex items-center gap-2">
@@ -815,17 +762,19 @@ function FallbackRow({ fallback, index, referencedProviderOptions, allKeys, onUp
 		</div>
 	);
 }
-
 interface TargetRowProps {
 	target: RoutingTargetFormData;
 	index: number;
 	referencedProviderOptions: ProviderSelectorOption[];
-	allKeys: Array<{ key_id: string; name: string; provider: string }>;
+	allKeys: Array<{
+		key_id: string;
+		name: string;
+		provider: string;
+	}>;
 	showRemove: boolean;
 	onUpdate: (index: number, field: keyof RoutingTargetFormData, value: string | number) => void;
 	onRemove: (index: number) => void;
 }
-
 function TargetRow({ target, index, referencedProviderOptions, allKeys, showRemove, onUpdate, onRemove }: TargetRowProps) {
 	const { t } = useTranslation("models");
 	return (

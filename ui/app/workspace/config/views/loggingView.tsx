@@ -9,46 +9,41 @@ import { getErrorMessage, useGetCoreConfigQuery, useUpdateCoreConfigMutation } f
 import { RequestTypeLabels, RequestTypes } from "@/lib/constants/logs";
 import { CoreConfig, DefaultCoreConfig } from "@/lib/types/config";
 import { parseArrayFromText } from "@/lib/utils/array";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 const requestTypeLabel = (requestType: string): string =>
 	Object.hasOwn(RequestTypeLabels, requestType) ? RequestTypeLabels[requestType as keyof typeof RequestTypeLabels] : requestType;
-
 // Every known request type, plus any stored value the UI does not know about yet
 // (for example a type set from config.json on a newer server) so it stays selectable.
 const hiddenRequestTypeOptions = (selected: string[]) => {
 	const known = new Set<string>(RequestTypes);
 	const extra = selected.filter((requestType) => !known.has(requestType));
-	return [...RequestTypes, ...extra].map((requestType) => ({ value: requestType, label: requestTypeLabel(requestType) }));
+	return [...RequestTypes, ...extra].map((requestType) => ({
+		value: requestType,
+		label: requestTypeLabel(requestType),
+	}));
 };
-
 // Order-independent equality; the multi-select emits values in selection order.
 const sameRequestTypes = (a: string[] | undefined, b: string[] | undefined): boolean => {
 	const left = [...(a || [])].sort();
 	const right = [...(b || [])].sort();
 	return left.length === right.length && left.every((value, index) => value === right[index]);
 };
-
 export default function LoggingView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig, isLoading: isConfigLoading, isError: isConfigError } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.client_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [localConfig, setLocalConfig] = useState<CoreConfig>(DefaultCoreConfig);
 	const [needsRestart, setNeedsRestart] = useState<boolean>(false);
 	const [loggingHeadersText, setLoggingHeadersText] = useState<string>("");
-
 	useEffect(() => {
 		if (config) {
 			setLocalConfig(config);
 			setLoggingHeadersText(config.logging_headers?.join(", ") || "");
 		}
 	}, [config]);
-
 	const hasChanges = useMemo(() => {
 		if (!config) return false;
 		return (
@@ -63,7 +58,6 @@ export default function LoggingView() {
 			!sameRequestTypes(localConfig.hidden_request_types, config.hidden_request_types)
 		);
 	}, [config, localConfig]);
-
 	const handleConfigChange = useCallback((field: keyof CoreConfig, value: boolean | number | string[]) => {
 		setLocalConfig((prev) => ({ ...prev, [field]: value }));
 		// Only enable_logging requires a restart (logging plugin is registered/skipped at startup).
@@ -72,24 +66,20 @@ export default function LoggingView() {
 			setNeedsRestart(true);
 		}
 	}, []);
-
 	const handleLoggingHeadersChange = useCallback((value: string) => {
 		setLoggingHeadersText(value);
 		setLocalConfig((prev) => ({ ...prev, logging_headers: parseArrayFromText(value) }));
 	}, []);
-
 	const handleSave = useCallback(async () => {
 		if (!bifrostConfig) {
 			toast.error(t("configNotLoaded"));
 			return;
 		}
-
 		// Validate log retention days
 		if (localConfig.log_retention_days < 1) {
 			toast.error(t("logging.toastRetentionMin"));
 			return;
 		}
-
 		try {
 			await updateCoreConfig({ ...bifrostConfig, client_config: localConfig }).unwrap();
 			toast.success(t("logging.toastSaved"));
@@ -97,7 +87,6 @@ export default function LoggingView() {
 			toast.error(getErrorMessage(error));
 		}
 	}, [bifrostConfig, localConfig, t, updateCoreConfig]);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-6 md:px-0">
 			<PageTitle title={t("logging.title")}>{t("logging.description")}</PageTitle>
@@ -111,9 +100,7 @@ export default function LoggingView() {
 							</label>
 							<p className="text-muted-foreground text-sm">
 								{t("logging.enableLogsHelp")}
-								{!bifrostConfig?.is_logs_connected && (
-									<span className="text-destructive font-medium"> {t("logging.requiresStore")}</span>
-								)}
+								{!bifrostConfig?.is_logs_connected && <span className="text-destructive font-medium"> {t("logging.requiresStore")}</span>}
 							</p>
 						</div>
 						<Switch
@@ -137,8 +124,7 @@ export default function LoggingView() {
 							{t("logging.hiddenRequestTypes")}
 						</Label>
 						<p className="text-muted-foreground text-sm">
-							{t("logging.hiddenRequestTypesHelp")}{" "}
-							<code className="text-xs">client.hidden_request_types</code> {t("logging.inConfigJson")}
+							{t("logging.hiddenRequestTypesHelp")} <code className="text-xs">client.hidden_request_types</code> {t("logging.inConfigJson")}
 						</p>
 					</div>
 					{isConfigError ? (
@@ -155,7 +141,7 @@ export default function LoggingView() {
 							onValueChange={(values) => handleConfigChange("hidden_request_types", values)}
 							placeholder={isConfigLoading ? t("logging.loadingConfiguration") : t("logging.allRequestTypesVisible")}
 							emptyIndicator={t("logging.noRequestTypes")}
-							disabled={!bifrostConfig || !hasSettingsUpdateAccess}
+							disabled={!bifrostConfig}
 							maxCount={6}
 							className="border-input text-foreground hover:bg-accent hover:text-accent-foreground min-h-9 rounded-sm bg-transparent font-normal"
 						/>
@@ -306,14 +292,13 @@ export default function LoggingView() {
 			</div>
 
 			<div className="bg-card sticky bottom-0 flex justify-end py-2">
-				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess}>
+				<Button onClick={handleSave} disabled={!hasChanges || isLoading}>
 					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>
 		</div>
 	);
 }
-
 const RestartWarning = () => {
 	const { t } = useTranslation("config");
 	return <div className="text-muted-foreground mt-2 pl-4 text-xs font-semibold">{t("restartWarning")}</div>;

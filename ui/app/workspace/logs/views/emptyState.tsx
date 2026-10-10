@@ -8,10 +8,8 @@ import { getExampleBaseUrl } from "@/lib/utils/port";
 import { AlertTriangle, Copy } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 type Provider = "openai" | "anthropic" | "genai" | "litellm" | "langchain";
 type Language = "python" | "typescript";
-
 type Examples = {
 	curl: string;
 	sdk: {
@@ -20,7 +18,6 @@ type Examples = {
 		};
 	};
 };
-
 // Common editor options to reduce duplication
 const EditorOptions = {
 	scrollBeyondLastLine: false,
@@ -31,7 +28,6 @@ const EditorOptions = {
 	lineNumbersMinChars: 0,
 	glyphMargin: false,
 } as const;
-
 interface CodeBlockProps {
 	code: string;
 	language: string;
@@ -39,11 +35,9 @@ interface CodeBlockProps {
 	showLanguageSelect?: boolean;
 	readonly?: boolean;
 }
-
 function CodeBlock({ code, language, onLanguageChange, showLanguageSelect = false, readonly = true }: CodeBlockProps) {
 	const { t } = useTranslation("observability");
 	const { copy: copyToClipboard } = useCopyToClipboard();
-
 	return (
 		<div className="relative">
 			<div className="absolute top-4 right-4 z-10 flex items-center gap-2">
@@ -70,19 +64,15 @@ function CodeBlock({ code, language, onLanguageChange, showLanguageSelect = fals
 		</div>
 	);
 }
-
 interface EmptyStateProps {
 	error: string | null;
 }
-
 export function EmptyState({ error }: EmptyStateProps) {
 	const { t } = useTranslation("observability");
 	const [language, setLanguage] = useState<Language>("python");
-
 	// Generate examples dynamically using the port utility
 	const examples: Examples = useMemo(() => {
 		const baseUrl = getExampleBaseUrl();
-
 		return {
 			curl: `curl -X POST ${baseUrl}/v1/chat/completions \\
   -H "Content-Type: application/json" \\
@@ -239,9 +229,7 @@ const result = await chain.invoke({ input: "What is LangChain?" });`,
 			},
 		};
 	}, []);
-
 	const isUnexpectedError = error && error.includes(t("logs.empty.unexpectedError"));
-
 	return (
 		<div className="dark:bg-card flex w-full flex-col items-center justify-center space-y-8 bg-white">
 			{error && (
@@ -270,7 +258,7 @@ const result = await chain.invoke({ input: "What is LangChain?" });`,
 					</TabsList>
 
 					<TabsContent value="curl" className="px-4">
-						<CodeBlock code={examples.curl} language="bash" readonly={false} />
+						<CodeBlock code={examples.curl} language="bash" readonly />
 					</TabsContent>
 
 					<TabsContent value="openai" className="px-4">

@@ -1,34 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModelProvider } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { SettingsIcon, Trash } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ProviderConfigSheet from "../dialogs/providerConfigSheet";
 import ModelProviderKeysTableView from "./modelProviderKeysTableView";
-
 interface Props {
 	provider: ModelProvider;
 	onRequestDelete?: () => void;
 }
-
 export default function ModelProviderConfig({ provider, onRequestDelete }: Props) {
 	const { t } = useTranslation("models");
 	const [showConfigSheet, setShowConfigSheet] = useState(false);
-	const hasDeleteProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Delete);
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
-
 	const showApiKeys = useMemo(() => {
 		if (provider.custom_provider_config) {
 			return !(provider.custom_provider_config?.is_key_less ?? false);
 		}
 		return true;
 	}, [provider.name, provider.custom_provider_config?.is_key_less]);
-
 	const editConfigButton = (
 		<div className="flex min-w-0 flex-wrap items-center gap-2">
-			{onRequestDelete && hasDeleteProviderAccess && (
+			{onRequestDelete && (
 				<Button
 					variant="outline"
 					onClick={onRequestDelete}
@@ -45,17 +38,16 @@ export default function ModelProviderConfig({ provider, onRequestDelete }: Props
 						variant="outline"
 						className="size-9 px-0 @3xl/card-header:h-9 @3xl/card-header:w-auto @3xl/card-header:px-4"
 						onClick={() => setShowConfigSheet(true)}
-						aria-label={hasUpdateProviderAccess ? t("providers.editConfigAria") : t("providers.viewConfigAria")}
+						aria-label={t("providers.editConfigAria")}
 					>
 						<SettingsIcon className="h-4 w-4" />
-						<span className="hidden @3xl/card-header:inline">{hasUpdateProviderAccess ? t("providers.editConfig") : t("providers.viewConfig")}</span>
+						<span className="hidden @3xl/card-header:inline">{t("providers.editConfig")}</span>
 					</Button>
 				</TooltipTrigger>
-				<TooltipContent>{hasUpdateProviderAccess ? t("providers.editConfig") : t("providers.viewConfig")}</TooltipContent>
+				<TooltipContent>{t("providers.editConfig")}</TooltipContent>
 			</Tooltip>
 		</div>
 	);
-
 	return (
 		<div className="flex w-full flex-col gap-2">
 			<ProviderConfigSheet show={showConfigSheet} onCancel={() => setShowConfigSheet(false)} provider={provider} />

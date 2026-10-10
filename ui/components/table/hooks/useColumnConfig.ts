@@ -1,20 +1,21 @@
 import { ColumnPinningState, VisibilityState } from "@tanstack/react-table";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-
 export interface ColumnConfigEntry {
 	id: string;
 	visible: boolean;
 	pinned: "left" | "right" | false;
 }
-
 interface UseColumnConfigOptions {
 	/** All available column IDs in their default order */
 	columnIds: string[];
 	/** URL query param name for persistence */
 	paramName?: string;
 	/** Columns excluded from configuration (always visible, always in position) */
-	fixedColumns?: { left?: string[]; right?: string[] };
+	fixedColumns?: {
+		left?: string[];
+		right?: string[];
+	};
 	/**
 	 * localStorage key for persisting the config across sessions. When set, the
 	 * stored config seeds the table on load if the URL param is empty (URL wins).
@@ -23,7 +24,6 @@ interface UseColumnConfigOptions {
 	/** Configurable column IDs that should be hidden by default (when not in URL/localStorage). */
 	defaultHidden?: string[];
 }
-
 // URL format: col1,col2:h,col3:l,col4:r
 // no suffix = visible & unpinned, :h = hidden, :l = pinned left, :r = pinned right
 function serialize(entries: ColumnConfigEntry[]): string {
@@ -38,7 +38,6 @@ function serialize(entries: ColumnConfigEntry[]): string {
 		})
 		.join(",");
 }
-
 function deserialize(str: string): ColumnConfigEntry[] {
 	if (!str) return [];
 	return str.split(",").map((part) => {
@@ -51,7 +50,6 @@ function deserialize(str: string): ColumnConfigEntry[] {
 		};
 	});
 }
-
 function isSerializedConfigValid(str: string): boolean {
 	try {
 		return str.split(",").every((part) => {
@@ -62,18 +60,13 @@ function isSerializedConfigValid(str: string): boolean {
 		return false;
 	}
 }
-
 export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, storageKey, defaultHidden }: UseColumnConfigOptions) {
 	const [raw, setRaw] = useQueryState(paramName, parseAsString.withDefault(""));
-
 	const fixedLeft = fixedColumns?.left ?? [];
 	const fixedRight = fixedColumns?.right ?? [];
 	const fixedSet = useMemo(() => new Set([...fixedLeft, ...fixedRight]), [fixedLeft, fixedRight]);
-
 	const configurableIds = useMemo(() => columnIds.filter((id) => !fixedSet.has(id)), [columnIds, fixedSet]);
-
 	const defaultHiddenSet = useMemo(() => new Set(defaultHidden ?? []), [defaultHidden]);
-
 	// Seed from localStorage once on mount when the URL has no config (URL wins).
 	const hydratedRef = useRef(false);
 	useEffect(() => {
@@ -94,13 +87,11 @@ export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, s
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
-
 	// Merge URL config with available columns (handles added/removed columns)
 	const entries = useMemo(() => {
 		const parsed = deserialize(raw);
 		const result: ColumnConfigEntry[] = [];
 		const seen = new Set<string>();
-
 		// Columns present in URL config that still exist
 		for (const entry of parsed) {
 			if (configurableIds.includes(entry.id) && !seen.has(entry.id)) {
@@ -108,20 +99,16 @@ export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, s
 				seen.add(entry.id);
 			}
 		}
-
 		// New columns not yet in URL config
 		for (const id of configurableIds) {
 			if (!seen.has(id)) {
 				result.push({ id, visible: !defaultHiddenSet.has(id), pinned: false });
 			}
 		}
-
 		return result;
 	}, [raw, configurableIds, defaultHiddenSet]);
-
 	// TanStack table state
 	const columnOrder = useMemo(() => [...fixedLeft, ...entries.map((e) => e.id), ...fixedRight], [entries, fixedLeft, fixedRight]);
-
 	const columnVisibility = useMemo(() => {
 		const vis: VisibilityState = {};
 		for (const entry of entries) {
@@ -129,7 +116,6 @@ export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, s
 		}
 		return vis;
 	}, [entries]);
-
 	const columnPinning = useMemo(
 		(): ColumnPinningState => ({
 			left: [...fixedLeft, ...entries.filter((e) => e.pinned === "left").map((e) => e.id)],
@@ -137,11 +123,10 @@ export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, s
 		}),
 		[entries, fixedLeft, fixedRight],
 	);
-
 	const persist = useCallback(
 		(newEntries: ColumnConfigEntry[]) => {
 			const serialized = serialize(newEntries);
-			setRaw(serialized || null);
+			setRaw(serialized);
 			if (storageKey) {
 				try {
 					if (serialized) localStorage.setItem(storageKey, serialized);
@@ -153,28 +138,24 @@ export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, s
 		},
 		[setRaw, storageKey],
 	);
-
 	const toggleVisibility = useCallback(
 		(columnId: string) => {
 			persist(entries.map((e) => (e.id === columnId ? { ...e, visible: !e.visible } : e)));
 		},
 		[entries, persist],
 	);
-
 	const togglePin = useCallback(
 		(columnId: string, position: "left" | "right") => {
 			persist(entries.map((e) => (e.id === columnId ? { ...e, pinned: e.pinned === position ? false : position } : e)));
 		},
 		[entries, persist],
 	);
-
 	const reorder = useCallback(
 		(newEntries: ColumnConfigEntry[]) => {
 			persist(newEntries);
 		},
 		[persist],
 	);
-
 	const reset = useCallback(() => {
 		setRaw(null);
 		if (storageKey) {
@@ -185,7 +166,6 @@ export function useColumnConfig({ columnIds, paramName = "cols", fixedColumns, s
 			}
 		}
 	}, [setRaw, storageKey]);
-
 	return {
 		entries,
 		columnOrder,

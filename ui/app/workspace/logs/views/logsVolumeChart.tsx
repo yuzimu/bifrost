@@ -9,16 +9,13 @@ import { getUnixRangeForPeriod } from "@/lib/utils/timeRange";
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { Component, type ErrorInfo, type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
 const requestFormatter = new Intl.NumberFormat("en-US", {
 	notation: "compact",
 	maximumFractionDigits: 1,
 });
-
 function formatRequest(requests: number): string {
 	return requestFormatter.format(requests);
 }
-
 // Empty chart placeholder when data fails to render
 function EmptyChart() {
 	return (
@@ -29,37 +26,48 @@ function EmptyChart() {
 					{ name: " ", value: 0 },
 				]}
 			>
-				<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
-				<XAxis dataKey="name" tick={{ fontSize: 13, className: "fill-zinc-500", dy: 5 }} tickLine={false} axisLine={false} />
-				<YAxis tick={{ fontSize: 13, className: "fill-zinc-500" }} tickLine={false} axisLine={false} width={40} domain={[0, 1]} />
+				<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
+				<XAxis dataKey="name" tick={{ fontSize: 13, className: "fill-zinc-500", dy: 5 }} tickLine axisLine />
+				<YAxis tick={{ fontSize: 13, className: "fill-zinc-500" }} tickLine axisLine width={40} domain={[0, 1]} />
 			</BarChart>
 		</ResponsiveContainer>
 	);
 }
-
 // Error boundary to catch Recharts rendering errors
-class ChartErrorBoundary extends Component<{ children: ReactNode; resetKey?: string }, { hasError: boolean }> {
+class ChartErrorBoundary extends Component<
+	{
+		children: ReactNode;
+		resetKey?: string;
+	},
+	{
+		hasError: boolean;
+	}
+> {
 	constructor(props: { children: ReactNode; resetKey?: string }) {
 		super(props);
 		this.state = { hasError: false };
 	}
-
 	static getDerivedStateFromError(_: Error) {
 		return { hasError: true };
 	}
-
-	static getDerivedStateFromProps(props: { resetKey?: string }, state: { hasError: boolean; prevResetKey?: string }) {
+	static getDerivedStateFromProps(
+		props: {
+			resetKey?: string;
+		},
+		state: {
+			hasError: boolean;
+			prevResetKey?: string;
+		},
+	) {
 		// Reset error state when resetKey changes
 		if (props.resetKey !== state.prevResetKey) {
 			return { hasError: false, prevResetKey: props.resetKey };
 		}
 		return null;
 	}
-
 	componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
 		console.warn("Chart rendering error:", error.message);
 	}
-
 	render() {
 		if (this.state.hasError) {
 			return <EmptyChart />;
@@ -67,7 +75,6 @@ class ChartErrorBoundary extends Component<{ children: ReactNode; resetKey?: str
 		return this.props.children;
 	}
 }
-
 interface LogsVolumeChartProps {
 	data: LogsHistogramResponse | MCPHistogramResponse | null;
 	loading?: boolean;
@@ -80,27 +87,25 @@ interface LogsVolumeChartProps {
 	period?: string;
 	onOpenChange: (open: boolean) => void;
 }
-
 type LogVolumeDataPoint = HistogramBucket & {
 	formattedTime: string;
 	index?: number;
 };
-
 interface CustomTooltipProps {
 	active?: boolean;
-	payload?: Array<{ payload?: LogVolumeDataPoint }>;
+	payload?: Array<{
+		payload?: LogVolumeDataPoint;
+	}>;
 }
-
-type ChartMouseEvent = { activeTooltipIndex?: number | string | null };
-
+type ChartMouseEvent = {
+	activeTooltipIndex?: number | string | null;
+};
 // Custom tooltip component
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -137,7 +142,6 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 		</div>
 	);
 }
-
 export function LogsVolumeChart({
 	data,
 	loading,
@@ -158,16 +162,13 @@ export function LogsVolumeChart({
 	// Suppress the Bar onClick that fires immediately after a drag-select mouseUp,
 	// otherwise Recharts overwrites the dragged range with a single-bucket zoom.
 	const suppressNextBarClickRef = useRef(false);
-
 	const effectingTimeRange = useMemo(() => {
 		if (period) {
 			const { start, end } = getUnixRangeForPeriod(period);
 			return { startTime: start, endTime: end };
 		}
-
 		return { startTime, endTime };
 	}, [period, startTime, endTime]);
-
 	// Transform data for chart, filling in empty buckets for the full time range
 	const chartData = useMemo(() => {
 		// Need bucket_size_seconds and valid time range
@@ -179,17 +180,13 @@ export function LogsVolumeChart({
 		) {
 			return [];
 		}
-
 		const bucketSizeMs = data.bucket_size_seconds * 1000;
-
 		// Align start time to bucket boundary
 		const minTime = Math.floor((effectingTimeRange.startTime * 1000) / bucketSizeMs) * bucketSizeMs;
 		const maxTime = effectingTimeRange.endTime * 1000;
-
 		// Safety: limit maximum number of buckets to prevent performance issues
 		const maxBuckets = 500;
 		const estimatedBuckets = Math.ceil((maxTime - minTime) / bucketSizeMs);
-
 		if (estimatedBuckets > maxBuckets) {
 			// If too many buckets, just return the original data without filling
 			const result = (data.buckets || []).map((bucket, index) => ({
@@ -213,9 +210,13 @@ export function LogsVolumeChart({
 			}
 			return result;
 		}
-
 		// First, create all empty buckets for the time range
-		const filledBuckets: Array<HistogramBucket & { formattedTime: string; index: number }> = [];
+		const filledBuckets: Array<
+			HistogramBucket & {
+				formattedTime: string;
+				index: number;
+			}
+		> = [];
 		for (let time = minTime, idx = 0; time < maxTime; time += bucketSizeMs, idx++) {
 			const timestamp = new Date(time).toISOString();
 			filledBuckets.push({
@@ -228,14 +229,12 @@ export function LogsVolumeChart({
 				formattedTime: formatTimestamp(timestamp, data.bucket_size_seconds),
 			});
 		}
-
 		// Then, place API buckets at their correct positions using index calculation
 		// This is more robust than exact timestamp matching
 		for (const bucket of data.buckets || []) {
 			const bucketTime = new Date(bucket.timestamp).getTime();
 			// Calculate the index for this bucket based on its offset from minTime
 			const bucketIndex = Math.round((bucketTime - minTime) / bucketSizeMs);
-
 			if (bucketIndex >= 0 && bucketIndex < filledBuckets.length) {
 				filledBuckets[bucketIndex] = {
 					...bucket,
@@ -245,7 +244,6 @@ export function LogsVolumeChart({
 				};
 			}
 		}
-
 		// Ensure at least 2 data points for Recharts
 		if (filledBuckets.length === 1) {
 			const nextTimestamp = new Date(new Date(filledBuckets[0].timestamp).getTime() + bucketSizeMs).toISOString();
@@ -259,10 +257,8 @@ export function LogsVolumeChart({
 				formattedTime: formatTimestamp(nextTimestamp, data.bucket_size_seconds),
 			});
 		}
-
 		return filledBuckets;
 	}, [data, effectingTimeRange.startTime, effectingTimeRange.endTime, i18n.resolvedLanguage]);
-
 	// Handle mouse down on chart (start selection)
 	const handleMouseDown = useCallback((e: ChartMouseEvent) => {
 		if (typeof e?.activeTooltipIndex === "number") {
@@ -270,7 +266,6 @@ export function LogsVolumeChart({
 			setIsSelecting(true);
 		}
 	}, []);
-
 	// Handle mouse move on chart (during selection)
 	const handleMouseMove = useCallback(
 		(e: ChartMouseEvent) => {
@@ -280,7 +275,6 @@ export function LogsVolumeChart({
 		},
 		[isSelecting],
 	);
-
 	// Handle mouse up on chart (end selection)
 	const handleMouseUp = useCallback(() => {
 		if (refAreaLeft === null || refAreaRight === null || !data?.bucket_size_seconds || chartData.length === 0) {
@@ -289,19 +283,15 @@ export function LogsVolumeChart({
 			setIsSelecting(false);
 			return;
 		}
-
 		// Get the buckets by index
 		const leftBucket = chartData[refAreaLeft];
 		const rightBucket = chartData[refAreaRight];
-
 		if (leftBucket && rightBucket) {
 			const leftTime = new Date(leftBucket.timestamp).getTime() / 1000;
 			const rightTime = new Date(rightBucket.timestamp).getTime() / 1000;
-
 			// Ensure left < right; the end edge is one bucket past the later timestamp
 			const selectionStart = Math.min(leftTime, rightTime);
 			const selectionEnd = Math.max(leftTime, rightTime) + data.bucket_size_seconds;
-
 			// Only trigger a range change for real drags (more than one bucket).
 			// For single-bucket gestures, let the trailing Bar onClick own the zoom
 			// so we don't fire onTimeRangeChange twice with the same range.
@@ -310,12 +300,10 @@ export function LogsVolumeChart({
 				onTimeRangeChange(selectionStart, selectionEnd);
 			}
 		}
-
 		setRefAreaLeft(null);
 		setRefAreaRight(null);
 		setIsSelecting(false);
 	}, [refAreaLeft, refAreaRight, data, chartData, onTimeRangeChange]);
-
 	// Handle click on a bar (zoom into that bucket)
 	const handleBarClick = useCallback(
 		(barData: LogVolumeDataPoint | undefined) => {
@@ -324,18 +312,14 @@ export function LogsVolumeChart({
 				return;
 			}
 			if (!data || !barData?.timestamp) return;
-
 			const startTime = new Date(barData.timestamp).getTime() / 1000;
 			const endTime = startTime + data.bucket_size_seconds;
-
 			onTimeRangeChange(startTime, endTime);
 		},
 		[data, onTimeRangeChange],
 	);
-
 	// Check if we have valid data for the chart
 	const hasValidData = data && effectingTimeRange.startTime && effectingTimeRange.endTime && chartData.length >= 2;
-
 	return (
 		<Card className="rounded-sm px-2 py-2 shadow-none">
 			<Collapsible open={isOpen} onOpenChange={onOpenChange}>
@@ -389,25 +373,25 @@ export function LogsVolumeChart({
 										onMouseLeave={handleMouseUp}
 										barCategoryGap={1}
 									>
-										<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+										<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 										<XAxis
 											dataKey="index"
 											type="number"
 											domain={[-0.5, chartData.length - 0.5]}
 											tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
 											tickLine={true}
-											axisLine={false}
+											axisLine
 											tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 											interval="preserveStartEnd"
 										/>
 										<YAxis
 											tick={{ fontSize: 11, className: "fill-zinc-500" }}
-											tickLine={false}
-											axisLine={false}
+											tickLine
+											axisLine
 											width={40}
 											tickFormatter={(v) => formatRequest(v)}
 											domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
-											allowDataOverflow={false}
+											allowDataOverflow
 										/>
 										<Tooltip content={<CustomTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
 										<CappedBarStack buckets={chartData.length}>

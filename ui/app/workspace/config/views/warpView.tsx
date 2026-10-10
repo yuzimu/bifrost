@@ -24,7 +24,6 @@ import {
 import { WARP_MAX_TEMPERATURE, WARP_MIN_TEMPERATURE, WARP_REASONING_EFFORTS, type WarpConfigInput } from "@/lib/types/warp";
 import { cn } from "@/lib/utils";
 import { getRangeForPeriod, TIME_PERIODS } from "@/lib/utils/timeRange";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, CheckCircle2, Database, Info, Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -52,17 +51,14 @@ import {
 	warpSavedSpaceKey,
 	type RetainedWarpBackfill,
 } from "./warpView.utils";
-
 /**
  * Sentinel for "any key". Radix rejects an empty-string SelectItem value, so the
  * unpinned default needs a stand-in that never reaches the form or the API.
  */
 const WARP_ANY_KEY = "__any__";
-
 /** Same idea as WARP_ANY_KEY: Radix rejects an empty-string item value, so
  * "leave reasoning effort unset" needs its own stand-in. */
 const WARP_REASONING_UNSET = "__unset__";
-
 const DEFAULT_MAX_ITERATIONS = 8;
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const DEFAULT_HISTORY_RETENTION_DAYS = 30;
@@ -72,9 +68,7 @@ const DEFAULT_VECTOR_NAMESPACE = "BifrostWarpLogs";
 const DEFAULT_SEARCH_THRESHOLD = 0.5;
 const DEFAULT_SEARCH_LIMIT = 10;
 const DEFAULT_BACKFILL_PERIOD = "7d";
-
 /** "xhigh" -> "Xhigh". Good enough for a Select item; these are short, plain words. */
-
 /** Everything the form edits, in one place. */
 interface WarpFormState {
 	enabled: boolean;
@@ -99,7 +93,6 @@ interface WarpFormState {
 	threshold: number;
 	searchLimit: number;
 }
-
 const EMPTY_FORM: WarpFormState = {
 	enabled: false,
 	models: [{ id: "default", provider: "", model: "", apiKeyID: "" }],
@@ -117,7 +110,6 @@ const EMPTY_FORM: WarpFormState = {
 	threshold: DEFAULT_SEARCH_THRESHOLD,
 	searchLimit: DEFAULT_SEARCH_LIMIT,
 };
-
 /**
  * Warp's settings.
  *
@@ -134,7 +126,6 @@ const EMPTY_FORM: WarpFormState = {
 /** 管理多模型 Warp 配置和绑定嵌入空间的回填任务。 */
 export default function WarpView() {
 	const { t } = useTranslation("config");
-	const hasWarpUpdateAccess = useRbac(RbacResource.Warp, RbacOperation.Update);
 	const { data: config, isLoading: isLoadingConfig, isError: isConfigError } = useGetWarpConfigQuery();
 	const {
 		data: providersData,
@@ -145,7 +136,6 @@ export default function WarpView() {
 	const [updateWarpConfig, { isLoading: isSaving }] = useUpdateWarpConfigMutation();
 	const [startWarpBackfill, { isLoading: isStartingBackfill }] = useStartWarpBackfillMutation();
 	const [cancelWarpBackfill, { isLoading: isCancellingBackfill }] = useCancelWarpBackfillMutation();
-
 	const [form, setForm] = useState<WarpFormState>(EMPTY_FORM);
 	const [activeBackfillID, setActiveBackfillID] = useState<string | null>(null);
 	// The last terminal result, held so it survives the switch to the id-less
@@ -174,16 +164,13 @@ export default function WarpView() {
 	// hydration, or from the picker's edit otherwise.
 	const [backfillStartCompare, setBackfillStartCompare] = useState<string | null>(null);
 	const [backfillEndCompare, setBackfillEndCompare] = useState<string | null>(null);
-
 	const providers = providersData ?? [];
 	const embeddingProviders = providers.filter(supportsWarpEmbedding);
-
 	// Memoized by the id, not rebuilt inline: every form edit rerenders this
 	// component, and ModelMultiselect refetches whenever the `keys` reference
 	// changes - so an inline array turned each unrelated edit into a models
 	// request for the same key.
 	const embeddingModelKeys = useMemo(() => (form.embeddingAPIKeyID ? [form.embeddingAPIKeyID] : undefined), [form.embeddingAPIKeyID]);
-
 	const {
 		// currentData, not data: RTK Query keeps the previous argument's result
 		// while it fetches the new one, so after switching provider the selector
@@ -213,7 +200,7 @@ export default function WarpView() {
 		// hide the running job or its cancel action after a reload - the status
 		// and cancel endpoints need admin access and the backfill stores, not a
 		// currently-configured Warp.
-		skip: !hasWarpUpdateAccess,
+		skip: false,
 		pollingInterval: activeBackfillID ? 2000 : 10000,
 	});
 	const isBackfillActive =
@@ -230,9 +217,11 @@ export default function WarpView() {
 	// These embedding calls skip the plugin pipeline, so they never show up in
 	// the logs - this line is the only place their spend is visible.
 	const backfillSpend = lastBackfill
-		? formatWarpUsage({ total_tokens: lastBackfill.embedding_tokens, cost: { total_cost: lastBackfill.embedding_cost } })
+		? formatWarpUsage({
+				total_tokens: lastBackfill.embedding_tokens,
+				cost: { total_cost: lastBackfill.embedding_cost },
+			})
 		: null;
-
 	// Adopt a job discovered by the id-less request. Without this a reload during
 	// a running backfill kept polling id-less, and the moment the job finished
 	// the endpoint answered "idle" instead of the terminal job - so the counters
@@ -243,7 +232,6 @@ export default function WarpView() {
 			setActiveBackfillID(backfillStatus.id);
 		}
 	}, [activeBackfillID, backfillStatus?.id, backfillStatus?.status]);
-
 	// Remember which space the pinned job runs under, for the terminal retention
 	// below. Only once config has loaded: before that savedSpaceKey describes
 	// nothing, and tagging the job with it would hide the run once config lands.
@@ -256,7 +244,6 @@ export default function WarpView() {
 	useEffect(() => {
 		if (isBackfillActive && configLoaded && activeBackfillSpaceKey.current === null) activeBackfillSpaceKey.current = savedSpaceKey;
 	}, [isBackfillActive, configLoaded, savedSpaceKey]);
-
 	// Release the pinned id once the job has finished, or the view keeps asking
 	// about a completed backfill every two seconds for as long as it stays open.
 	// Keyed on the status string rather than isBackfillActive so this does not
@@ -284,7 +271,6 @@ export default function WarpView() {
 		// execution time, since the closure is rebuilt every render.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [backfillStatus?.status]);
-
 	// A failed or cancelled run that got partway through the window can be
 	// resumed from its checkpoint instead of rescanning from the start - see
 	// the `restart` flag on startWarpBackfill. Resuming only makes sense while
@@ -322,7 +308,6 @@ export default function WarpView() {
 		!!backfillEndCompare &&
 		new Date(backfillStartCompare).getTime() === new Date(backfillStatus.start_time).getTime() &&
 		new Date(backfillEndCompare).getTime() === new Date(backfillStatus.end_time).getTime();
-
 	// One hydration point. Everything the form shows comes from here.
 	useEffect(() => {
 		if (!config) return;
@@ -348,7 +333,6 @@ export default function WarpView() {
 			searchLimit: config.semantic_search_limit || DEFAULT_SEARCH_LIMIT,
 		});
 	}, [config]);
-
 	// The date pickers default to "last 7 days" at mount time, which no longer
 	// matches a finished job's frozen window after a reload (the defaults
 	// recompute against the new "now"). Seed them from that job's own window
@@ -371,13 +355,11 @@ export default function WarpView() {
 		setBackfillEndCompare(backfillStatus.end_time);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [backfillStatus?.id, isBackfillActive]);
-
 	const update = <K extends keyof WarpFormState>(key: K, value: WarpFormState[K]) => setForm((current) => ({ ...current, [key]: value }));
 	const updateModels = (change: (models: WarpModelRow[]) => WarpModelRow[]) =>
 		setForm((current) => ({ ...current, models: change(current.models) }));
 	const updateModel = (id: string, patch: Partial<Omit<WarpModelRow, "id">>) =>
 		updateModels((models) => models.map((row) => (row.id === id ? { ...row, ...patch } : row)));
-
 	const hasChanges =
 		!!config &&
 		(form.enabled !== config.enabled ||
@@ -400,7 +382,6 @@ export default function WarpView() {
 			form.namespace !== (config.log_vector_store_namespace || DEFAULT_VECTOR_NAMESPACE) ||
 			form.threshold !== (config.semantic_search_threshold || DEFAULT_SEARCH_THRESHOLD) ||
 			form.searchLimit !== (config.semantic_search_limit || DEFAULT_SEARCH_LIMIT));
-
 	// The server enforces the same rules; checking here only saves a round trip.
 	const defaultModel = form.models[0];
 	const missingRequired = form.enabled && (!defaultModel?.provider || !defaultModel?.model);
@@ -450,11 +431,9 @@ export default function WarpView() {
 		temperatureInvalid ||
 		!!embeddingValidation ||
 		needsNewNamespace;
-
 	const onSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (invalid || !hasChanges) return;
-
 		const payload: WarpConfigInput = {
 			enabled: form.enabled,
 			...warpModelsPayload(form.models),
@@ -482,7 +461,6 @@ export default function WarpView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const onStartBackfill = async (restart = false) => {
 		if (!backfillStart || !backfillEnd || backfillStart >= backfillEnd) {
 			toast.error(t("warp.badRange"));
@@ -517,7 +495,6 @@ export default function WarpView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const onCancelBackfill = async () => {
 		try {
 			await cancelWarpBackfill(activeBackfillID ? { id: activeBackfillID } : undefined).unwrap();
@@ -526,7 +503,6 @@ export default function WarpView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-4" data-testid="warp-config-view">
 			<form onSubmit={onSubmit} className="space-y-4">
@@ -547,8 +523,8 @@ export default function WarpView() {
 							<div className="flex items-center justify-between gap-4">
 								<div className="space-y-1">
 									{/* Alpha sits beside the switch: this is where someone decides
-									    whether to turn Warp on for everyone, so it is the moment the
-									    maturity signal actually informs a decision. */}
+          whether to turn Warp on for everyone, so it is the moment the
+          maturity signal actually informs a decision. */}
 									<div className="flex items-center gap-2">
 										<Label htmlFor="warp-enabled">{t("warp.enable")}</Label>
 										<Badge variant="secondary">{t("warp.alpha")}</Badge>
@@ -560,13 +536,13 @@ export default function WarpView() {
 									size="md"
 									data-testid="warp-enabled-switch"
 									checked={form.enabled}
-									disabled={!hasWarpUpdateAccess || (!config?.vector_store_connected && !form.enabled)}
+									disabled={!config?.vector_store_connected && !form.enabled}
 									onCheckedChange={(checked) => update("enabled", checked)}
 								/>
 							</div>
 							{/* A complete but switched-off config saves happily and then leaves
-							    the panel saying Warp is unavailable, with nothing on this page
-							    admitting why. Say it here, next to the switch that causes it. */}
+              the panel saying Warp is unavailable, with nothing on this page
+              admitting why. Say it here, next to the switch that causes it. */}
 							{!form.enabled && !!defaultModel?.provider && !!defaultModel?.model && (
 								<p className="text-muted-foreground text-xs" data-testid="warp-disabled-hint">
 									{t("warp.disabledHint")}
@@ -581,10 +557,10 @@ export default function WarpView() {
 
 						<WarpSection title={t("warp.models")} description={t("warp.modelsHelp")}>
 							{/* A successful empty list is its own situation, distinct from
-							    loading and from a failed query. Without this the selector is
-							    simply blank, missingRequired blocks the save, and nothing on
-							    the page says the deployment has no providers yet or where to
-							    add one. Same treatment the complexity router uses. */}
+              loading and from a failed query. Without this the selector is
+              simply blank, missingRequired blocks the save, and nothing on
+              the page says the deployment has no providers yet or where to
+              add one. Same treatment the complexity router uses. */}
 							{!isProvidersLoading && !isProvidersError && providers.length === 0 && (
 								<Alert variant="warning" data-testid="warp-no-providers">
 									<TriangleAlert className="h-4 w-4" />
@@ -600,8 +576,8 @@ export default function WarpView() {
 								</Alert>
 							)}
 							{/* An empty dropdown reads as "this deployment has no providers",
-							    which is a different and much more alarming statement than
-							    "the list has not arrived yet". */}
+              which is a different and much more alarming statement than
+              "the list has not arrived yet". */}
 							{isProvidersLoading && <p className="text-muted-foreground text-xs">{t("warp.loadingProviders")}</p>}
 							{isProvidersError && (
 								<p className="text-destructive flex items-center gap-2 text-xs" role="alert">
@@ -615,10 +591,10 @@ export default function WarpView() {
 							<div className="divide-y" data-testid="warp-models-list">
 								{form.models.map((row, index) => (
 									<WarpModelRowFields
+										disabled
 										key={row.id}
 										row={row}
 										index={index}
-										disabled={!hasWarpUpdateAccess}
 										// The default row's "nothing chosen yet" is said once, beside Save.
 										error={index === 0 && missingRequired ? null : modelErrors[index]}
 										onChange={(patch) => updateModel(row.id, patch)}
@@ -637,7 +613,7 @@ export default function WarpView() {
 									variant="outline"
 									size="sm"
 									onClick={() => updateModels((models) => [...models, newWarpModelRow()])}
-									disabled={!hasWarpUpdateAccess || form.models.length > WARP_MAX_ADDITIONAL_MODELS}
+									disabled={form.models.length > WARP_MAX_ADDITIONAL_MODELS}
 									data-testid="warp-add-model-btn"
 								>
 									<Plus className="size-3.5" />
@@ -654,9 +630,17 @@ export default function WarpView() {
 								<WarpField
 									label={t("warp.temperature")}
 									htmlFor="warp-temperature"
-									hint={t("warp.temperatureHelp", { min: WARP_MIN_TEMPERATURE, max: WARP_MAX_TEMPERATURE })}
+									hint={t("warp.temperatureHelp", {
+										min: WARP_MIN_TEMPERATURE,
+										max: WARP_MAX_TEMPERATURE,
+									})}
 									error={
-										temperatureInvalid ? t("warp.temperatureError", { min: WARP_MIN_TEMPERATURE, max: WARP_MAX_TEMPERATURE }) : undefined
+										temperatureInvalid
+											? t("warp.temperatureError", {
+													min: WARP_MIN_TEMPERATURE,
+													max: WARP_MAX_TEMPERATURE,
+												})
+											: undefined
 									}
 								>
 									<Input
@@ -672,7 +656,6 @@ export default function WarpView() {
 											const raw = event.target.value;
 											update("temperature", raw === "" ? "" : Number(raw));
 										}}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 
@@ -680,7 +663,6 @@ export default function WarpView() {
 									<Select
 										value={form.reasoningEffort || WARP_REASONING_UNSET}
 										onValueChange={(value) => update("reasoningEffort", value === WARP_REASONING_UNSET ? "" : value)}
-										disabled={!hasWarpUpdateAccess}
 									>
 										<SelectTrigger className="w-full" id="warp-reasoning-effort" data-testid="warp-reasoning-effort-select">
 											<SelectValue />
@@ -711,7 +693,6 @@ export default function WarpView() {
 										className={iterationsInvalid ? "border-destructive" : ""}
 										value={form.maxIterations}
 										onChange={(event) => update("maxIterations", Number(event.target.value))}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 
@@ -728,7 +709,6 @@ export default function WarpView() {
 										className={timeoutInvalid ? "border-destructive" : ""}
 										value={form.requestTimeoutSeconds}
 										onChange={(event) => update("requestTimeoutSeconds", Number(event.target.value))}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 
@@ -745,7 +725,6 @@ export default function WarpView() {
 										className={retentionInvalid ? "border-destructive" : ""}
 										value={form.historyRetentionDays}
 										onChange={(event) => update("historyRetentionDays", Number(event.target.value))}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 							</div>
@@ -759,7 +738,6 @@ export default function WarpView() {
 									data-testid="warp-system-prompt-suffix-input"
 									value={form.systemPromptSuffix}
 									onChange={(event) => update("systemPromptSuffix", event.target.value)}
-									disabled={!hasWarpUpdateAccess}
 								/>
 							</WarpField>
 						</WarpSection>
@@ -791,16 +769,20 @@ export default function WarpView() {
 												// Model and key are provider-scoped, so they only reset on a real change.
 												!value || value === current.embeddingProvider
 													? current
-													: { ...current, embeddingProvider: value, embeddingModel: "", embeddingAPIKeyID: "" },
+													: {
+															...current,
+															embeddingProvider: value,
+															embeddingModel: "",
+															embeddingAPIKeyID: "",
+														},
 											)
 										}
-										disabled={!hasWarpUpdateAccess}
 									/>
 									{/* An empty selector with a "Choose an embedding provider" save
-									    error underneath is an instruction nobody can follow. Kept
-									    distinct from the loading and error states: "none support
-									    embeddings" is a different thing to tell someone than "the
-									    list has not arrived". */}
+          error underneath is an instruction nobody can follow. Kept
+          distinct from the loading and error states: "none support
+          embeddings" is a different thing to tell someone than "the
+          list has not arrived". */}
 									{!isProvidersLoading && !isProvidersError && embeddingProviders.length === 0 && (
 										<p className="text-muted-foreground text-xs" data-testid="warp-no-embedding-providers">
 											{t("warp.noEmbeddingProviders")}
@@ -812,7 +794,6 @@ export default function WarpView() {
 									<ModelSelector
 										inputId="warp-embedding-model"
 										data-testid="warp-embedding-model-select"
-										multiple={false}
 										provider={form.embeddingProvider || undefined}
 										// Scoped to the pinned key, same as the chat model above:
 										// /api/models filters by each key's models and
@@ -824,7 +805,7 @@ export default function WarpView() {
 										value={form.embeddingModel}
 										onChange={(model) => update("embeddingModel", model)}
 										placeholder={form.embeddingProvider ? t("warp.searchEmbeddingModel") : t("warp.selectProviderFirst")}
-										disabled={!form.embeddingProvider || !hasWarpUpdateAccess}
+										disabled={!form.embeddingProvider}
 									/>
 								</WarpField>
 
@@ -844,7 +825,7 @@ export default function WarpView() {
 												embeddingModel: "",
 											}));
 										}}
-										disabled={!form.embeddingProvider || isEmbeddingKeysLoading || isEmbeddingKeysError || !hasWarpUpdateAccess}
+										disabled={!form.embeddingProvider || isEmbeddingKeysLoading || isEmbeddingKeysError}
 									>
 										<SelectTrigger className="w-full" id="warp-embedding-api-key" data-testid="warp-embedding-api-key-select">
 											<SelectValue placeholder={t("warp.anyKey")} />
@@ -887,7 +868,6 @@ export default function WarpView() {
 										data-testid="warp-embedding-dimension-input"
 										value={form.embeddingDimension}
 										onChange={(event) => update("embeddingDimension", Number(event.target.value))}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 							</div>
@@ -899,7 +879,6 @@ export default function WarpView() {
 										data-testid="warp-vector-namespace-input"
 										value={form.namespace}
 										onChange={(event) => update("namespace", event.target.value)}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 
@@ -917,7 +896,6 @@ export default function WarpView() {
 										data-testid="warp-search-threshold-input"
 										value={form.threshold}
 										onChange={(event) => update("threshold", Number(event.target.value))}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 
@@ -930,7 +908,6 @@ export default function WarpView() {
 										data-testid="warp-search-limit-input"
 										value={form.searchLimit}
 										onChange={(event) => update("searchLimit", Number(event.target.value))}
-										disabled={!hasWarpUpdateAccess}
 									/>
 								</WarpField>
 							</div>
@@ -960,7 +937,7 @@ export default function WarpView() {
 											triggerTestId="warp-backfill-range"
 											dateTime={backfillRange}
 											disabledAfter={new Date()}
-											disabled={isBackfillActive || !hasWarpUpdateAccess}
+											disabled={isBackfillActive}
 											predefinedPeriod={backfillPeriod}
 											preDefinedPeriods={TIME_PERIODS}
 											onDateTimeUpdate={(range) => {
@@ -988,7 +965,7 @@ export default function WarpView() {
 												type="button"
 												variant="outline"
 												onClick={onCancelBackfill}
-												disabled={isCancellingBackfill || !hasWarpUpdateAccess}
+												disabled={isCancellingBackfill}
 												data-testid="warp-backfill-cancel-btn"
 											>
 												{isCancellingBackfill && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t("warp.cancelBackfill")}
@@ -1009,7 +986,6 @@ export default function WarpView() {
 															isBackfillStatusError ||
 															!config?.configured ||
 															!config.vector_store_connected ||
-															!hasWarpUpdateAccess ||
 															hasChanges
 														}
 														data-testid="warp-backfill-restart-btn"
@@ -1030,7 +1006,6 @@ export default function WarpView() {
 														isBackfillStatusError ||
 														!config?.configured ||
 														!config.vector_store_connected ||
-														!hasWarpUpdateAccess ||
 														hasChanges ||
 														backfillWindowAlreadyDone
 													}
@@ -1038,7 +1013,10 @@ export default function WarpView() {
 												>
 													{isStartingBackfill && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 													{canResumeBackfill
-														? t("warp.resumeBackfill", { scanned: backfillStatus.scanned, total: backfillStatus.total })
+														? t("warp.resumeBackfill", {
+																scanned: backfillStatus.scanned,
+																total: backfillStatus.total,
+															})
 														: t("warp.startBackfill")}
 												</Button>
 											</>
@@ -1054,7 +1032,10 @@ export default function WarpView() {
 										<div className="flex items-center justify-between gap-3">
 											<span className="font-medium">{t(`warp.statuses.${shownBackfill.status}`)}</span>
 											<span className="text-muted-foreground">
-												{t("warp.scanned", { scanned: shownBackfill.scanned, total: shownBackfill.total })}
+												{t("warp.scanned", {
+													scanned: shownBackfill.scanned,
+													total: shownBackfill.total,
+												})}
 											</span>
 										</div>
 										<div className="bg-border h-2 overflow-hidden rounded-full">
@@ -1106,7 +1087,7 @@ export default function WarpView() {
 							{t("warp.chooseProviderModel")}
 						</p>
 					)}
-					<Button type="submit" disabled={!hasChanges || isSaving || invalid || !hasWarpUpdateAccess} data-testid="warp-save-btn">
+					<Button type="submit" disabled={!hasChanges || isSaving || invalid} data-testid="warp-save-btn">
 						{isSaving ? t("warp.saving") : t("warp.saveChanges")}
 					</Button>
 				</div>
@@ -1114,7 +1095,6 @@ export default function WarpView() {
 		</div>
 	);
 }
-
 interface WarpModelRowFieldsProps {
 	row: WarpModelRow;
 	/** Position in the list. 0 is Warp's default model. */
@@ -1126,20 +1106,17 @@ interface WarpModelRowFieldsProps {
 	onMakeDefault?: () => void;
 	onRemove?: () => void;
 }
-
 /** 展示提供商、模型和密钥行，保留按提供商加载与清空关联值的行为。 */
 function WarpModelRowFields({ row, index, disabled, error, onChange, onMakeDefault, onRemove }: WarpModelRowFieldsProps) {
 	const { t } = useTranslation("config");
 	const isDefault = index === 0;
 	// The default row keeps the ids it had as the page's only model.
 	const suffix = isDefault ? "" : `-${index}`;
-
 	// Memoized by the id, not rebuilt inline: every form edit rerenders this
 	// component, and ModelMultiselect refetches whenever the `keys` reference
 	// changes - so an inline array turned each unrelated edit into a models
 	// request for the same key.
 	const modelKeys = useMemo(() => (row.apiKeyID ? [row.apiKeyID] : undefined), [row.apiKeyID]);
-
 	// Keys are provider-scoped, so the query waits for a provider rather than
 	// firing a request for "".
 	const {
@@ -1156,7 +1133,6 @@ function WarpModelRowFields({ row, index, disabled, error, onChange, onMakeDefau
 		refetch: refetchKeys,
 	} = useGetProviderKeysQuery(row.provider, { skip: !row.provider });
 	const providerKeys = providerKeysData ?? [];
-
 	return (
 		<div className="space-y-3 py-4 first:pt-0 last:pb-0" data-testid={`warp-model-row${suffix}`}>
 			<div className="flex min-h-7 items-center justify-between gap-3">
@@ -1211,7 +1187,6 @@ function WarpModelRowFields({ row, index, disabled, error, onChange, onMakeDefau
 					<ModelSelector
 						inputId={`warp-model${suffix}`}
 						data-testid={`warp-model-select${suffix}`}
-						multiple={false}
 						provider={row.provider || undefined}
 						// Scoped to the pinned key, because /api/models filters by each
 						// key's model restrictions: without this the picker offered - and
@@ -1254,12 +1229,12 @@ function WarpModelRowFields({ row, index, disabled, error, onChange, onMakeDefau
 						</SelectTrigger>
 						<SelectContent>
 							{/* Radix forbids an empty-string SelectItem value, so the unpinned
-							    default needs a sentinel, mapped back to "" before it leaves.
-							    Listing it first makes it the obvious default. */}
+      default needs a sentinel, mapped back to "" before it leaves.
+      Listing it first makes it the obvious default. */}
 							<SelectItem value={WARP_ANY_KEY}>{t("warp.anyKey")}</SelectItem>
 							{/* A pinned key missing from the fetched set still has to show,
-							    or it silently reads as Any key here while staying pinned on
-							    the server. */}
+      or it silently reads as Any key here while staying pinned on
+      the server. */}
 							{row.apiKeyID && !providerKeys.some((providerKey) => providerKey.id === row.apiKeyID) && (
 								<SelectItem value={row.apiKeyID}>{row.apiKeyID}</SelectItem>
 							)}
@@ -1271,9 +1246,9 @@ function WarpModelRowFields({ row, index, disabled, error, onChange, onMakeDefau
 						</SelectContent>
 					</Select>
 					{/* "No keys configured" is a statement of fact about the provider,
-					    so it must not be made while the query is still in flight or
-					    after it failed - both of those also produce an empty list.
-					    Kept inline, not in the tooltip: it describes current state. */}
+          so it must not be made while the query is still in flight or
+          after it failed - both of those also produce an empty list.
+          Kept inline, not in the tooltip: it describes current state. */}
 					{row.provider && !isKeysLoading && !isKeysError && providerKeys.length === 0 && (
 						<p className="text-muted-foreground text-xs">{t("warp.noKeys")}</p>
 					)}
@@ -1297,14 +1272,12 @@ function WarpModelRowFields({ row, index, disabled, error, onChange, onMakeDefau
 		</div>
 	);
 }
-
 interface WarpSectionProps {
 	title: string;
 	description?: React.ReactNode;
 	action?: React.ReactNode;
 	children: React.ReactNode;
 }
-
 /** One bordered group per concern, so related fields share a card instead of each getting its own box. */
 function WarpSection({ title, description, action, children }: WarpSectionProps) {
 	return (
@@ -1320,7 +1293,6 @@ function WarpSection({ title, description, action, children }: WarpSectionProps)
 		</section>
 	);
 }
-
 interface WarpFieldProps {
 	label: string;
 	htmlFor: string;
@@ -1331,7 +1303,6 @@ interface WarpFieldProps {
 	className?: string;
 	children: React.ReactNode;
 }
-
 function WarpField({ label, htmlFor, hint, error, className, children }: WarpFieldProps) {
 	const { t } = useTranslation("config");
 	return (

@@ -427,7 +427,9 @@ func (p *GovernancePlugin) GetBudgetAndRateLimitStatus(ctx *schemas.BifrostConte
 // Candidacy comes from the request's grants, so a request that holds providers without presenting
 // a key is balanced across them too. Everything it needs comes off the request: the grants say
 // which providers may serve it, and the store says which of those can be paid for.
+// LoadBalanceProvider 先发布配置中的无 key 能力，再向注入策略提供已授权且可支付的候选。
 func (p *GovernancePlugin) LoadBalanceProvider(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) error {
+	p.publishProviderCapabilities(ctx)
 	provider, modelStr, existingFallbacks := req.GetRequestFields()
 	if modelStr == "" {
 		return nil
@@ -524,24 +526,34 @@ func (p *GovernancePlugin) LoadBalanceProvider(ctx *schemas.BifrostContext, req 
 	}
 
 	var selectedProvider schemas.ModelProvider
-	totalWeight := 0.0
-	for _, candidate := range weighted {
-		totalWeight += getWeight(candidate.Weight)
-	}
-	// Generate random number between 0 and totalWeight
-	randomValue := rand.Float64() * totalWeight
-	// Select provider based on weighted random selection
-	currentWeight := 0.0
-	for _, candidate := range weighted {
-		currentWeight += getWeight(candidate.Weight)
-		if randomValue <= currentWeight {
-			selectedProvider = schemas.ModelProvider(candidate.Provider)
-			break
+	if policy := currentLoadBalancePolicy(); policy != nil {
+		weighted = policy.FilterProviders(ctx, weighted, modelStr)
+		selected, err := policy.SelectProvider(ctx, weighted, modelStr)
+		if err != nil {
+			return err
 		}
+		selectedProvider = schemas.ModelProvider(selected.Provider)
 	}
-	// Fallback: if no provider was selected (shouldn't happen but guard against FP issues)
 	if selectedProvider == "" {
-		selectedProvider = schemas.ModelProvider(weighted[0].Provider)
+		totalWeight := 0.0
+		for _, candidate := range weighted {
+			totalWeight += getWeight(candidate.Weight)
+		}
+		// Generate random number between 0 and totalWeight
+		randomValue := rand.Float64() * totalWeight
+		// Select provider based on weighted random selection
+		currentWeight := 0.0
+		for _, candidate := range weighted {
+			currentWeight += getWeight(candidate.Weight)
+			if randomValue <= currentWeight {
+				selectedProvider = schemas.ModelProvider(candidate.Provider)
+				break
+			}
+		}
+		// Fallback: if no provider was selected (shouldn't happen but guard against FP issues)
+		if selectedProvider == "" {
+			selectedProvider = schemas.ModelProvider(weighted[0].Provider)
+		}
 	}
 
 	var weightedProviders []string
@@ -1063,7 +1075,9 @@ func resolveLimits(ctx *schemas.BifrostContext, store GovernanceStore, provider 
 //
 // Realtime + generic streaming bypass handleRequest (see core/bifrost.go
 // RunRealtimeTurnPreHooks / RunStreamPreHooks) and are still handled at HTTPTransportPreHook.
+// PreRequestHook 同步发布配置中的无 key 能力，供未经过方向选择的 resilience 路径使用。
 func (p *GovernancePlugin) PreRequestHook(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) error {
+	p.publishProviderCapabilities(ctx)
 	if req.RequestType == schemas.PassthroughRequest || req.RequestType == schemas.PassthroughStreamRequest {
 		return nil
 	}

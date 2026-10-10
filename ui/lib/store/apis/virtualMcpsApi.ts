@@ -1,10 +1,4 @@
-import {
-	GetVirtualMCPsParams,
-	GetVirtualMCPsResponse,
-	VirtualMCP,
-	VirtualMCPAccessProfileUsage,
-	VirtualMCPRequest,
-} from "@/lib/types/virtualMcps";
+import { GetVirtualMCPsParams, GetVirtualMCPsResponse, VirtualMCP, VirtualMCPRequest } from "@/lib/types/virtualMcps";
 import { baseApi } from "./baseApi";
 
 type SuccessResponse = { success: boolean };
@@ -41,14 +35,6 @@ export const virtualMcpsApi = baseApi.injectEndpoints({
 			invalidatesTags: (_result, _error, { id }) => ["VirtualMCPs", { type: "VirtualMCPs", id }],
 		}),
 
-		// Enterprise-only reverse lookup (the endpoint is registered by the enterprise build); the OSS
-		// fallback section never calls it.
-		getVirtualMCPAccessProfiles: builder.query<VirtualMCPAccessProfileUsage[], number>({
-			query: (id) => ({ url: `/mcp/virtual-mcps/${id}/access-profiles` }),
-			transformResponse: (response: { access_profiles: VirtualMCPAccessProfileUsage[] }) => response.access_profiles,
-			providesTags: (_result, _error, id) => [{ type: "VirtualMCPs", id }],
-		}),
-
 		deleteVirtualMCP: builder.mutation<SuccessResponse, number>({
 			query: (id) => ({ url: `/mcp/virtual-mcps/${id}`, method: "DELETE" }),
 			invalidatesTags: ["VirtualMCPs"],
@@ -70,7 +56,6 @@ export const virtualMcpsApi = baseApi.injectEndpoints({
 export const {
 	useGetVirtualMCPsQuery,
 	useGetVirtualMCPQuery,
-	useGetVirtualMCPAccessProfilesQuery,
 	useCreateVirtualMCPMutation,
 	useUpdateVirtualMCPMutation,
 	useDeleteVirtualMCPMutation,

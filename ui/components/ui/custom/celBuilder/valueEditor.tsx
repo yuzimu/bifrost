@@ -2,7 +2,6 @@
  * Value Editor Component for CEL Rule Builder
  * Smart input component that adapts based on operator and field type
  */
-
 import { ComboboxSelect, ComboboxSelectOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { ModelSelector } from "@/components/ui/modelSelector";
@@ -11,11 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ValueEditorProps, ValueEditorType } from "react-querybuilder";
-
 type CELValueEditorContext = {
 	validateRegex?: (pattern: string) => string | null;
 };
-
 export function ValueEditor({
 	value,
 	handleOnChange,
@@ -23,21 +20,20 @@ export function ValueEditor({
 	fieldData,
 	type,
 	context,
-}: ValueEditorProps & { context?: CELValueEditorContext }) {
+}: ValueEditorProps & {
+	context?: CELValueEditorContext;
+}) {
 	const { t } = useTranslation("observability");
 	// Compute all conditions upfront before any early returns
 	const isArrayOperator = operator === "in" || operator === "notIn";
 	const isRegexOperator = operator === "matches";
 	const isNullOperator = operator === "null" || operator === "notNull";
-
 	const validateRegex = context?.validateRegex;
-
 	// Get valueEditorType, handling both string and function types
 	const valueEditorType =
 		typeof fieldData?.valueEditorType === "function" ? fieldData.valueEditorType(operator) : fieldData?.valueEditorType;
 	const isKeyValueType = valueEditorType === ("keyValue" as ValueEditorType);
 	const isSelectType = valueEditorType === ("select" as ValueEditorType);
-
 	// Parse keyValue format: "key:value" or just "key" for null/notNull operators
 	const [keyValuePair, setKeyValuePair] = useState(() => {
 		if (!isKeyValueType) return { key: "", value: "" };
@@ -53,7 +49,6 @@ export function ValueEditor({
 		}
 		return { key: "", value: "" };
 	});
-
 	useEffect(() => {
 		if (isKeyValueType && typeof value === "string" && value) {
 			if (value.includes(":")) {
@@ -69,13 +64,11 @@ export function ValueEditor({
 			setKeyValuePair({ key: "", value: "" });
 		}
 	}, [value, isKeyValueType]);
-
 	// For null/notNull operators, no value input needed
 	// (keyValue fields show key input in FieldSelector)
 	if (isNullOperator) {
 		return null;
 	}
-
 	// For keyValue fields, the key input is in FieldSelector.
 	// Here we handle updating the value part while preserving the key.
 	const handleKeyValueValueChange = (newValue: string) => {
@@ -89,7 +82,6 @@ export function ValueEditor({
 			handleOnChange("");
 		}
 	};
-
 	// Handle model field with ModelSelector
 	const isModelField = fieldData?.name === "model";
 	if (isModelField && isSelectType) {
@@ -109,11 +101,9 @@ export function ValueEditor({
 						.filter((v) => v);
 				}
 			}
-
 			const handleMultiModelChange = (selected: string[]) => {
 				handleOnChange(selected.length > 0 ? JSON.stringify(selected) : "");
 			};
-
 			return (
 				<ModelSelector
 					multiple
@@ -126,12 +116,10 @@ export function ValueEditor({
 				/>
 			);
 		}
-
 		let valueToUse = value;
 		if (typeof value === "string" && value) {
 			try {
 				const parsedValue = JSON.parse(value);
-
 				if (Array.isArray(parsedValue)) {
 					valueToUse = parsedValue[0];
 				} else if (typeof parsedValue === "string") {
@@ -139,7 +127,6 @@ export function ValueEditor({
 				}
 			} catch (error) {}
 		}
-
 		// For single operators (=, !=), use single select
 		return (
 			<ModelSelector
@@ -152,7 +139,6 @@ export function ValueEditor({
 			/>
 		);
 	}
-
 	// Handle select type (for provider dropdown)
 	if (isSelectType && fieldData?.values) {
 		const isProviderField = fieldData?.name === "provider";
@@ -163,10 +149,9 @@ export function ValueEditor({
 				return {
 					value: optName,
 					label: (option as any).label || optName,
-					disabled: (option as any).disabled || false,
+					disabled: (option as any).disabled,
 				};
 			});
-
 		// For array operators with provider, use multi-select dropdown
 		if (isArrayOperator) {
 			// Parse comma-separated or JSON array value
@@ -186,11 +171,9 @@ export function ValueEditor({
 						.filter((v) => v);
 				}
 			}
-
 			const handleMultiselectChange = (values: string[]) => {
 				handleOnChange(values.length > 0 ? JSON.stringify(values) : "");
 			};
-
 			return isProviderField ? (
 				<ProviderSelector
 					multiple
@@ -214,7 +197,6 @@ export function ValueEditor({
 				/>
 			);
 		}
-
 		return isProviderField ? (
 			<ProviderSelector
 				source="values"
@@ -227,7 +209,7 @@ export function ValueEditor({
 			/>
 		) : (
 			<ComboboxSelect
-				value={value || null}
+				value={value}
 				onValueChange={(newValue) => handleOnChange(newValue ?? "")}
 				options={options}
 				placeholder={fieldData.placeholder || t("celBuilder.selectPlaceholder")}
@@ -236,7 +218,6 @@ export function ValueEditor({
 			/>
 		);
 	}
-
 	// Handle keyValue type (for header and parameter)
 	// Key input is rendered in FieldSelector, only show value input here
 	if (isKeyValueType) {
@@ -251,13 +232,11 @@ export function ValueEditor({
 			/>
 		);
 	}
-
 	const placeholder = isArrayOperator
 		? t("celBuilder.commaSeparated")
 		: isRegexOperator
 			? "e.g., .* (any), openai|anthropic (multiple), ^gpt.* (prefix)"
 			: fieldData?.placeholder || t("celBuilder.enterValue");
-
 	// Use textarea for array inputs
 	if (isArrayOperator) {
 		return (
@@ -269,11 +248,9 @@ export function ValueEditor({
 			/>
 		);
 	}
-
 	// Use text input with validation for regex
 	if (isRegexOperator) {
 		const regexError = validateRegex && value ? validateRegex(String(value)) : null;
-
 		return (
 			<div className="flex flex-col gap-1">
 				<Input
@@ -287,7 +264,6 @@ export function ValueEditor({
 			</div>
 		);
 	}
-
 	// Use regular input for single values
 	return (
 		<Input

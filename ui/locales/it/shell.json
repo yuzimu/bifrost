@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "Pagina iniziale",
 		"observability": "Osservabilità",
 		"dashboard": "Dashboard",
 		"llmLogs": "Log LLM",
@@ -28,30 +27,14 @@
 		"oauthGrants": "Concessioni OAuth",
 		"mcpSettings": "Impostazioni MCP",
 		"plugins": "Plugin",
-		"alerting": "Avvisi",
-		"channels": "Canali",
-		"rules": "Regole",
-		"history": "Cronologia",
 		"governance": "Governance",
 		"virtualKeys": "Chiavi virtuali",
-		"users": "Utenti",
 		"teams": "Team",
-		"businessUnits": "Business unit",
 		"customers": "Clienti",
-		"userProvisioning": "Provisioning utenti",
-		"rolesPermissions": "Ruoli e autorizzazioni",
-		"accessProfiles": "Profili di accesso",
-		"projects": "Progetti",
-		"auditLogs": "Log di audit",
 		"guardrails": "Guardrail",
 		"guardrailRules": "Regole",
 		"guardrailProviders": "Provider",
 		"webhooks": "Webhook",
-		"edgeControl": "Controllo edge",
-		"devices": "Dispositivi",
-		"approvals": "Approvazioni",
-		"edgeSettings": "Impostazioni edge",
-		"clusterConfig": "Configurazione cluster",
 		"adaptiveRouting": "Routing adattivo",
 		"adaptiveRoutingDashboard": "Dashboard",
 		"adaptiveRoutingSettings": "Impostazioni",
@@ -63,15 +46,10 @@
 		"caching": "Cache",
 		"security": "Sicurezza",
 		"warp": "Warp",
-		"proxy": "Proxy",
-		"apiKeys": "Chiavi API",
 		"performanceTuning": "Ottimizzazione prestazioni",
-		"featureFlags": "Feature flag",
-		"branding": "Branding",
-		"licenseInfo": "Informazioni licenza"
+		"featureFlags": "Feature flag"
 	},
 	"navDesc": {
-		"home": "Il tuo utilizzo, le chiavi, i budget e gli accessi",
 		"observability": "Log delle richieste e monitoraggio",
 		"dashboard": "Dashboard",
 		"llmLogs": "Log delle richieste LLM e monitoraggio",
@@ -96,30 +74,14 @@
 		"oauthGrants": "Concessioni OAuth downstream",
 		"mcpSettings": "Configurazione MCP",
 		"plugins": "Gestisci plugin personalizzati",
-		"alerting": "Gestisci canali, regole e cronologia degli avvisi",
-		"channels": "Configura i canali di notifica",
-		"rules": "Definisci le regole di alerting",
-		"history": "Consulta la cronologia di consegna degli avvisi",
 		"governance": "Chiavi virtuali, utenti, team, clienti e ruoli",
 		"virtualKeys": "Gestisci chiavi virtuali e accesso",
-		"users": "Gestisci gli utenti",
 		"teams": "Gestisci i team",
-		"businessUnits": "Gestisci le business unit",
 		"customers": "Gestisci i clienti",
-		"userProvisioning": "Gestione e provisioning utenti",
-		"rolesPermissions": "Ruoli e autorizzazioni utente",
-		"accessProfiles": "Gestisci i profili di accesso per i ruoli",
-		"projects": "Limita le richieste all'accesso e al budget di un progetto",
-		"auditLogs": "Log di audit e conformità",
 		"guardrails": "Configurazione guardrail",
 		"guardrailRules": "Regole guardrail",
 		"guardrailProviders": "Configurazione provider guardrail",
 		"webhooks": "Endpoint webhook per job asincroni",
-		"edgeControl": "Gestione dispositivi edge",
-		"devices": "Gestisci i dispositivi edge",
-		"approvals": "Approva app e server MCP",
-		"edgeSettings": "Impostazioni edge",
-		"clusterConfig": "Gestisci il cluster Bifrost",
 		"adaptiveRouting": "Gestisci il routing adattivo",
 		"adaptiveRoutingDashboard": "Metriche del routing adattivo",
 		"adaptiveRoutingSettings": "Impostazioni del routing adattivo",
@@ -131,16 +93,8 @@
 		"caching": "Configurazione della cache",
 		"security": "Impostazioni di sicurezza",
 		"warp": "Configurazione dell'agente Warp",
-		"proxy": "Configurazione proxy",
-		"apiKeys": "Gestione chiavi API",
 		"performanceTuning": "Impostazioni di ottimizzazione delle prestazioni",
-		"featureFlags": "Attiva/disattiva feature flag",
-		"branding": "Logo e icona personalizzati",
-		"licenseInfo": "Informazioni sulla licenza Enterprise"
-	},
-	"home": {
-		"unlockTitle": "Sblocca la tua pagina iniziale personale",
-		"unlockDescription": "Questa funzione fa parte della licenza enterprise di Bifrost. La pagina iniziale mostra a ogni utente il proprio utilizzo, le chiavi, i budget e gli accessi."
+		"featureFlags": "Attiva/disattiva feature flag"
 	},
 	"search": {
 		"placeholder": "Cerca...",
@@ -166,12 +120,6 @@
 			"available": "{{name}} è ora disponibile.",
 			"viewNotes": "Vedi le note di rilascio",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "Serve aiuto per la configurazione in produzione?",
-			"body": "Offriamo supporto per la configurazione in produzione, incluse integrazioni personalizzate e assistenza dedicata.",
-			"bookPrefix": "Prenota una demo con il nostro team",
-			"here": "qui"
 		}
 	},
 	"topbar": {
@@ -194,25 +142,14 @@
 	"titles": {
 		"dashboard": "Dashboard",
 		"adaptiveRoutingSettings": "Impostazioni routing adattivo",
-		"alertChannels": "Canali di avviso",
-		"alertHistory": "Cronologia avvisi",
-		"alertRules": "Regole di avviso",
-		"clusterConfig": "Configurazione cluster",
 		"settings": "Impostazioni",
-		"licenseInfo": "Informazioni licenza",
-		"edgeSettings": "Impostazioni edge",
-		"edgeDevices": "Dispositivi edge",
-		"edgeApprovals": "Approvazioni edge",
-		"rolesPermissions": "Ruoli e autorizzazioni",
 		"guardrailRules": "Regole guardrail",
 		"guardrailProviders": "Provider guardrail",
 		"llmLogs": "Log LLM",
-		"logConnectors": "Connettori dei log",
 		"observabilityConnectors": "Connettori di osservabilità",
 		"promptRepository": "Repository prompt",
 		"modelProviders": "Provider di modelli",
-		"routingTree": "Albero di routing",
-		"userProvisioning": "Provisioning utenti"
+		"routingTree": "Albero di routing"
 	},
 	"error": {
 		"title": "Qualcosa è andato storto",
@@ -406,10 +343,7 @@
 			"not_configured": {
 				"summary": "Warp non è ancora configurato.",
 				"cause": "Nessun fornitore e modello impostati, oppure Warp è disattivato nelle impostazioni.",
-				"suggestions": [
-					"Apri le impostazioni Warp e scegli un fornitore e un modello.",
-					"Assicurati che Enable Warp sia attivo."
-				]
+				"suggestions": ["Apri le impostazioni Warp e scegli un fornitore e un modello.", "Assicurati che Enable Warp sia attivo."]
 			},
 			"max_iterations": {
 				"summary": "Warp non è riuscito a chiudere una risposta.",
@@ -455,10 +389,7 @@
 			"unknown": {
 				"summary": "Qualcosa è andato storto.",
 				"cause": "Warp ha restituito un errore senza un codice riconosciuto.",
-				"suggestions": [
-					"Riprova la domanda.",
-					"Se continua, segnalalo con i dettagli qui sotto."
-				]
+				"suggestions": ["Riprova la domanda.", "Se continua, segnalalo con i dettagli qui sotto."]
 			}
 		}
 	}

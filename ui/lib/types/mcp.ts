@@ -60,7 +60,6 @@ export interface MCPTLSConfig {
 	ca_cert_pem?: SecretVar;
 }
 
-// Delegated token-exchange scoping for auth_type === "token_exchange": each
 // caller's identity-provider token is exchanged at runtime for a short-lived
 // token scoped to this server's audience. Carries no credentials — the
 // exchange endpoint and client come from the deployment's identity-provider
@@ -69,16 +68,16 @@ export interface MCPTokenExchangeConfig {
 	audience: string; // Resource identifier at the identity provider, e.g. "api://jira-mcp"
 	// Identity-provider application authorized to perform exchanges for this
 	// audience — typically a dedicated registration carrying the
-	// token-exchange (or on-behalf-of) grant, separate from the SSO login
+
 	// application. Required unless use_idp_credentials is true. Redacted on
 	// GET.
 	client_id?: SecretVar;
 	client_secret?: SecretVar; // Omit for public clients. Ignored when use_idp_credentials is true. Redacted on GET.
-	// When true, performs the exchange as the SSO login application itself
+
 	// instead of client_id/client_secret above, which are then ignored. Some
 	// providers require this — Microsoft Entra ID's on-behalf-of grant only
 	// accepts an assertion audienced to the exchanging application, and the
-	// SSO login flow always requests a token self-audienced to itself, so a
+
 	// separate exchange application can never receive a usable one.
 	use_idp_credentials?: boolean;
 	// Optional scopes on the exchanged token. Include "offline_access" (where
@@ -87,8 +86,7 @@ export interface MCPTokenExchangeConfig {
 	scopes?: string[];
 	// Overrides where the exchange request is sent, for identity providers
 	// that bind an audience to a specific authorization server distinct from
-	// the one used for SSO login (e.g. Okta's per-resource Custom
-	// Authorization Servers). Leave empty to use the deployment's SSO login
+
 	// issuer, which is correct for providers with one tenant-wide token
 	// endpoint (Entra, Auth0).
 	authorization_server_url?: string;
@@ -144,8 +142,7 @@ export interface MCPClientConfig {
 	// in the credential store, not on the client config. Required (non-empty)
 	// for per_user_headers auth; ignored for all other auth types.
 	per_user_header_keys?: string[];
-	// token_exchange-only: audience/scopes the exchanged tokens are scoped to.
-	// Required (with a non-empty audience) for token_exchange auth.
+
 	token_exchange?: MCPTokenExchangeConfig;
 	is_ping_available?: boolean;
 	// Only meaningful when connection_type === "http": whether this client
@@ -179,7 +176,7 @@ export interface MCPVKConfigResponse {
 // MCPClientCredential is the read-only view of the credential a server holds
 // on its own behalf, as opposed to the per-caller credentials listed under
 // MCP sessions: the single shared token for an oauth server, the retained
-// admin token for per_user_oauth and token_exchange servers (used only to
+
 // refresh the tool list), or the retained admin header values for a
 // per_user_headers server. Never carries secret material: the refresh token
 // is reported as present or absent, and header values only by name.
@@ -243,7 +240,7 @@ export interface CreateMCPClientRequest {
 	headers?: Record<string, SecretVar>;
 	// per_user_headers-only: admin-declared header schema (names only).
 	per_user_header_keys?: string[];
-	// token_exchange-only: audience/scopes the exchanged tokens are scoped to.
+
 	// Verification runs automatically as the signed-in admin (their own
 	// identity-provider token is the exchange subject); sessions without one
 	// (e.g. API-key auth) create the client in pending_verification.
@@ -317,7 +314,7 @@ export interface UpdateMCPClientRequest {
 	disabled?: boolean; // Set to true to shut down connection/workers; false to reconnect
 	tls_config?: MCPTLSConfig; // TLS configuration for HTTP/SSE connections
 	oauth_config?: OAuthConfigUpdate; // Only supported for existing oauth/per_user_oauth clients (credential rotation)
-	token_exchange?: MCPTokenExchangeConfig; // Only supported for existing token_exchange clients; omitted = preserve
+	token_exchange?: MCPTokenExchangeConfig;
 	vk_configs?: MCPVKConfig[]; // When provided, replaces all VK assignments for this MCP client
 }
 
@@ -329,7 +326,7 @@ export interface GetMCPClientsParams {
 	server?: string;
 	// Comma-separated exact-match filters (OR semantics), mirroring the library page.
 	connection_type?: string; // http,sse,stdio
-	auth_type?: string; // none,headers,oauth,per_user_oauth,per_user_headers,token_exchange
+	auth_type?: string;
 	state?: string; // connected,disconnected — resolved against live engine state
 	virtual_keys?: string; // comma-separated VK IDs the client is assigned to
 	// Boolean facets — omit for "no filter".

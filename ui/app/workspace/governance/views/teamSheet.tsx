@@ -26,7 +26,6 @@ import { getErrorMessage, useCreateTeamMutation, useUpdateTeamMutation } from "@
 import { CreateTeamRequest, Team, UpdateTeamRequest } from "@/lib/types/governance";
 import { budgetSignature, formatCurrency } from "@/lib/utils/governance";
 import { Validator } from "@/lib/utils/validation";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { formatDistanceToNow } from "date-fns";
 import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 import isEqual from "lodash.isequal";
@@ -34,13 +33,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { v4 as uuid } from "uuid";
-
 interface TeamSheetProps {
 	team?: Team | null;
 	onSave: () => void;
 	onCancel: () => void;
 }
-
 // One editable budget row; teams own multiple, each keyed by reset_duration
 // on the wire. The client-side `id` is stable across re-renders and equals
 // the persisted budget's id for existing rows, or a fresh UUID for new ones —
@@ -51,9 +48,10 @@ interface TeamBudgetRow {
 	maxLimit: number | undefined;
 	resetDuration: string;
 	/** Fiscal quarter definition; only meaningful when resetDuration is quarterly. */
-	resetConfig?: { quarter_start_month?: number };
+	resetConfig?: {
+		quarter_start_month?: number;
+	};
 }
-
 interface TeamFormData {
 	name: string;
 	customerId: string;
@@ -68,7 +66,6 @@ interface TeamFormData {
 	calendarAligned: boolean;
 	isDirty: boolean;
 }
-
 // Helper function to create initial state
 const createInitialState = (team?: Team | null): Omit<TeamFormData, "isDirty"> => {
 	return {
@@ -89,7 +86,6 @@ const createInitialState = (team?: Team | null): Omit<TeamFormData, "isDirty"> =
 		calendarAligned: team?.calendar_aligned ?? false,
 	};
 };
-
 export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 	const { t, i18n } = useTranslation("governance");
 	const { t: tCommon } = useTranslation("common");
@@ -100,7 +96,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 		isDirty: false,
 	});
 	const [nameError, setNameError] = useState<string | null>(null);
-
 	// Keyed on the team *id*, not the object: this sheet is fed from a polled
 	// list, so an unchanged team still arrives as a fresh object every few
 	// seconds and an identity-keyed reset would discard in-progress edits.
@@ -115,16 +110,11 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 		setNameError(null);
 		setShowCalendarAlignWarning(false);
 	}, [team]);
-
-	const hasCreateAccess = useRbac(RbacResource.Teams, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Teams, RbacOperation.Update);
-	const hasPermission = isEditing ? hasUpdateAccess : hasCreateAccess;
-
+	const hasPermission = isEditing ? true : true;
 	// RTK Query hooks
 	const [createTeam, { isLoading: isCreating }] = useCreateTeamMutation();
 	const [updateTeam, { isLoading: isUpdating }] = useUpdateTeamMutation();
 	const loading = isCreating || isUpdating;
-
 	// Team-wide calendar-align toggle: confirmation only fires on the off→on
 	// transition for an existing team (mirrors the VK sheet behavior).
 	const [showCalendarAlignWarning, setShowCalendarAlignWarning] = useState(false);
@@ -132,14 +122,12 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 	// The payload is a marker rather than the form data: this sheet keeps its own
 	// formData state, which the save reads directly.
 	const resetPrompt = useBudgetUsageResetPrompt<boolean>();
-
 	const updateBudgetRow = (idx: number, patch: Partial<TeamBudgetRow>) => {
 		setFormData((prev) => {
 			const next = prev.budgets.map((row, i) => (i === idx ? { ...row, ...patch } : row));
 			return { ...prev, budgets: next };
 		});
 	};
-
 	const addBudgetRow = () => {
 		setFormData((prev) => ({
 			...prev,
@@ -153,14 +141,12 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 			],
 		}));
 	};
-
 	const removeBudgetRow = (idx: number) => {
 		setFormData((prev) => ({
 			...prev,
 			budgets: prev.budgets.filter((_, i) => i !== idx),
 		}));
 	};
-
 	const handleCalendarAlignedChange = (checked: boolean) => {
 		// Warn only on the persisted false→true transition. Toggling off then
 		// back on within the same edit session doesn't reset on save (the backend
@@ -171,7 +157,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 			updateField("calendarAligned", checked);
 		}
 	};
-
 	// Track isDirty state
 	useEffect(() => {
 		const currentData: Omit<TeamFormData, "isDirty"> = {
@@ -199,10 +184,8 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 		formData.calendarAligned,
 		initialState,
 	]);
-
 	const tokenMaxLimitNum = formData.tokenMaxLimit;
 	const requestMaxLimitNum = formData.requestMaxLimit;
-
 	// Validation
 	const validator = useMemo(() => {
 		// Per-row budget validation plus cross-row uniqueness on reset_duration.
@@ -215,13 +198,11 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 		});
 		const populatedDurations = formData.budgets.filter((r) => r.maxLimit !== undefined && r.maxLimit !== null).map((r) => r.resetDuration);
 		const uniqueDurations = new Set(populatedDurations).size;
-
 		return new Validator([
 			Validator.required(formData.name.trim(), t("teams.nameRequired")),
 			Validator.custom(formData.isDirty, t("sheet.noChanges")),
 			...budgetValidators,
 			Validator.custom(uniqueDurations === populatedDurations.length, t("sheet.distinctResetDuration")),
-
 			// Rate limit validation - token limits
 			...(formData.tokenMaxLimit !== undefined && formData.tokenMaxLimit !== null
 				? [
@@ -229,7 +210,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 						Validator.required(formData.tokenResetDuration, t("sheet.tokenResetRequired")),
 					]
 				: []),
-
 			// Rate limit validation - request limits
 			...(formData.requestMaxLimit !== undefined && formData.requestMaxLimit !== null
 				? [
@@ -239,14 +219,12 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 				: []),
 		]);
 	}, [formData, tokenMaxLimitNum, requestMaxLimitNum, t]);
-
 	const updateField = <K extends keyof TeamFormData>(field: K, value: TeamFormData[K]) => {
 		if (field === "name") {
 			setNameError(null);
 		}
 		setFormData((prev) => ({ ...prev, [field]: value }));
 	};
-
 	// Whether this save changes budget configuration on an existing team, which is
 	// when clearing accumulated spend is a meaningful choice. Creating a team has
 	// no usage to reset, and a save that leaves budgets alone should not ask.
@@ -258,7 +236,11 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 		if (!isEditing || !team) return false;
 		const next = formData.budgets
 			.filter((r) => r.maxLimit !== undefined && r.maxLimit !== null)
-			.map((r) => ({ max_limit: r.maxLimit, reset_duration: r.resetDuration, reset_config: r.resetConfig }));
+			.map((r) => ({
+				max_limit: r.maxLimit,
+				reset_duration: r.resetDuration,
+				reset_config: r.resetConfig,
+			}));
 		const current = (team.budgets ?? []).map((b) => ({
 			max_limit: b.max_limit ?? undefined,
 			reset_duration: b.reset_duration,
@@ -266,22 +248,18 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 		}));
 		return budgetSignature(next) !== budgetSignature(current);
 	};
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-
 		if (!validator.isValid()) {
 			toast.error(validator.getFirstError());
 			return;
 		}
-
 		if (budgetsChanged()) {
 			resetPrompt.ask(true);
 			return;
 		}
 		await saveTeam(false);
 	};
-
 	const saveTeam = async (resetBudgetUsage: boolean) => {
 		// Serialize budget rows whose max_limit was filled in — rows left blank
 		// are silently dropped (the backend treats the slice as authoritative).
@@ -294,7 +272,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 				// Only quarterly windows may carry a quarter definition; the API rejects it elsewhere.
 				reset_config: r.resetDuration.endsWith("Q") ? r.resetConfig : undefined,
 			}));
-
 		try {
 			if (isEditing && team) {
 				// Update existing team
@@ -308,7 +285,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 					// Only sent when the operator explicitly chose to clear spend.
 					reset_budget_usage: resetBudgetUsage || undefined,
 				};
-
 				// Detect rate limit changes using had/has pattern
 				const hadRateLimit = !!team.rate_limit;
 				const hasRateLimit =
@@ -325,7 +301,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 				} else if (hadRateLimit) {
 					updateData.rate_limit = {} as UpdateTeamRequest["rate_limit"];
 				}
-
 				await updateTeam({ teamId: team.id, data: updateData }).unwrap();
 				toast.success(t("teams.updated"));
 			} else {
@@ -337,7 +312,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 					// Team-wide setting that governs both team budgets and the team rate limit.
 					calendar_aligned: formData.calendarAligned,
 				};
-
 				// Add rate limit if enabled (token or request limits)
 				if (
 					(tokenMaxLimitNum !== undefined && tokenMaxLimitNum !== null) ||
@@ -351,11 +325,9 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 							requestMaxLimitNum !== undefined && requestMaxLimitNum !== null ? formData.requestResetDuration : undefined,
 					};
 				}
-
 				await createTeam(createData).unwrap();
 				toast.success(t("teams.created"));
 			}
-
 			onSave();
 		} catch (error: any) {
 			if (error?.status === 409) {
@@ -365,7 +337,6 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	return (
 		<Sheet open onOpenChange={(open) => !open && onCancel()}>
 			<SheetContent
@@ -400,7 +371,7 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 							</div>
 
 							{/* Customer Assignment — searchable/paginated, so the sheet never
-							    depends on the caller having fetched every customer up front. */}
+            depends on the caller having fetched every customer up front. */}
 							<div className="space-y-2">
 								<Label htmlFor="customer">{t("teams.sheet.customerOptional")}</Label>
 								<div className="flex items-center gap-2" data-testid="team-customer-selector">
@@ -552,7 +523,10 @@ export default function TeamSheet({ team, onSave, onCancel }: TeamSheetProps) {
 										<Trans
 											t={t}
 											i18nKey="teams.sheet.calendarAlignHelp"
-											components={{ bold0: <span className="font-semibold" />, bold1: <span className="font-semibold" /> }}
+											components={{
+												bold0: <span className="font-semibold" />,
+												bold1: <span className="font-semibold" />,
+											}}
 										/>
 									</AlertDialogDescription>
 								</AlertDialogHeader>

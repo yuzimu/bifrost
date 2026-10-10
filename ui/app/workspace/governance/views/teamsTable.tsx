@@ -24,7 +24,6 @@ import { getErrorMessage, useDeleteTeamMutation } from "@/lib/store";
 import { Team } from "@/lib/types/governance";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/governance";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Edit, MoreHorizontal, Plus, ScrollText, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -32,12 +31,10 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import TeamSheet from "./teamSheet";
 import { TeamsEmptyState } from "./teamsEmptyState";
-
 // Helper to format reset duration for display
 const formatResetDuration = (duration: string) => {
 	return resetDurationLabels[duration] || duration;
 };
-
 /** 本地化团队操作标签，保留操作权限与菜单行为。 */
 function TeamActionsMenu({
 	team,
@@ -58,7 +55,6 @@ function TeamActionsMenu({
 	const { t: tCommon } = useTranslation("common");
 	const [isOpen, setIsOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-
 	return (
 		<>
 			<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -126,7 +122,6 @@ function TeamActionsMenu({
 		</>
 	);
 }
-
 interface TeamsTableProps {
 	teams: Team[];
 	totalCount: number;
@@ -141,7 +136,6 @@ interface TeamsTableProps {
 	onTeamSelect: (team: Team | null) => void;
 	onDialogClose: () => void;
 }
-
 /** 展示团队用量和分页，显示文案随界面语言更新。 */
 export default function TeamsTable({
 	teams,
@@ -161,7 +155,6 @@ export default function TeamsTable({
 	const { t: tCommon } = useTranslation("common");
 	const showTeamSheet = selectedTeamId !== null && selectedTeamId !== "";
 	const editingTeam = selectedTeamId && selectedTeamId !== "new" ? (teams.find((t) => t.id === selectedTeamId) ?? null) : null;
-
 	// If a team ID is in the URL but can't be resolved (deleted or filtered out),
 	// clear it so we don't silently open the dialog in "create" mode.
 	useEffect(() => {
@@ -169,13 +162,7 @@ export default function TeamsTable({
 			onDialogClose();
 		}
 	}, [selectedTeamId, editingTeam, onDialogClose]);
-
-	const hasCreateAccess = useRbac(RbacResource.Teams, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Teams, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.Teams, RbacOperation.Delete);
-
 	const [deleteTeam, { isLoading: isDeleting }] = useDeleteTeamMutation();
-
 	const handleDelete = async (teamId: string) => {
 		try {
 			await deleteTeam(teamId).unwrap();
@@ -184,19 +171,15 @@ export default function TeamsTable({
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const handleAddTeam = () => {
 		onTeamAdd();
 	};
-
 	const handleEditTeam = (team: Team) => {
 		onTeamSelect(team);
 	};
-
 	const handleTeamSaved = () => {
 		onDialogClose();
 	};
-
 	// Both the customer name and the virtual-key count come straight off the team
 	// row — the list endpoint preloads `customer` and computes `virtual_key_count`
 	// via a correlated subquery, so neither needs a client-side join.
@@ -204,19 +187,15 @@ export default function TeamsTable({
 		if (!team.customer_id) return "-";
 		return team.customer?.name ?? t("teams.unknownCustomer");
 	};
-
 	const hasActiveFilters = debouncedSearch;
-
 	const [hasLoadedRows, setHasLoadedRows] = useState(false);
 	useEffect(() => {
 		if (totalCount > 0) setHasLoadedRows(true);
 	}, [totalCount]);
-
 	// Hoisted above the empty/populated branch: PageTitle draws nothing inline,
 	// and leaving it out of either branch drops the topbar to the route-derived
 	// fallback.
 	const pageTitle = <PageTitle title={t("teams.title")}>{t("teams.description")}</PageTitle>;
-
 	// True empty state: no teams at all (not just filtered to zero). Rendered as a
 	// branch *inside* the tree rather than an early return with a different shape,
 	// because a shape change made React remount TeamSheet and wipe whatever was
@@ -225,14 +204,13 @@ export default function TeamsTable({
 	// every few seconds on a genuinely empty page, while the latch still suppresses
 	// the empty card during the uncached fetch of a later page.
 	const isTrulyEmpty = totalCount === 0 && !hasActiveFilters && !hasLoadedRows;
-
 	return (
 		<>
 			{pageTitle}
 			<TooltipProvider>
 				{showTeamSheet && <TeamSheet team={editingTeam} onSave={handleTeamSaved} onCancel={onDialogClose} />}
 
-				{isTrulyEmpty && <TeamsEmptyState onAddClick={handleAddTeam} canCreate={hasCreateAccess} />}
+				{isTrulyEmpty && <TeamsEmptyState onAddClick={handleAddTeam} canCreate={true} />}
 
 				{!isTrulyEmpty && (
 					<div className="flex grow flex-col overflow-y-auto">
@@ -248,8 +226,8 @@ export default function TeamsTable({
 									data-testid="teams-search-input"
 								/>
 							</div>
-							<DisabledReason reason={actionDisabledReason(hasCreateAccess, "create", "teams")} className="ml-auto">
-								<Button className="ml-auto" data-testid="create-team-btn" onClick={handleAddTeam} disabled={!hasCreateAccess}>
+							<DisabledReason reason={actionDisabledReason(true, "create", "teams")} className="ml-auto">
+								<Button className="ml-auto" data-testid="create-team-btn" onClick={handleAddTeam}>
 									<Plus className="h-4 w-4" />
 									{t("teams.add")}
 								</Button>
@@ -279,11 +257,9 @@ export default function TeamsTable({
 										teams.map((team) => {
 											const vkCount = team.virtual_key_count ?? 0;
 											const customerName = getCustomerName(team);
-
 											// Budget calculations — any of the team's budgets exhausted
 											const teamBudgets = team.budgets ?? [];
 											const isBudgetExhausted = teamBudgets.some((b) => b.max_limit > 0 && b.current_usage >= b.max_limit);
-
 											// Rate limit calculations
 											const isTokenLimitExhausted =
 												team.rate_limit?.token_max_limit &&
@@ -302,9 +278,7 @@ export default function TeamsTable({
 												team.rate_limit?.request_max_limit && team.rate_limit.request_max_limit > 0
 													? Math.min((team.rate_limit.request_current_usage / team.rate_limit.request_max_limit) * 100, 100)
 													: 0;
-
 											const isExhausted = isBudgetExhausted || isRateLimitExhausted;
-
 											return (
 												<TableRow
 													key={team.id}
@@ -474,8 +448,8 @@ export default function TeamsTable({
 													>
 														<TeamActionsMenu
 															team={team}
-															hasUpdateAccess={hasUpdateAccess}
-															hasDeleteAccess={hasDeleteAccess}
+															hasUpdateAccess={true}
+															hasDeleteAccess={true}
 															isDeleting={isDeleting}
 															onEdit={handleEditTeam}
 															onDelete={handleDelete}

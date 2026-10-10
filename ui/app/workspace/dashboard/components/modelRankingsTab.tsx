@@ -25,10 +25,8 @@ import { ChartErrorBoundary } from "./charts/chartErrorBoundary";
 import { formatCost, SortableHeader, TrendBadge } from "./rankingsShared";
 import { useTranslation } from "react-i18next";
 import { NoChartData } from "./charts/noChartData";
-
 type SortField = "total_requests" | "success_rate" | "total_tokens" | "total_cost" | "avg_latency" | "throughput";
 type SortOrder = "asc" | "desc";
-
 interface ModelRankingsTabProps {
 	rankingsData: ModelRankingsResponse | null;
 	loading: boolean;
@@ -37,18 +35,15 @@ interface ModelRankingsTabProps {
 	startTime: number;
 	endTime: number;
 }
-
 function formatLatency(ms: number): string {
 	if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
 	return `${ms.toFixed(0)}ms`;
 }
-
 // Tooltip for the usage share chart
 function UsageShareTooltip({ active, payload, models, modelLabels }: any) {
 	if (!active || !payload || !payload.length) return null;
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -74,7 +69,6 @@ function UsageShareTooltip({ active, payload, models, modelLabels }: any) {
 		</div>
 	);
 }
-
 // Top Models usage share stacked area chart + ranked legend
 function TopModelsChart({
 	modelData,
@@ -96,7 +90,6 @@ function TopModelsChart({
 		if (!modelData?.buckets || !modelData.bucket_size_seconds) {
 			return { chartData: [], displayModels: [] };
 		}
-
 		const allModels = modelData.models || [];
 		// Pick top-N by total request count, then sort the chosen labels alphabetically
 		// for legend stability. Other goes at the end.
@@ -105,7 +98,6 @@ function TopModelsChart({
 		const sortedTop = [...top].sort((a, b) => a.localeCompare(b));
 		const models = hasOther ? [...sortedTop, OTHER_SERIES_KEY] : sortedTop;
 		const topSet = new Set(sortedTop);
-
 		const processed = modelData.buckets.map((bucket, index) => {
 			const item: any = {
 				...bucket,
@@ -123,10 +115,8 @@ function TopModelsChart({
 			}
 			return item;
 		});
-
 		return { chartData: processed, displayModels: models };
 	}, [modelData, i18n.resolvedLanguage]);
-
 	const grandTotal = useMemo(() => {
 		if (!modelData?.buckets) return null;
 		let sum = 0;
@@ -137,7 +127,6 @@ function TopModelsChart({
 		}
 		return sum;
 	}, [modelData]);
-
 	// Totals per model for the ranked legend (aggregated across providers). The
 	// legend is a key to the chart: the same TOP_SERIES_LIMIT named series in
 	// chart-color order, then one explicit "Other" row for everything the chart
@@ -173,7 +162,6 @@ function TopModelsChart({
 			},
 		];
 	}, [rankingsData, displayModels]);
-
 	return (
 		<ChartCard
 			title={t("dashboard.charts.topModels")}
@@ -190,25 +178,25 @@ function TopModelsChart({
 					<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}`}>
 						<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 							<BarChart data={chartData} margin={{ top: 6, right: 4, left: 4, bottom: 0 }} barCategoryGap={1}>
-								<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+								<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 								<XAxis
 									dataKey="index"
 									type="number"
 									domain={[-0.5, chartData.length - 0.5]}
 									tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-									tickLine={false}
-									axisLine={false}
+									tickLine
+									axisLine
 									tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 									interval="preserveStartEnd"
 								/>
 								<YAxis
 									tick={{ fontSize: 11, className: "fill-zinc-500" }}
-									tickLine={false}
-									axisLine={false}
+									tickLine
+									axisLine
 									width={48}
 									tickFormatter={(v) => formatNumber(v)}
 									domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-									allowDataOverflow={false}
+									allowDataOverflow
 								/>
 								<Tooltip
 									content={<UsageShareTooltip models={displayModels} modelLabels={modelLabels} />}
@@ -221,7 +209,7 @@ function TopModelsChart({
 											dataKey={`model_${idx}`}
 											fill={model === OTHER_SERIES_KEY ? OTHER_SERIES_COLOR : getModelColor(idx)}
 											fillOpacity={0.9}
-											isAnimationActive={false}
+											isAnimationActive
 											barSize={30}
 										/>
 									))}
@@ -254,12 +242,10 @@ function TopModelsChart({
 		</ChartCard>
 	);
 }
-
 function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels, startTime, endTime }: ModelRankingsTabProps) {
 	const { t } = useTranslation("observability");
 	const [sortField, setSortField] = useState<SortField>("total_requests");
 	const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-
 	const handleSort = useCallback(
 		(field: SortField) => {
 			if (sortField === field) {
@@ -271,7 +257,6 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 		},
 		[sortField],
 	);
-
 	const sortedRankings = useMemo(() => {
 		if (!rankingsData?.rankings) return [];
 		return [...rankingsData.rankings].sort((a, b) => {
@@ -280,7 +265,6 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 			return sortOrder === "desc" ? (bVal as number) - (aVal as number) : (aVal as number) - (bVal as number);
 		});
 	}, [rankingsData, sortField, sortOrder]);
-
 	const modelLabels = useMemo(() => {
 		const labels: Record<string, string> = {};
 		for (const r of rankingsData?.rankings ?? []) {
@@ -288,7 +272,6 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 		}
 		return labels;
 	}, [rankingsData]);
-
 	return (
 		<div className="flex flex-col gap-4">
 			{/* Top Models chart */}
@@ -422,13 +405,13 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 									<TableCell className="text-right">
 										<div className="flex items-center justify-end gap-2">
 											<span>{formatCost(entry.total_cost)}</span>
-											<TrendBadge value={entry.trend.cost_trend} positiveIsGood={false} isNew={!entry.trend.has_previous_period} />
+											<TrendBadge value={entry.trend.cost_trend} positiveIsGood isNew={!entry.trend.has_previous_period} />
 										</div>
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex items-center justify-end gap-2">
 											<span>{formatLatency(entry.avg_latency)}</span>
-											<TrendBadge value={entry.trend.latency_trend} positiveIsGood={false} isNew={!entry.trend.has_previous_period} />
+											<TrendBadge value={entry.trend.latency_trend} positiveIsGood isNew={!entry.trend.has_previous_period} />
 										</div>
 									</TableCell>
 									<TableCell className="text-right">

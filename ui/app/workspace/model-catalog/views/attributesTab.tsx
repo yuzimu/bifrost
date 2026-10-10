@@ -11,26 +11,21 @@ import { ProviderLabels, ProviderName } from "@/lib/constants/logs";
 import { parseAsSafeString } from "@/lib/queryParamsParser";
 import { ModelDetails, useGetModelDetailsQuery, useGetProvidersQuery } from "@/lib/store";
 import { KnownProvider } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ChevronLeft, ChevronRight, Edit, Search } from "lucide-react";
 import { useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import AttributeSheet from "./attributeSheet";
 import OverriddenPrice from "./overriddenPrice";
 import { useTranslation } from "react-i18next";
-
 // The filter spells "no provider filter" as a sentinel, since the control needs a value to
 // show for it. Module level so its identity is stable across renders.
 const ALL_PROVIDERS_VALUE = "__all__";
-
 const PAGE_SIZE = 25;
-
 const toTestIdPart = (value: string) =>
 	value
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-|-$/g, "");
-
 function DescriptionCell({ description }: { description?: string }) {
 	if (!description) return <span className="text-muted-foreground text-sm">—</span>;
 	const truncated = description.length > 80;
@@ -47,17 +42,13 @@ function DescriptionCell({ description }: { description?: string }) {
 		</TooltipProvider>
 	);
 }
-
 interface AttributesTabProps {
 	hasAccess: boolean;
 }
-
 /** 本地化模型属性表格和分页，保留编辑权限与查询条件。 */
 export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 	const { t } = useTranslation("models");
 	const allProvidersOption = useMemo(() => ({ value: ALL_PROVIDERS_VALUE, label: t("modelCatalog.allProvidersLower") }), [t]);
-	const hasUpdateAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
-
 	// Search and provider filter live in the URL so they survive a refresh and
 	// can be shared as a link. Replace rather than push so typing doesn't fill
 	// browser history with one entry per keystroke.
@@ -69,19 +60,15 @@ export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 		{ history: "replace" },
 	);
 	const { search, provider: providerFilter } = urlState;
-
 	const [offset, setOffset] = useState(0);
 	const [editing, setEditing] = useState<ModelDetails | null>(null);
-
 	// Only the query is debounced — the input itself stays URL-driven so it
 	// echoes keystrokes immediately.
 	const debouncedSearch = useDebouncedValue(search, 300);
-
 	// Reset to first page when filters change
 	useEffect(() => {
 		setOffset(0);
 	}, [debouncedSearch, providerFilter]);
-
 	const { data: providersData } = useGetProvidersQuery(undefined, { skip: !hasAccess });
 	const { data, isLoading, error, refetch } = useGetModelDetailsQuery(
 		{
@@ -93,17 +80,14 @@ export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 		},
 		{ skip: !hasAccess },
 	);
-
 	const models = data?.models ?? [];
 	const totalCount = data?.total ?? 0;
 	const overridesById = useMemo(() => data?.pricing_overrides ?? {}, [data?.pricing_overrides]);
-
 	// Snap offset back when total shrinks past current page
 	useEffect(() => {
 		if (offset < totalCount) return;
 		setOffset(totalCount === 0 ? 0 : Math.floor((totalCount - 1) / PAGE_SIZE) * PAGE_SIZE);
 	}, [totalCount, offset]);
-
 	// Clear the provider filter if the selected provider is no longer in the list
 	useEffect(() => {
 		if (!providerFilter || !providersData) return;
@@ -111,9 +95,7 @@ export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 			setUrlState({ provider: null });
 		}
 	}, [providersData, providerFilter, setUrlState]);
-
 	if (isLoading && !data) return <FullPageLoader />;
-
 	if (error) {
 		return (
 			<div className="flex h-full flex-col items-center justify-center gap-4 text-center">
@@ -124,7 +106,6 @@ export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 			</div>
 		);
 	}
-
 	return (
 		<>
 			{editing && <AttributeSheet model={editing} overrides={overridesById} onClose={() => setEditing(null)} />}
@@ -144,7 +125,7 @@ export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 							aria-label={t("modelCatalog.searchAria")}
 							placeholder={t("modelCatalog.searchByModelName")}
 							value={search}
-							onChange={(e) => setUrlState({ search: e.target.value || null })}
+							onChange={(e) => setUrlState({ search: e.target.value })}
 							className="pl-9"
 							data-testid="model-catalog-search-input"
 						/>
@@ -258,7 +239,6 @@ export default function AttributesTab({ hasAccess }: AttributesTabProps) {
 													variant="ghost"
 													size="icon"
 													className="ml-6 h-7 w-7"
-													disabled={!hasUpdateAccess}
 													onClick={() => setEditing(m)}
 													aria-label={t("modelCatalog.editAttributesFor", { name: m.name })}
 													data-testid={`model-catalog-edit-${testKey}`}

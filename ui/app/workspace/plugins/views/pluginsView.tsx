@@ -8,7 +8,6 @@ import { Switch } from "@/components/ui/switch";
 import { setPluginFormDirtyState, useAppDispatch, useAppSelector, useUpdatePluginMutation } from "@/lib/store";
 import { PluginType } from "@/lib/types/plugins";
 import { cn } from "@/lib/utils";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -16,12 +15,10 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
-
 interface Props {
 	onDelete: () => void;
 	onCreate: (pluginName: string) => void;
 }
-
 type PluginFormValues = {
 	name: string;
 	enabled: boolean;
@@ -29,7 +26,6 @@ type PluginFormValues = {
 	config?: string;
 	hasConfig: boolean;
 };
-
 const getPluginTypeColor = (type: PluginType) => {
 	switch (type) {
 		case "llm":
@@ -42,18 +38,14 @@ const getPluginTypeColor = (type: PluginType) => {
 			return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
 	}
 };
-
 export default function PluginsView(props: Props) {
 	const { t } = useTranslation("governance");
 	const { t: tCommon } = useTranslation("common");
 	const dispatch = useAppDispatch();
-	const hasUpdatePluginAccess = useRbac(RbacResource.Plugins, RbacOperation.Update);
-	const hasDeletePluginAccess = useRbac(RbacResource.Plugins, RbacOperation.Delete);
 	const [updatePlugin, { isLoading }] = useUpdatePluginMutation();
 	const selectedPlugin = useAppSelector((state) => state.plugin.selectedPlugin);
 	const [showConfig, setShowConfig] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
 	const pluginFormSchema = useMemo(
 		() =>
 			z.object({
@@ -65,18 +57,16 @@ export default function PluginsView(props: Props) {
 			}),
 		[t],
 	);
-
 	const form = useForm<PluginFormValues>({
 		resolver: zodResolver(pluginFormSchema),
 		defaultValues: {
 			name: selectedPlugin?.name || "",
-			enabled: selectedPlugin?.enabled || false,
+			enabled: selectedPlugin?.enabled,
 			path: selectedPlugin?.path || undefined,
 			config: selectedPlugin?.config ? JSON.stringify(selectedPlugin.config, null, 2) : undefined,
 			hasConfig: Boolean(selectedPlugin?.config && Object.keys(selectedPlugin.config).length > 0),
 		},
 	});
-
 	// Update form when selectedPlugin changes
 	useEffect(() => {
 		if (selectedPlugin) {
@@ -91,16 +81,13 @@ export default function PluginsView(props: Props) {
 			});
 		}
 	}, [selectedPlugin]);
-
 	// Track form dirty state
 	useEffect(() => {
 		const isDirty = form.formState.isDirty;
 		dispatch(setPluginFormDirtyState(isDirty));
 	}, [form.formState.isDirty, dispatch]);
-
 	const onSubmit = async (values: PluginFormValues) => {
 		if (!selectedPlugin) return;
-
 		try {
 			let config;
 			if (values.hasConfig && values.config) {
@@ -111,7 +98,6 @@ export default function PluginsView(props: Props) {
 					return;
 				}
 			}
-
 			await updatePlugin({
 				name: selectedPlugin.name,
 				data: {
@@ -126,25 +112,20 @@ export default function PluginsView(props: Props) {
 			toast.error(t("plugins.updateFailed"));
 		}
 	};
-
 	const onError = () => {
 		toast.error(t("plugins.formErrors"));
 	};
-
 	const handleDeleteClick = () => {
 		setShowDeleteDialog(true);
 	};
-
 	const handleDeleteCancel = () => {
 		setShowDeleteDialog(false);
 	};
-
 	const handleDeleteSuccess = () => {
 		setShowDeleteDialog(false);
 		toast.success(t("plugins.deleted"));
 		props.onDelete();
 	};
-
 	if (!selectedPlugin) {
 		return (
 			<div className="ml-4 flex w-full items-center justify-center">
@@ -152,12 +133,10 @@ export default function PluginsView(props: Props) {
 			</div>
 		);
 	}
-
 	const isErrorLog = (log: string) => {
 		const errorKeywords = ["error", "failed", "exception", "panic", "fatal", "ERR"];
 		return errorKeywords.some((keyword) => log.toLowerCase().includes(keyword.toLowerCase()));
 	};
-
 	return (
 		<div className="ml-4 w-full">
 			<Form {...form}>
@@ -324,20 +303,14 @@ export default function PluginsView(props: Props) {
 							type="button"
 							variant="outline"
 							onClick={handleDeleteClick}
-							disabled={!hasDeletePluginAccess}
 						>
 							<Trash2Icon className="h-4 w-4" />
 							{t("plugins.deletePlugin")}
 						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => form.reset()}
-							disabled={!form.formState.isDirty || !hasUpdatePluginAccess}
-						>
+						<Button type="button" variant="outline" onClick={() => form.reset()} disabled={!form.formState.isDirty}>
 							{t("plugins.reset")}
 						</Button>
-						<Button type="submit" disabled={isLoading || !form.formState.isDirty || !hasUpdatePluginAccess}>
+						<Button type="submit" disabled={isLoading || !form.formState.isDirty}>
 							<SaveIcon className="h-4 w-4" />
 							{isLoading ? t("plugins.saving") : t("plugins.saveChanges")}
 						</Button>

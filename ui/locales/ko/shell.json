@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "홈",
 		"observability": "관찰 가능성",
 		"dashboard": "대시보드",
 		"llmLogs": "LLM 로그",
@@ -28,30 +27,14 @@
 		"oauthGrants": "OAuth 권한 부여",
 		"mcpSettings": "MCP 설정",
 		"plugins": "플러그인",
-		"alerting": "알림",
-		"channels": "채널",
-		"rules": "규칙",
-		"history": "기록",
 		"governance": "거버넌스",
 		"virtualKeys": "가상 키",
-		"users": "사용자",
 		"teams": "팀",
-		"businessUnits": "비즈니스 유닛",
 		"customers": "고객",
-		"userProvisioning": "사용자 프로비저닝",
-		"rolesPermissions": "역할 및 권한",
-		"accessProfiles": "액세스 프로필",
-		"projects": "프로젝트",
-		"auditLogs": "감사 로그",
 		"guardrails": "가드레일",
 		"guardrailRules": "규칙",
 		"guardrailProviders": "공급자",
 		"webhooks": "Webhook",
-		"edgeControl": "엣지 제어",
-		"devices": "디바이스",
-		"approvals": "승인",
-		"edgeSettings": "엣지 설정",
-		"clusterConfig": "클러스터 구성",
 		"adaptiveRouting": "적응형 라우팅",
 		"adaptiveRoutingDashboard": "대시보드",
 		"adaptiveRoutingSettings": "설정",
@@ -63,15 +46,10 @@
 		"caching": "캐싱",
 		"security": "보안",
 		"warp": "Warp",
-		"proxy": "프록시",
-		"apiKeys": "API 키",
 		"performanceTuning": "성능 튜닝",
-		"featureFlags": "기능 플래그",
-		"branding": "브랜딩",
-		"licenseInfo": "라이선스 정보"
+		"featureFlags": "기능 플래그"
 	},
 	"navDesc": {
-		"home": "내 사용량, 키, 예산, 접근 권한",
 		"observability": "요청 로그 및 모니터링",
 		"dashboard": "대시보드",
 		"llmLogs": "LLM 요청 로그 및 모니터링",
@@ -96,30 +74,14 @@
 		"oauthGrants": "다운스트림 OAuth 권한 부여",
 		"mcpSettings": "MCP 구성",
 		"plugins": "커스텀 플러그인 관리",
-		"alerting": "알림 채널, 규칙, 기록 관리",
-		"channels": "알림 채널 구성",
-		"rules": "알림 규칙 정의",
-		"history": "알림 전송 기록 검토",
 		"governance": "가상 키, 사용자, 팀, 고객 및 역할",
 		"virtualKeys": "가상 키 및 액세스 관리",
-		"users": "사용자 관리",
 		"teams": "팀 관리",
-		"businessUnits": "비즈니스 유닛 관리",
 		"customers": "고객 관리",
-		"userProvisioning": "사용자 관리 및 프로비저닝",
-		"rolesPermissions": "사용자 역할 및 권한",
-		"accessProfiles": "역할용 액세스 프로필 관리",
-		"projects": "요청을 프로젝트의 액세스와 예산에 한정",
-		"auditLogs": "감사 로그 및 규정 준수",
 		"guardrails": "가드레일 구성",
 		"guardrailRules": "가드레일 규칙",
 		"guardrailProviders": "가드레일 공급자 구성",
 		"webhooks": "비동기 작업 Webhook 엔드포인트",
-		"edgeControl": "엣지 디바이스 관리",
-		"devices": "엣지 디바이스 관리",
-		"approvals": "앱 및 MCP 서버 승인",
-		"edgeSettings": "엣지 설정",
-		"clusterConfig": "Bifrost 클러스터 관리",
 		"adaptiveRouting": "적응형 라우팅 관리",
 		"adaptiveRoutingDashboard": "적응형 라우팅 지표",
 		"adaptiveRoutingSettings": "적응형 라우팅 설정",
@@ -131,16 +93,8 @@
 		"caching": "캐싱 구성",
 		"security": "보안 설정",
 		"warp": "Warp 에이전트 구성",
-		"proxy": "프록시 구성",
-		"apiKeys": "API 키 관리",
 		"performanceTuning": "성능 튜닝 설정",
-		"featureFlags": "기능 플래그 전환",
-		"branding": "커스텀 로고 및 아이콘",
-		"licenseInfo": "엔터프라이즈 라이선스 정보"
-	},
-	"home": {
-		"unlockTitle": "개인 홈 잠금 해제",
-		"unlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스의 일부입니다. 홈에서는 각 사용자 자신의 사용량, 키, 예산, 접근 권한을 보여 줍니다."
+		"featureFlags": "기능 플래그 전환"
 	},
 	"search": {
 		"placeholder": "검색...",
@@ -166,12 +120,6 @@
 			"available": "{{name}}을(를) 사용할 수 있어요.",
 			"viewNotes": "릴리스 노트 보기",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "프로덕션 설정에 도움이 필요하신가요?",
-			"body": "커스텀 통합과 전담 지원을 포함한 프로덕션 설정 도움을 제공해요.",
-			"bookPrefix": "팀과 데모 예약",
-			"here": "여기"
 		}
 	},
 	"topbar": {
@@ -194,25 +142,14 @@
 	"titles": {
 		"dashboard": "대시보드",
 		"adaptiveRoutingSettings": "적응형 라우팅 설정",
-		"alertChannels": "알림 채널",
-		"alertHistory": "알림 기록",
-		"alertRules": "알림 규칙",
-		"clusterConfig": "클러스터 구성",
 		"settings": "설정",
-		"licenseInfo": "라이선스 정보",
-		"edgeSettings": "엣지 설정",
-		"edgeDevices": "엣지 디바이스",
-		"edgeApprovals": "엣지 승인",
-		"rolesPermissions": "역할 및 권한",
 		"guardrailRules": "가드레일 규칙",
 		"guardrailProviders": "가드레일 공급자",
 		"llmLogs": "LLM 로그",
-		"logConnectors": "로그 커넥터",
 		"observabilityConnectors": "관찰 가능성 커넥터",
 		"promptRepository": "프롬프트 저장소",
 		"modelProviders": "모델 공급자",
-		"routingTree": "라우팅 트리",
-		"userProvisioning": "사용자 프로비저닝"
+		"routingTree": "라우팅 트리"
 	},
 	"error": {
 		"title": "문제가 발생했어요",
@@ -406,10 +343,7 @@
 			"not_configured": {
 				"summary": "Warp가 아직 구성되지 않았습니다.",
 				"cause": "프로바이더와 모델이 설정되지 않았거나, 설정에서 Warp가 꺼져 있습니다.",
-				"suggestions": [
-					"Warp 설정을 열고 프로바이더와 모델을 선택하세요.",
-					"Warp 사용이 켜져 있는지 확인하세요."
-				]
+				"suggestions": ["Warp 설정을 열고 프로바이더와 모델을 선택하세요.", "Warp 사용이 켜져 있는지 확인하세요."]
 			},
 			"max_iterations": {
 				"summary": "Warp가 답변에 도달하지 못했습니다.",
@@ -442,10 +376,7 @@
 			"tool_error": {
 				"summary": "쿼리가 실패했습니다.",
 				"cause": "Warp의 데이터 쿼리 중 하나가 오류를 반환했고, 남은 단계 안에서 복구하지 못했습니다.",
-				"suggestions": [
-					"더 좁은 시간 범위를 시도하세요.",
-					"지정한 모델, 키 또는 팀이 실제로 존재하는지 확인하세요."
-				]
+				"suggestions": ["더 좁은 시간 범위를 시도하세요.", "지정한 모델, 키 또는 팀이 실제로 존재하는지 확인하세요."]
 			},
 			"cancelled": {
 				"summary": "중지됨.",
@@ -455,10 +386,7 @@
 			"unknown": {
 				"summary": "문제가 발생했습니다.",
 				"cause": "Warp가 인식되지 않는 코드로 오류를 반환했습니다.",
-				"suggestions": [
-					"질문을 다시 시도하세요.",
-					"계속되면 아래 세부 정보와 함께 보고하세요."
-				]
+				"suggestions": ["질문을 다시 시도하세요.", "계속되면 아래 세부 정보와 함께 보고하세요."]
 			}
 		}
 	}

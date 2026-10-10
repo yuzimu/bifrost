@@ -1,7 +1,6 @@
 // Searchable A2A agent selector. The agents endpoint returns the full
 // registration list in one call, so search filters client-side rather than
 // re-querying per keystroke.
-
 import {
 	EntitySelector,
 	type EntitySelectorCommonProps,
@@ -11,16 +10,12 @@ import {
 import { useGetAgentsQuery } from "@/lib/store";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
 export type AgentSelectorProps = EntitySelectorCommonProps & EntitySelectorModeProps;
-
 /** 保留智能体筛选方式，仅翻译访问状态和默认实体名。 */
 export function AgentSelector(props: AgentSelectorProps) {
 	const { t } = useTranslation("models");
 	const { open, setOpen, setSearch, debouncedSearch } = useEntitySelectorSearch();
-
 	const { data, isFetching, isError } = useGetAgentsQuery();
-
 	const options = useMemo(() => {
 		const needle = debouncedSearch.trim().toLowerCase();
 		return (data?.agents ?? [])
@@ -33,7 +28,6 @@ export function AgentSelector(props: AgentSelectorProps) {
 				description: agent.allow_by_default ? t("selectorUi.openToAllKeys") : agent.enabled ? undefined : t("selectorUi.disabled"),
 			}));
 	}, [data, debouncedSearch, t]);
-
 	return (
 		<EntitySelector
 			{...props}
@@ -45,7 +39,7 @@ export function AgentSelector(props: AgentSelectorProps) {
 			open={open}
 			onOpenChange={setOpen}
 			onSearchChange={setSearch}
-			isSearching={false}
+			isSearching
 			debouncedSearch={debouncedSearch}
 		/>
 	);

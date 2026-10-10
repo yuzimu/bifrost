@@ -68,6 +68,9 @@
 		"inOneMinute": "in 1 minute",
 		"inMinutes": "in {{count}} minutes",
 		"invalidTitle": "This link is no longer valid",
-		"invalidBody": "The authorization link has expired, been used already, or had its token stripped. Restart the connection from your MCP client to get a fresh link."
+		"invalidBody": "The authorization link has expired, been used already, or had its token stripped. Restart the connection from your MCP client to get a fresh link.",
+		"recognizeCallback": "Continue only if you recognize this application and its callback destination:",
+		"signInRequired": "This authorization needs a signed-in Bifrost account. Taking you to sign in; you'll come straight back here.",
+		"signInToBifrost": "Sign in to Bifrost"
 	}
 }

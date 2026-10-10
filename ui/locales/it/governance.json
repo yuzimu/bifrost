@@ -5,7 +5,6 @@
 		"bookDemo": "Prenota una demo",
 		"bookDemoAria": "Prenota una demo (apre Calendly in una nuova scheda)"
 	},
-	"unlockSharedDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Vorremmo saperne di più sul tuo caso d’uso e su come possiamo aiutarti.",
 	"customers": {
 		"title": "Clienti",
 		"description": "Gestisci gli account cliente con i propri team, budget e controlli degli accessi.",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "Cerca webhook..."
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "Sblocca i canali di avviso per un monitoraggio proattivo",
-		"channelsUnlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Configura gli avvisi Slack, PagerDuty, OpsGenie e webhook per anticipare problemi di budget e prestazioni.",
-		"rulesUnlockTitle": "Sblocca le regole di avviso per un monitoraggio proattivo",
-		"rulesUnlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Definisci regole di avviso per rilevare problemi di budget, latenza e degrado prima che diventino incidenti.",
-		"historyUnlockTitle": "Sblocca la cronologia degli avvisi per un monitoraggio proattivo",
-		"historyUnlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Esamina gli esiti di recapito degli avvisi, gli errori e gli eventi di risoluzione in un unico posto."
-	},
 	"guardrails": {
 		"unlockTitle": "Sblocca i guardrail per una maggiore sicurezza"
-	},
-	"auditLogs": {
-		"unlockTitle": "Sblocca i log di audit per una maggiore conformità"
-	},
-	"rbac": {
-		"unlockTitle": "Sblocca ruoli e autorizzazioni per una maggiore sicurezza"
-	},
-	"projects": {
-		"unlockTitle": "Sblocca i progetti per circoscrivere accesso e spesa",
-		"unlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Un progetto è un elemento a cui una richiesta sceglie di aderire: concede l'accesso in aggiunta a ciò di cui il chiamante già dispone e stabilisce su quale registro viene addebitata la spesa."
-	},
-	"userRankings": {
-		"unlockTitle": "Sblocca le classifiche degli utenti per una maggiore visibilità"
-	},
-	"promptDeployments": {
-		"unlockTitle": "Sblocca i deployment dei prompt per un migliore versioning dei prompt e test A/B."
-	},
-	"connectorsUnlock": {
-		"splunk": "Sblocca l'ingestione nativa dei dati su Splunk per una migliore osservabilità",
-		"pubsub": "Sblocca lo streaming delle tracce su Google Cloud Pub/Sub",
-		"datadog": "Sblocca l'ingestione nativa dei dati su Datadog per una migliore osservabilità",
-		"bigquery": "Sblocca l'ingestione nativa dei dati su BigQuery per le analisi",
-		"kafka": "Sblocca lo streaming nativo dei log su Kafka per un'osservabilità in tempo reale",
-		"kafkaDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Invia in streaming le tracce delle richieste completate in formato JSON su un topic Kafka per analisi in tempo reale, avvisi ed elaborazione a valle."
-	},
-	"accessProfiles": {
-		"unlockTitle": "Sblocca i profili di accesso per prestazioni migliori",
-		"unlockDescription": "Questa funzionalità fa parte della licenza Enterprise di Bifrost. Crea profili di accesso per controllare l'accesso alle tue risorse."
-	},
-	"users": {
-		"unlockTitle": "Sblocca utenti e governance degli utenti",
-		"unlockDescription": "Gestisci gli utenti, imposta budget e limiti di frequenza per utente e controlla l'accesso con una governance di livello enterprise. Questa funzionalità fa parte della licenza Enterprise di Bifrost. Vorremmo saperne di più sul tuo caso d’uso e su come possiamo aiutarti."
-	},
-	"businessUnits": {
-		"unlockTitle": "Sblocca business unit e governance avanzata",
-		"unlockDescription": "Gestisci gli utenti e le business unit con la nostra governance di livello enterprise. Questa funzionalità fa parte della licenza Enterprise di Bifrost. Vorremmo saperne di più sul tuo caso d’uso e su come possiamo aiutarti."
 	},
 	"sheet": {
 		"saving": "Salvataggio...",

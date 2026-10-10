@@ -1,5 +1,4 @@
 "use client";
-
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -18,7 +17,6 @@ import { useGetSkillQuery, useUpdateSkillMutation, useDeleteSkillMutation } from
 import { getErrorMessage } from "@/lib/store/apis/baseApi";
 import { SkillFile, SkillVersionSummary } from "@/lib/types/skills";
 import { validateVersionBump } from "@/lib/validators/skills";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ArrowLeft, Download, MoreHorizontal, Plus, Loader2, Trash2 } from "lucide-react";
 import { getApiBaseUrl } from "@/lib/utils/port";
 import { useEffect, useRef, useState } from "react";
@@ -30,9 +28,7 @@ import { SkillFormFields } from "../forms/skillEditFormFields";
 import { SkillEditView } from "../forms/skillEditForm";
 import { SkillVersionsList } from "../dialogs/skillVersionDialog";
 import { VersionDetailDialog } from "../dialogs/versionDetailsDialog";
-
 // ---------- SkillDetailView ----------
-
 export function SkillDetailView({
 	skillId,
 	isEditing,
@@ -46,22 +42,15 @@ export function SkillDetailView({
 }) {
 	const { t } = useTranslation("config");
 	const { t: tc } = useTranslation("common");
-	const hasEditAccess = useRbac(RbacResource.SkillsRepository, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.SkillsRepository, RbacOperation.Delete);
-
 	const { data: skillData, isLoading } = useGetSkillQuery(skillId);
 	const [updateSkill, { isLoading: isUpdating }] = useUpdateSkillMutation();
 	const [deleteSkill, { isLoading: isDeleting }] = useDeleteSkillMutation();
-
 	const [selectedVersion, setSelectedVersion] = useState<SkillVersionSummary | null>(null);
 	const [versionsOpen, setVersionsOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
 	const form = useSkillForm();
 	const skill = skillData?.skill;
-
 	const highestVersion = skill?.highest_version || skill?.latest_version || "0.0.0";
-
 	/** Build a SkillFormState from the current skill data. Returns null if skill isn't loaded yet. */
 	function buildFormState(): SkillFormState | null {
 		if (!skill) return null;
@@ -91,11 +80,9 @@ export function SkillDetailView({
 				: [],
 		};
 	}
-
 	// Tracks the skill we last seeded the form from, so switching to a different
 	// skill still resets even while another skill was being edited.
 	const lastResetSkillIdRef = useRef<string | null>(null);
-
 	// Populate form when skill data loads or changes. Skip resets during an
 	// active edit of the same skill so a background refetch can't wipe unsaved
 	// changes.
@@ -108,7 +95,6 @@ export function SkillDetailView({
 			lastResetSkillIdRef.current = skillId;
 		}
 	}, [skill, highestVersion, isEditing, skillId]);
-
 	const handleSave = async (serve: boolean) => {
 		if (!form.runValidation()) return;
 		const bumpErr = validateVersionBump(form.version, highestVersion);
@@ -116,7 +102,6 @@ export function SkillDetailView({
 			toast.error(t("skillsRepo.toastInvalidVersion"), { description: bumpErr });
 			return;
 		}
-
 		try {
 			const { name: _name, ...payload } = form.getPayload();
 			await updateSkill({
@@ -131,7 +116,6 @@ export function SkillDetailView({
 			});
 		}
 	};
-
 	const handleDelete = async () => {
 		try {
 			await deleteSkill(skillId).unwrap();
@@ -143,17 +127,14 @@ export function SkillDetailView({
 			});
 		}
 	};
-
 	const handleCancelEdit = () => {
 		const state = buildFormState();
 		if (state) form.reset(state);
 		setIsEditing(false);
 	};
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	if (!skill) {
 		return (
 			<div className="flex w-full flex-1 flex-col items-center justify-center p-4">
@@ -165,7 +146,6 @@ export function SkillDetailView({
 			</div>
 		);
 	}
-
 	return (
 		<div className="relative flex min-h-0 w-full flex-1 flex-col">
 			{isEditing ? (
@@ -219,7 +199,7 @@ export function SkillDetailView({
 									button={{
 										dataTestId: "skill-add-version-btn",
 										className: "bg-transparent",
-										disabled: !hasEditAccess,
+										disabled: false,
 										"aria-label": t("skillsRepo.addNewVersionAria"),
 									}}
 									dropdownContent={{
@@ -245,7 +225,12 @@ export function SkillDetailView({
 								</SplitButton>
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
-										<Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("skillsRepo.actionsForAria", { name: skill.name })}>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8"
+											aria-label={t("skillsRepo.actionsForAria", { name: skill.name })}
+										>
 											<MoreHorizontal className="h-4 w-4" />
 										</Button>
 									</DropdownMenuTrigger>
@@ -256,7 +241,7 @@ export function SkillDetailView({
 												{t("skillsRepo.downloadZip")}
 											</a>
 										</DropdownMenuItem>
-										{hasDeleteAccess && (
+										{
 											<DropdownMenuItem
 												variant="destructive"
 												className="cursor-pointer"
@@ -269,16 +254,14 @@ export function SkillDetailView({
 												<Trash2 className="h-4 w-4" />
 												{tc("delete")}
 											</DropdownMenuItem>
-										)}
+										}
 									</DropdownMenuContent>
 								</DropdownMenu>
 								<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 									<AlertDialogContent>
 										<AlertDialogHeader>
 											<AlertDialogTitle>{t("skillsRepo.deleteTitle", { name: skill.name })}</AlertDialogTitle>
-											<AlertDialogDescription>
-												{t("skillsRepo.deleteConfirmation")}
-											</AlertDialogDescription>
+											<AlertDialogDescription>{t("skillsRepo.deleteConfirmation")}</AlertDialogDescription>
 										</AlertDialogHeader>
 										<AlertDialogFooter>
 											<AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>

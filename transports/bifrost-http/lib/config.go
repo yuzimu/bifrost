@@ -34,6 +34,7 @@ import (
 	"github.com/maximhq/bifrost/framework/encrypt"
 	"github.com/maximhq/bifrost/framework/envutils"
 	"github.com/maximhq/bifrost/framework/featureflags"
+	"github.com/maximhq/bifrost/framework/guardrails"
 	"github.com/maximhq/bifrost/framework/kvstore"
 	"github.com/maximhq/bifrost/framework/logstore"
 	"github.com/maximhq/bifrost/framework/mcp_headers"
@@ -42,6 +43,7 @@ import (
 	"github.com/maximhq/bifrost/framework/oauth2"
 	"github.com/maximhq/bifrost/framework/objectstore"
 	plugins "github.com/maximhq/bifrost/framework/plugins"
+	"github.com/maximhq/bifrost/framework/resilience"
 	"github.com/maximhq/bifrost/framework/vectorstore"
 	"github.com/maximhq/bifrost/plugins/compat"
 	"github.com/maximhq/bifrost/plugins/governance"
@@ -129,6 +131,9 @@ func getWeight(w *float64) float64 {
 // BuiltinPluginNames is the canonical list of built-in plugin names.
 // It is the single source of truth — update here when adding or removing a built-in plugin.
 var builtinPluginNames = []string{
+	"guardrails",
+	"adaptive-routing",
+	"circuit-breaker",
 	telemetry.PluginName,
 	prompts.PluginName,
 	logging.PluginName,
@@ -147,6 +152,11 @@ func GetBuiltinPluginNames() []string {
 // IsBuiltinPlugin checks if a plugin is a built-in plugin
 func IsBuiltinPlugin(name string) bool {
 	return slices.Contains(builtinPluginNames, name)
+}
+
+// IsHostManagedPlugin 标记必须在宿主依赖就绪后验证并持久化的配置。
+func IsHostManagedPlugin(name string) bool {
+	return name == "guardrails" || name == "adaptive-routing" || name == "circuit-breaker"
 }
 
 // pluginOrderInfo stores ordering metadata for a plugin.
@@ -203,19 +213,22 @@ type ConfigData struct {
 	// the BIFROST_SETUP_TOKEN env var) — so every node in a multi-node deployment reads
 	// the same value from its own identical config/env rather than relying on a
 	// per-process generated value.
-	SetupToken        *schemas.SecretVar                    `json:"setup_token,omitempty"`
-	Providers         map[string]configstore.ProviderConfig `json:"providers"`
-	FrameworkConfig   *framework.FrameworkConfig            `json:"framework,omitempty"`
-	MCP               *schemas.MCPConfig                    `json:"mcp,omitempty"`
-	Webhooks          []*WebhookEndpointConfig              `json:"webhooks,omitempty"`
-	Agents            []*AgentRegistrationFileConfig        `json:"agents,omitempty"`
-	Governance        *configstore.GovernanceConfig         `json:"governance,omitempty"`
-	VectorStoreConfig *vectorstore.Config                   `json:"vector_store,omitempty"`
-	ConfigStoreConfig *configstore.Config                   `json:"config_store,omitempty"`
-	LogsStoreConfig   *logstore.Config                      `json:"logs_store,omitempty"`
-	Plugins           []*schemas.PluginConfig               `json:"plugins,omitempty"`
-	WebSocket         *schemas.WebSocketConfig              `json:"websocket,omitempty"`
-	FeatureFlags      *FeatureFlagsFileConfig               `json:"feature_flags,omitempty"`
+	SetupToken           *schemas.SecretVar                    `json:"setup_token,omitempty"`
+	Providers            map[string]configstore.ProviderConfig `json:"providers"`
+	FrameworkConfig      *framework.FrameworkConfig            `json:"framework,omitempty"`
+	MCP                  *schemas.MCPConfig                    `json:"mcp,omitempty"`
+	Webhooks             []*WebhookEndpointConfig              `json:"webhooks,omitempty"`
+	Agents               []*AgentRegistrationFileConfig        `json:"agents,omitempty"`
+	Governance           *configstore.GovernanceConfig         `json:"governance,omitempty"`
+	VectorStoreConfig    *vectorstore.Config                   `json:"vector_store,omitempty"`
+	ConfigStoreConfig    *configstore.Config                   `json:"config_store,omitempty"`
+	LogsStoreConfig      *logstore.Config                      `json:"logs_store,omitempty"`
+	Plugins              []*schemas.PluginConfig               `json:"plugins,omitempty"`
+	GuardrailsConfig     *guardrails.Config                    `json:"guardrails_config,omitempty"`
+	LoadBalancerConfig   *resilience.AdaptiveConfig            `json:"load_balancer_config,omitempty"`
+	CircuitBreakerConfig *resilience.CircuitBreakerConfig      `json:"circuit_breaker_config,omitempty"`
+	WebSocket            *schemas.WebSocketConfig              `json:"websocket,omitempty"`
+	FeatureFlags         *FeatureFlagsFileConfig               `json:"feature_flags,omitempty"`
 	// ProxyConfig is the global outbound proxy (the dashboard's proxy settings page), not a
 	// provider's own proxy_config.
 	ProxyConfig *GlobalProxyFileConfig `json:"proxy_config,omitempty"`
@@ -224,6 +237,53 @@ type ConfigData struct {
 	presentGovernanceSections map[string]bool
 	presentMCPSections        map[string]bool
 	SkillsRegistry            *SkillsRegistryConfig `json:"skills_registry,omitempty"`
+}
+
+// MarshalJSON 将宿主配置输出为公开顶层字段，避免同一 namespace 被重复声明。
+func (cd ConfigData) MarshalJSON() ([]byte, error) {
+	type configData ConfigData
+	out := configData(cd)
+	out.Plugins = make([]*schemas.PluginConfig, 0, len(cd.Plugins))
+	for _, plugin := range cd.Plugins {
+		if plugin == nil || !IsHostManagedPlugin(plugin.Name) {
+			out.Plugins = append(out.Plugins, plugin)
+			continue
+		}
+		raw, err := schemas.MarshalSorted(plugin.Config)
+		if err != nil {
+			return nil, err
+		}
+		switch plugin.Name {
+		case "guardrails":
+			cfg, err := guardrails.DecodeConfig(plugin.Config)
+			if err != nil {
+				return nil, err
+			}
+			cfg.Enabled = plugin.Enabled
+			out.GuardrailsConfig = cfg
+		case "adaptive-routing":
+			cfg := resilience.DefaultConfig().LoadBalancer
+			if err := resilience.DecodeStrict(raw, &cfg); err != nil {
+				return nil, err
+			}
+			if !plugin.Enabled {
+				cfg = resilience.AdaptiveConfig{}
+			}
+			out.LoadBalancerConfig = &cfg
+		case "circuit-breaker":
+			cfg := resilience.DefaultConfig().CircuitBreaker
+			if err := resilience.DecodeStrict(raw, &cfg); err != nil {
+				return nil, err
+			}
+			if !plugin.Enabled {
+				for i := range cfg.Policies {
+					cfg.Policies[i].Enabled = schemas.Ptr(false)
+				}
+			}
+			out.CircuitBreakerConfig = &cfg
+		}
+	}
+	return schemas.MarshalSorted(out)
 }
 
 // SkillsRegistryConfig defines declarative skill definitions in config.json.
@@ -580,6 +640,45 @@ func (cd *ConfigData) UnmarshalJSON(data []byte) error {
 	cd.Agents = temp.Agents
 	cd.Governance = temp.Governance
 	cd.Plugins = temp.Plugins
+	for _, section := range []struct{ field, name string }{
+		{"guardrails_config", "guardrails"}, {"load_balancer_config", "adaptive-routing"},
+		{"circuit_breaker_config", "circuit-breaker"},
+	} {
+		payload, present := raw[section.field]
+		if !present {
+			continue
+		}
+		if slices.ContainsFunc(cd.Plugins, func(cfg *schemas.PluginConfig) bool { return cfg != nil && cfg.Name == section.name }) {
+			return fmt.Errorf("%s cannot be declared both as a section and a plugin", section.name)
+		}
+		var value map[string]any
+		if err := json.Unmarshal(payload, &value); err != nil || value == nil {
+			return fmt.Errorf("invalid %s configuration object", section.field)
+		}
+		enabled := true
+		switch section.name {
+		case "guardrails":
+			cfg, err := guardrails.DecodeConfig(value)
+			if err != nil {
+				return fmt.Errorf("invalid %s configuration: %w", section.field, err)
+			}
+			cd.GuardrailsConfig = cfg
+			enabled = cfg.Enabled
+		case "adaptive-routing":
+			cfg := resilience.DefaultConfig().LoadBalancer
+			if err := resilience.DecodeStrict(payload, &cfg); err != nil {
+				return fmt.Errorf("invalid %s configuration: %w", section.field, err)
+			}
+			cd.LoadBalancerConfig = &cfg
+		case "circuit-breaker":
+			cfg := resilience.DefaultConfig().CircuitBreaker
+			if err := resilience.DecodeStrict(payload, &cfg); err != nil {
+				return fmt.Errorf("invalid %s configuration: %w", section.field, err)
+			}
+			cd.CircuitBreakerConfig = &cfg
+		}
+		cd.Plugins = append(cd.Plugins, &schemas.PluginConfig{Name: section.name, Enabled: enabled, Config: value})
+	}
 	cd.WebSocket = temp.WebSocket
 	cd.FeatureFlags = temp.FeatureFlags
 	cd.ProxyConfig = temp.ProxyConfig
@@ -741,7 +840,11 @@ type Config struct {
 	PluginLoader         plugins.PluginLoader
 
 	// Plugin metadata from config file/database
-	PluginConfigs []*schemas.PluginConfig
+	PluginConfigs     []*schemas.PluginConfig
+	HostPluginFactory func(context.Context, string, any) (schemas.BasePlugin, error)
+	HostPluginHashes  map[string]string
+	HostPluginDeletes []string
+	HostLogStore      func(logstore.LogStore) logstore.LogStore
 
 	// Plugin status tracking (co-located with plugin instances)
 	pluginStatusMu sync.RWMutex
@@ -2059,10 +2162,8 @@ func loadMCPConfig(ctx context.Context, config *Config, configData *ConfigData) 
 				continue
 			}
 			if c.AuthType == schemas.MCPAuthTypeTokenExchange {
-				if isEnterprise, _ := ctx.Value(schemas.BifrostContextKeyIsEnterprise).(bool); !isEnterprise {
-					logger.Error("skipping MCP client config %q from config file: auth_type 'token_exchange' is not supported", c.Name)
-					continue
-				}
+				logger.Error("skipping MCP client config %q from config file: auth_type 'token_exchange' is not supported", c.Name)
+				continue
 			}
 			// oauth_config_id is server-managed state — a credentials-row
 			// reference produced by admin authorization — not a declarative
@@ -5350,6 +5451,7 @@ func loadAuthConfig(ctx context.Context, config *Config, configData *ConfigData)
 
 // loadPlugins loads and merges plugins from file
 func loadPlugins(ctx context.Context, config *Config, configData *ConfigData) {
+	config.HostPluginHashes = make(map[string]string)
 	// Hash of config.json recorded at each stored plugin's last sync, keyed by plugin name.
 	storedPluginHashes := make(map[string]string)
 	// First load plugins from DB
@@ -5383,6 +5485,15 @@ func loadPlugins(ctx context.Context, config *Config, configData *ConfigData) {
 	}
 
 	// Merge with config file plugins
+	if configData.isConfigJSONSourceOfTruth() && !configData.sectionPresent("plugins") {
+		for _, section := range []struct{ field, name string }{
+			{"guardrails_config", "guardrails"}, {"load_balancer_config", "adaptive-routing"}, {"circuit_breaker_config", "circuit-breaker"},
+		} {
+			if configData.sectionPresent(section.field) {
+				storedPluginHashes[section.name] = "file-source-of-truth"
+			}
+		}
+	}
 	if len(configData.Plugins) > 0 {
 		if configData.isConfigJSONSourceOfTruth() && configData.sectionPresent("plugins") {
 			syncPluginsFromFile(ctx, config, configData)
@@ -5516,6 +5627,13 @@ func mergePlugins(ctx context.Context, config *Config, configData *ConfigData, s
 	if config.ConfigStore != nil {
 		logger.Debug("updating plugins in store")
 		for _, plugin := range config.PluginConfigs {
+			if IsHostManagedPlugin(plugin.Name) {
+				config.HostPluginHashes[plugin.Name] = storedHashes[plugin.Name]
+				if hash, ok := syncedHashes[plugin.Name]; ok {
+					config.HostPluginHashes[plugin.Name] = hash
+				}
+				continue
+			}
 			pluginConfigCopy, err := DeepCopy(plugin.Config)
 			if err != nil {
 				logger.Warn("failed to deep copy plugin config, skipping database update: %v", err)
@@ -5570,6 +5688,10 @@ func syncPluginsFromFile(ctx context.Context, config *Config, configData *Config
 				continue
 			}
 			if !keep[plugin.Name] {
+				if IsHostManagedPlugin(plugin.Name) {
+					config.HostPluginDeletes = append(config.HostPluginDeletes, plugin.Name)
+					continue
+				}
 				if err := config.ConfigStore.DeletePlugin(ctx, plugin.Name, tx); err != nil {
 					return fmt.Errorf("failed to delete plugin %s: %w", plugin.Name, err)
 				}
@@ -5579,6 +5701,12 @@ func syncPluginsFromFile(ctx context.Context, config *Config, configData *Config
 		}
 		for _, plugin := range configData.Plugins {
 			if plugin == nil {
+				continue
+			}
+			if IsHostManagedPlugin(plugin.Name) {
+				if hash, err := generatePluginConfigHash(plugin); err == nil {
+					config.HostPluginHashes[plugin.Name] = hash
+				}
 				continue
 			}
 			configHash, err := generatePluginConfigHash(plugin)
@@ -6937,8 +7065,7 @@ func initFeatureFlags(ctx context.Context, config *Config, configData *ConfigDat
 	// behavior of the previous `!= nil` check. The schemas comment for this
 	// context key declares it as bool, so the assertion is the documented
 	// shape; the comma-ok zero-value handles the unset path cleanly.
-	isEnterprise, _ := ctx.Value(schemas.BifrostContextKeyIsEnterprise).(bool)
-	store, err := featureflags.New(featureflags.Config{IsEnterprise: isEnterprise})
+	store, err := featureflags.New(featureflags.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to initialize feature flags: %w", err)
 	}
@@ -7278,6 +7405,37 @@ func (c *Config) ReloadPlugin(plugin schemas.BasePlugin) error {
 		}
 		// CAS failed, retry with new snapshot
 	}
+}
+
+// RememberPluginConfig 用已提交行同步内存配置，保留运行时观测设置。
+func (c *Config) RememberPluginConfig(row *configstoreTables.TablePlugin) {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+	cfg := &schemas.PluginConfig{Name: row.Name, Enabled: row.Enabled, Config: row.Config,
+		Path: row.Path, Version: schemas.Ptr(row.Version), Placement: row.Placement, Order: row.Order}
+	next := slices.Clone(c.PluginConfigs)
+	for i, old := range next {
+		if old.Name == row.Name {
+			cfg.SemaphoreSize, cfg.InjectTimeout = old.SemaphoreSize, old.InjectTimeout
+			next[i] = cfg
+			c.PluginConfigs = next
+			return
+		}
+	}
+	c.PluginConfigs = append(next, cfg)
+}
+
+// ForgetPluginConfig 仅移除已删除插件的内存配置。
+func (c *Config) ForgetPluginConfig(name string) {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+	next := make([]*schemas.PluginConfig, 0, len(c.PluginConfigs))
+	for _, cfg := range c.PluginConfigs {
+		if cfg.Name != name {
+			next = append(next, cfg)
+		}
+	}
+	c.PluginConfigs = next
 }
 
 // UnregisterPlugin removes a plugin from the registry

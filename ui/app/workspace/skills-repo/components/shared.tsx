@@ -1,5 +1,4 @@
 "use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -41,19 +40,15 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentPro
 import { useTranslation } from "react-i18next";
 import { FilePreviewPane, getFileServeUrl } from "./filePreview";
 import { formatYamlRecord } from "./helpers";
-
 const LazyMarkdown = lazy(() => import("@/components/ui/markdown").then((m) => ({ default: m.Markdown })));
 const Markdown = (props: ComponentProps<typeof LazyMarkdown>) => (
-	<Suspense fallback={null}>
+	<Suspense fallback>
 		<LazyMarkdown {...props} />
 	</Suspense>
 );
-
 // Sentinel used as the "selected file" value for the SKILL.md body node.
 export const SKILLMD_KEY = "__skillmd__";
-
 // ---------- HeaderMetaItem ----------
-
 export function HeaderMetaItem({
 	label,
 	value,
@@ -66,7 +61,6 @@ export function HeaderMetaItem({
 	icon: typeof Scale;
 }) {
 	const hasValue = Boolean(value?.trim());
-
 	const pill = (
 		<div
 			className={cn(
@@ -78,9 +72,7 @@ export function HeaderMetaItem({
 			<span className={cn("truncate", hasValue && "font-mono")}>{hasValue ? value : missingText}</span>
 		</div>
 	);
-
 	if (!hasValue) return pill;
-
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>{pill}</TooltipTrigger>
@@ -88,16 +80,13 @@ export function HeaderMetaItem({
 		</Tooltip>
 	);
 }
-
 // ---------- ClampedDescription ----------
-
 /** Shows the description clamped to 3 lines with a Show more/less toggle when it overflows. */
 function ClampedDescription({ description }: { description: string }) {
 	const { t } = useTranslation("mcp");
 	const [expanded, setExpanded] = useState(false);
 	const [isOverflowing, setIsOverflowing] = useState(false);
 	const textRef = useRef<HTMLParagraphElement>(null);
-
 	useEffect(() => {
 		// Only measure while collapsed — once expanded the clamp is removed so the
 		// element always fits, which would otherwise reset isOverflowing to false.
@@ -110,9 +99,7 @@ function ClampedDescription({ description }: { description: string }) {
 		observer.observe(el);
 		return () => observer.disconnect();
 	}, [description, expanded]);
-
 	if (!description) return null;
-
 	return (
 		<div className="relative max-w-3xl">
 			<p ref={textRef} className={cn("text-muted-foreground text-xs", !expanded && "line-clamp-3")}>
@@ -140,9 +127,7 @@ function ClampedDescription({ description }: { description: string }) {
 		</div>
 	);
 }
-
 // ---------- SkillHeader ----------
-
 export function SkillHeader({
 	name,
 	version,
@@ -177,7 +162,6 @@ export function SkillHeader({
 		successMessage: t("skillsRepo.copiedRawSkillMd"),
 		errorMessage: t("skillsRepo.copyRawSkillMdFailed"),
 	});
-
 	return (
 		<>
 			<div
@@ -246,17 +230,24 @@ export function SkillHeader({
 				<TooltipProvider>
 					<div className="mt-4 flex flex-wrap items-center gap-2 pb-2">
 						<HeaderMetaItem label={t("skillsRepo.license")} value={license} missingText={t("skillsRepo.noLicense")} icon={Scale} />
-						<HeaderMetaItem label={t("skillsRepo.compatibility")} value={compatibility} missingText={t("skillsRepo.noCompatibility")} icon={Bot} />
-						<HeaderMetaItem label={t("skillsRepo.allowedToolsShort")} value={allowedTools} missingText={t("skillsRepo.noAllowedTools")} icon={Hammer} />
+						<HeaderMetaItem
+							label={t("skillsRepo.compatibility")}
+							value={compatibility}
+							missingText={t("skillsRepo.noCompatibility")}
+							icon={Bot}
+						/>
+						<HeaderMetaItem
+							label={t("skillsRepo.allowedToolsShort")}
+							value={allowedTools}
+							missingText={t("skillsRepo.noAllowedTools")}
+							icon={Hammer}
+						/>
 					</div>
 				</TooltipProvider>
 			</div>
 			{composedSkillMd && (
 				<Dialog open={showRawDialog} onOpenChange={setShowRawDialog}>
-					<DialogContent
-						showCloseButton={false}
-						className="h-[90vh] w-full border-0 p-0 sm:w-[85vw] sm:max-w-[85vw] md:w-[75vw] md:max-w-[75vw]"
-					>
+					<DialogContent showCloseButton className="h-[90vh] w-full border-0 p-0 sm:w-[85vw] sm:max-w-[85vw] md:w-[75vw] md:max-w-[75vw]">
 						<DialogHeader className="sr-only">
 							<DialogTitle>{t("skillsRepo.rawSkillMd")}</DialogTitle>
 						</DialogHeader>
@@ -286,7 +277,6 @@ export function SkillHeader({
 		</>
 	);
 }
-
 export function FormSection({
 	title,
 	children,
@@ -325,11 +315,9 @@ export function FormSection({
 		</section>
 	);
 }
-
 // ---------- ReadOnlyYamlBlock ----------
 export function ReadOnlyYamlBlock({ title, value, className }: { title: string; value: Record<string, unknown>; className?: string }) {
 	const yaml = formatYamlRecord(value);
-
 	return (
 		<FormSection title={title} className={cn("flex flex-1 flex-col", className)}>
 			<div className="bg-muted/10 flex-1 overflow-y-auto rounded-sm border p-3">
@@ -338,12 +326,10 @@ export function ReadOnlyYamlBlock({ title, value, className }: { title: string; 
 		</FormSection>
 	);
 }
-
 // ---------- ReadOnlyMetadataTable ----------
 export function ReadOnlyMetadataTable({ value, className }: { value: Record<string, unknown>; className?: string }) {
 	const { t } = useTranslation("config");
 	const entries = Object.entries(value);
-
 	return (
 		<FormSection title={t("skillsRepo.metadata")} className={cn("flex flex-1 flex-col", className)}>
 			<div className="flex flex-1 flex-col rounded-sm border">
@@ -364,25 +350,20 @@ export function ReadOnlyMetadataTable({ value, className }: { value: Record<stri
 	);
 }
 // ---------- ReadOnlySkillBody ----------
-
 // Resolve a relative markdown link (e.g. "./tui/activity.go", "../foo.md") to a
 // known skill file path so it can be opened in the sidebar instead of navigated.
 function resolveSkillFilePath(href: string, files: SkillFileEntry[]): string | null {
 	if (!href) return null;
 	// Ignore anchors and protocol-ish links (mailto:, //example.com, etc.).
 	if (href.startsWith("#") || href.startsWith("//") || /^[a-z][a-z0-9+.-]*:/i.test(href)) return null;
-
 	// Strip query/hash and any leading "./".
 	const cleaned = href.split(/[?#]/)[0].replace(/^\.\//, "");
 	if (!cleaned) return null;
-
 	const normalize = (p: string) => p.replace(/^\.?\//, "").replace(/^\/+/, "");
 	const target = normalize(cleaned);
-
 	// Exact match on the full path first.
 	const exact = files.find((f) => normalize(f.path) === target);
 	if (exact) return exact.path;
-
 	// Fall back to matching by trailing path segments (handles "../" prefixes).
 	const targetTail = target.replace(/^(\.\.\/)+/, "");
 	const byTail = files.find((f) => {
@@ -390,17 +371,14 @@ function resolveSkillFilePath(href: string, files: SkillFileEntry[]): string | n
 		return fp === targetTail || fp.endsWith(`/${targetTail}`);
 	});
 	if (byTail) return byTail.path;
-
 	// Last resort: match on the bare filename if unambiguous.
 	const fileName = target.split("/").pop();
 	if (fileName) {
 		const matches = files.filter((f) => normalize(f.path).split("/").pop() === fileName);
 		if (matches.length === 1) return matches[0].path;
 	}
-
 	return null;
 }
-
 // Renders SKILL.md markdown with skill-aware links: relative links that resolve to
 // a sibling file open it via onSelectFile, external links route through a confirm
 // dialog instead of navigating away. Shared by the read-only view and the edit-form
@@ -422,12 +400,10 @@ export function SkillMarkdown({
 		href: string;
 		label: string;
 	} | null>(null);
-
 	const markdownComponents = {
 		a: ({ href, children, ...props }: React.ComponentProps<"a">) => {
 			const isExternal = Boolean(href && (href.startsWith("//") || /^https?:\/\//i.test(href)));
 			const label = typeof children === "string" ? children : href || "external link";
-
 			if (isExternal && href) {
 				return (
 					<a
@@ -444,11 +420,9 @@ export function SkillMarkdown({
 					</a>
 				);
 			}
-
 			// Internal/relative link: resolve to a sibling file and select it in the
 			// sidebar instead of letting the browser navigate to a broken path.
 			const matchedPath = href ? resolveSkillFilePath(href, files) : null;
-
 			// Resolvable file link: render as a primary-styled button (matching the
 			// markdown preview's link treatment) that selects the file in the sidebar.
 			if (matchedPath && onSelectFile) {
@@ -462,7 +436,6 @@ export function SkillMarkdown({
 					</button>
 				);
 			}
-
 			return (
 				<a href={href} {...props}>
 					{children}
@@ -470,7 +443,6 @@ export function SkillMarkdown({
 			);
 		},
 	};
-
 	return (
 		<>
 			<Markdown content={content || ""} className={className} components={markdownComponents} />
@@ -505,7 +477,6 @@ export function SkillMarkdown({
 		</>
 	);
 }
-
 export function ReadOnlySkillBody({
 	body,
 	files = [],
@@ -517,7 +488,6 @@ export function ReadOnlySkillBody({
 }) {
 	const { t } = useTranslation("config");
 	const [activeTab, setActiveTab] = useState("preview");
-
 	return (
 		<Tabs defaultValue="preview" onValueChange={setActiveTab} className="flex min-h-0 w-full flex-1 flex-col gap-2">
 			<div className="flex items-center justify-between gap-2">
@@ -549,9 +519,7 @@ export function ReadOnlySkillBody({
 		</Tabs>
 	);
 }
-
 // ---------- ReadOnlyFileTree ----------
-
 interface FileTreeNodeData extends BaseNodeData {
 	type: "root" | "folder" | "file" | "skillmd";
 	mime_type?: string;
@@ -560,7 +528,6 @@ interface FileTreeNodeData extends BaseNodeData {
 	path?: string;
 	childCount?: number;
 }
-
 function downloadTextAsFile(content: string, filename: string) {
 	const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
 	const url = URL.createObjectURL(blob);
@@ -572,19 +539,15 @@ function downloadTextAsFile(content: string, filename: string) {
 	document.body.removeChild(a);
 	URL.revokeObjectURL(url);
 }
-
 function fileNameFromPath(filePath: string) {
 	return filePath.split("/").filter(Boolean).pop() || filePath;
 }
-
 // Simple helper components to avoid nested ternaries in the file tree rows.
-
 function TreeRowChevron({ hasChildren, isExpanded }: { hasChildren: boolean; isExpanded: boolean }) {
 	if (!hasChildren) return <span className="w-3.5 shrink-0" />;
 	if (isExpanded) return <ChevronDown className="text-muted-foreground h-3.5 w-3.5 shrink-0" />;
 	return <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />;
 }
-
 function TreeRowIcon({
 	isSkillMd,
 	isFile,
@@ -602,7 +565,6 @@ function TreeRowIcon({
 	if (isFolder) return <Folder className="text-muted-foreground h-4 w-4 shrink-0" />;
 	return null;
 }
-
 export function ReadOnlyFileTree({
 	skillName,
 	files,
@@ -635,7 +597,6 @@ export function ReadOnlyFileTree({
 			subfolders: Record<string, FolderBucket>;
 		}
 		const rootBucket: FolderBucket = { files: [], subfolders: {} };
-
 		for (const file of filteredFiles) {
 			const segments = file.path.split("/").filter(Boolean);
 			if (segments.length === 0) continue;
@@ -647,7 +608,6 @@ export function ReadOnlyFileTree({
 			}
 			bucket.files.push(file);
 		}
-
 		const bucketToNodes = (bucket: FolderBucket, parentPath: string): TreeNode<FileTreeNodeData>[] => {
 			const nodes: TreeNode<FileTreeNodeData>[] = [];
 			for (const [folderName, sub] of Object.entries(bucket.subfolders).sort(([a], [b]) => a.localeCompare(b))) {
@@ -680,7 +640,6 @@ export function ReadOnlyFileTree({
 			}
 			return nodes;
 		};
-
 		return [
 			{
 				data: {
@@ -696,11 +655,9 @@ export function ReadOnlyFileTree({
 			},
 		];
 	}, [skillName, filteredFiles, query]);
-
 	// Own the expansion state so we can programmatically reveal a file selected from
 	// outside the tree (e.g. a markdown link), expanding its ancestor folders.
 	const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
-
 	useEffect(() => {
 		if (!selectedPath || selectedPath === SKILLMD_KEY) return;
 		const segments = selectedPath.split("/").filter(Boolean);
@@ -718,9 +675,7 @@ export function ReadOnlyFileTree({
 			return changed ? next : prev;
 		});
 	}, [selectedPath]);
-
 	const downloadUrl = `${getApiBaseUrl()}/skills/serve/${encodeURIComponent(skillName)}/download.zip`;
-
 	const tree = (
 		<TooltipProvider>
 			<Tree<FileTreeNodeData>
@@ -734,12 +689,9 @@ export function ReadOnlyFileTree({
 					const isSkillMd = item.type === "skillmd";
 					const isFile = item.type === "file";
 					const isDownloadable = isSkillMd || isFile;
-
 					const fileDownloadUrl = isFile && item.path ? getFileServeUrl(skillName, item.path) : undefined;
-
 					const selectKey = isSkillMd ? SKILLMD_KEY : item.path;
 					const isSelected = !!onSelectPath && isDownloadable && selectedPath != null && selectedPath === selectKey;
-
 					const downloadFile = () => {
 						if (isSkillMd) {
 							downloadTextAsFile(composedSkillMd, "SKILL.md");
@@ -752,7 +704,6 @@ export function ReadOnlyFileTree({
 							document.body.removeChild(a);
 						}
 					};
-
 					const handleClick = () => {
 						if (hasChildren) {
 							onToggle();
@@ -762,7 +713,6 @@ export function ReadOnlyFileTree({
 							else downloadFile();
 						}
 					};
-
 					return (
 						// oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- role, tabIndex and keys are set together when the row is actionable
 						<div
@@ -791,9 +741,7 @@ export function ReadOnlyFileTree({
 							</span>
 
 							{isFolder && !isExpanded && item.childCount != null && item.childCount > 0 && (
-								<span className="text-muted-foreground text-xs">
-									{t("mcp:skillsPresentation.items", { count: item.childCount })}
-								</span>
+								<span className="text-muted-foreground text-xs">{t("mcp:skillsPresentation.items", { count: item.childCount })}</span>
 							)}
 
 							{/* Download context menu (file + SKILL.md rows) */}
@@ -808,7 +756,12 @@ export function ReadOnlyFileTree({
 								>
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
-											<Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t("skillsRepo.actionsForAria", { name: item.name })}>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-6 w-6"
+												aria-label={t("skillsRepo.actionsForAria", { name: item.name })}
+											>
 												<MoreHorizontal className="h-3.5 w-3.5" />
 											</Button>
 										</DropdownMenuTrigger>
@@ -860,12 +813,9 @@ export function ReadOnlyFileTree({
 			/>
 		</TooltipProvider>
 	);
-
 	if (bare) return tree;
-
 	return <FormSection title={t("skillsRepo.files")}>{tree}</FormSection>;
 }
-
 export function SkillReadOnlyContent({
 	skillName,
 	skillMdBody,
@@ -887,17 +837,14 @@ export function SkillReadOnlyContent({
 	const isMobile = useIsMobile();
 	const METADATA_KEY = "__metadata__";
 	const FRONTMATTER_KEY = "__extra_frontmatter__";
-
 	// Default selection is the SKILL.md body, preserving the prior default view.
 	const [selected, setSelected] = useState<string>(SKILLMD_KEY);
 	const selectedFile =
 		selected === SKILLMD_KEY || selected === METADATA_KEY || selected === FRONTMATTER_KEY
 			? null
 			: (files.find((f) => f.path === selected) ?? null);
-
 	const hasMetadata = metadata && Object.keys(metadata).length > 0;
 	const hasFrontmatter = extraFrontmatter && Object.keys(extraFrontmatter).length > 0;
-
 	return (
 		<ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className={cn("min-h-0 w-full", className)}>
 			<ResizablePanel defaultSize="28%" minSize="18%" maxSize="50%" className="flex min-h-0 flex-col gap-2">
@@ -962,7 +909,6 @@ export function SkillReadOnlyContent({
 		</ResizablePanelGroup>
 	);
 }
-
 function SkillFilesSidebar({
 	skillName,
 	files,
@@ -978,7 +924,6 @@ function SkillFilesSidebar({
 }) {
 	const { t } = useTranslation("config");
 	const [searchQuery, setSearchQuery] = useState("");
-
 	return (
 		<div className="bg-card flex h-full w-full min-w-0 flex-col rounded-md border">
 			{/* Header: search */}

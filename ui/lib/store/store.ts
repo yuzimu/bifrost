@@ -2,9 +2,6 @@ import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
 import { baseApi } from "./apis/baseApi";
 import { appReducer, pluginReducer, providerReducer } from "./slices";
-import { middleware as enterpriseMiddleware, reducers as enterpriseReducers, type EnterpriseState } from "@enterprise/lib/store/slices";
-// Importing enterprise APIs triggers their self-injection into baseApi
-import "@enterprise/lib/store/apis";
 
 export const store = configureStore({
 	reducer: {
@@ -16,8 +13,6 @@ export const store = configureStore({
 		provider: providerReducer,
 		// Plugin state slice
 		plugin: pluginReducer,
-		// Enterprise reducers (if available)
-		...enterpriseReducers,
 	},
 	middleware: (getDefaultMiddleware) =>
 		getDefaultMiddleware({
@@ -38,7 +33,7 @@ export const store = configureStore({
 				// Ignore these paths in the state
 				ignoredPaths: ["api.queries", "api.mutations"],
 			},
-		}).concat(baseApi.middleware, ...enterpriseMiddleware),
+		}).concat(baseApi.middleware),
 	devTools: process.env.NODE_ENV !== "production",
 });
 
@@ -47,6 +42,6 @@ export const store = configureStore({
 // first loaded in a background tab never runs any `skipPollingIfUnfocused` poll.
 setupListeners(store.dispatch);
 
-export type RootState = ReturnType<typeof store.getState> & EnterpriseState;
+export type RootState = ReturnType<typeof store.getState>;
 
 export type AppDispatch = typeof store.dispatch;

@@ -1,9 +1,7 @@
 // Runtime registry of model_config scopes available to the UI.
 //
 // OSS ships the base set (global + virtual_key) registered at module load.
-// Downstream builds (enterprise) extend the registry by importing their
-// registration module via the @enterprise alias — see
-// ui/app/_fallbacks/enterprise/lib/registrations/modelLimitScopes.ts
+
 // for the OSS-build fallback.
 //
 // Each entry can supply:
@@ -44,15 +42,14 @@ export interface ModelLimitScopeEntry {
 	// When true, this scope is system-generated only: never offered as a choice
 	// when creating a limit, and the Model Limit sheet renders it as a pure
 	// read-only summary (no editable fields, no save, no delete) instead of the
-	// normal form — e.g. enterprise's "access_profile" scope, whose rows must
-	// only be changed by editing the owning access profile.
+
 	readOnly?: boolean;
 	// When explicitly false, this scope is never offered as a choice when
 	// creating a limit, but an EXISTING row of it stays fully editable and
 	// deletable through the normal form — unlike readOnly, which also locks
 	// editing. Defaults to true (creatable) when omitted. For a scope whose
 	// creation is retired but whose pre-existing rows must keep working exactly
-	// as before — e.g. enterprise's "user" scope.
+
 	creatable?: boolean;
 	// Optional. Overrides the label shown in the Scope column/field for rows of
 	// this scope, while `label` above still names the scope itself (e.g. in the
@@ -62,14 +59,13 @@ export interface ModelLimitScopeEntry {
 	displayAsScope?: string;
 	// Optional. Groups this scope under another scope's filter option, so the
 	// Scope filter offers one choice covering both and queries them together.
-	// The value names the scope that owns the option (e.g. enterprise's
-	// "access_profile" rows filter under "user": they are still a user's limits,
+
 	// just materialized from a profile, so splitting them across two filter
 	// options only hides rows from someone filtering by User). The grouped scope
 	// keeps its own `label` for anywhere it names itself.
 	filterUnderScope?: string;
 	// Optional. Renders additional context next to the Scope Target for a row of
-	// this scope — e.g. enterprise's "Managed by Access Profile: X" note. Passed
+
 	// the row's own ModelConfig; renders nothing (returns null) itself when there
 	// is nothing to show.
 	//
@@ -80,7 +76,7 @@ export interface ModelLimitScopeEntry {
 	ManagedByComponent?: ComponentType<{ modelConfig: ModelConfig; labelled?: boolean }>;
 	// Optional. Replaces the generic read-only alert body in the Model Limit
 	// sheet for a readOnly scope, letting the owner name itself — e.g.
-	// enterprise's "managed by access profile X". Passed the row's own
+
 	// ModelConfig; falls back to the generic message when omitted.
 	ReadOnlyNotice?: ComponentType<{ modelConfig: ModelConfig }>;
 }

@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 const MANAGE_PROVIDERS_VALUE = "__manage_providers__";
 
 // Shared provider-configuration editor for the Virtual Key (core) and Access
-// Profile / Project (enterprise) forms. It owns the "Allow all providers" toggle,
+
 // the add-provider dropdown, and the per-provider cards; callers drive it with the
 // card's normalized ProviderConfigCardValue and adapt their own storage shape.
 export interface ProviderConfigsEditorProps {

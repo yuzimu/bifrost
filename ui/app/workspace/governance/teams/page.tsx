@@ -1,4 +1,4 @@
-import { TeamsView } from "@enterprise/components/user-groups/teamsView";
+import { TeamsView } from "../views/teamsView";
 
 export default function GovernanceTeamsPage() {
 	return (

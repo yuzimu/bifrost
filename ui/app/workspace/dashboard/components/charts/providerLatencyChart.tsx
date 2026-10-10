@@ -15,7 +15,6 @@ import { barShape } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import type { ChartType } from "./chartTypeToggle";
 import { NoChartData } from "./noChartData";
-
 interface ProviderLatencyChartProps {
 	data: ProviderLatencyHistogramResponse | null;
 	chartType: ChartType;
@@ -23,13 +22,10 @@ interface ProviderLatencyChartProps {
 	endTime: number;
 	selectedProvider: string;
 }
-
 function AllProvidersTooltip({ active, payload, displayProviders: providers }: any) {
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -51,14 +47,11 @@ function AllProvidersTooltip({ active, payload, displayProviders: providers }: a
 		</div>
 	);
 }
-
 function SingleProviderTooltip({ active, payload }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -99,28 +92,24 @@ function SingleProviderTooltip({ active, payload }: any) {
 		</div>
 	);
 }
-
 function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selectedProvider }: ProviderLatencyChartProps) {
 	const { i18n } = useTranslation("observability");
 	const { chartData, mode, displayProviders } = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return { chartData: [], mode: "all" as const, displayProviders: [] };
 		}
-
 		const isSingleProvider = selectedProvider !== "all";
 		// Rank by total_requests so we keep the highest-volume providers visible.
 		// No "Other" bucket — averaging latencies across the long tail would mislead.
 		const providers = isSingleProvider
 			? [selectedProvider]
 			: computeDisplaySeries(data.buckets, data.providers, (b, p) => b.by_provider?.[p]?.total_requests ?? 0, false);
-
 		const processed = data.buckets.map((bucket, index) => {
 			const item: any = {
 				...bucket,
 				index,
 				formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 			};
-
 			if (isSingleProvider) {
 				const stats = bucket.by_provider?.[selectedProvider];
 				item.avg_latency = stats?.avg_latency || 0;
@@ -133,86 +122,53 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 					item[`provider_${idx}`] = bucket.by_provider?.[provider]?.avg_latency || 0;
 				});
 			}
-
 			return item;
 		});
-
 		return {
 			chartData: processed,
 			mode: isSingleProvider ? ("single" as const) : ("all" as const),
 			displayProviders: providers,
 		};
 	}, [data, selectedProvider, i18n.resolvedLanguage]);
-
 	if (!data?.buckets || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	const commonProps = {
 		data: chartData,
 		margin: { top: 6, right: 4, left: 4, bottom: 0 },
 	};
-
 	return (
 		<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}-${selectedProvider}`}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				{chartType === "bar" ? (
 					<BarChart {...commonProps} barCategoryGap={1}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={55}
 							tickFormatter={formatLatency}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						{mode === "single" ? (
 							<>
 								<Tooltip content={<SingleProviderTooltip provider={selectedProvider} />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
-								<Bar
-									isAnimationActive={false}
-									dataKey="avg_latency"
-									fill={LATENCY_COLORS.avg}
-									fillOpacity={0.9}
-									barSize={8}
-									shape={barShape}
-								/>
-								<Bar
-									isAnimationActive={false}
-									dataKey="p90_latency"
-									fill={LATENCY_COLORS.p90}
-									fillOpacity={0.9}
-									barSize={8}
-									shape={barShape}
-								/>
-								<Bar
-									isAnimationActive={false}
-									dataKey="p95_latency"
-									fill={LATENCY_COLORS.p95}
-									fillOpacity={0.9}
-									barSize={8}
-									shape={barShape}
-								/>
-								<Bar
-									isAnimationActive={false}
-									dataKey="p99_latency"
-									fill={LATENCY_COLORS.p99}
-									fillOpacity={0.9}
-									barSize={8}
-									shape={barShape}
-								/>
+								<Bar isAnimationActive dataKey="avg_latency" fill={LATENCY_COLORS.avg} fillOpacity={0.9} barSize={8} shape={barShape} />
+								<Bar isAnimationActive dataKey="p90_latency" fill={LATENCY_COLORS.p90} fillOpacity={0.9} barSize={8} shape={barShape} />
+								<Bar isAnimationActive dataKey="p95_latency" fill={LATENCY_COLORS.p95} fillOpacity={0.9} barSize={8} shape={barShape} />
+								<Bar isAnimationActive dataKey="p99_latency" fill={LATENCY_COLORS.p99} fillOpacity={0.9} barSize={8} shape={barShape} />
 							</>
 						) : (
 							<>
@@ -225,7 +181,7 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 										key={provider}
 										dataKey={`provider_${idx}`}
 										fill={getModelColor(idx)}
-										isAnimationActive={false}
+										isAnimationActive
 										fillOpacity={0.9}
 										barSize={8}
 										shape={barShape}
@@ -236,31 +192,31 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 					</BarChart>
 				) : (
 					<AreaChart {...commonProps}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={55}
 							tickFormatter={formatLatency}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						{mode === "single" ? (
 							<>
 								<Tooltip content={<SingleProviderTooltip provider={selectedProvider} />} />
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="p99_latency"
 									stroke={LATENCY_COLORS.p99}
@@ -268,7 +224,7 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 									fillOpacity={0.15}
 								/>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="p95_latency"
 									stroke={LATENCY_COLORS.p95}
@@ -276,7 +232,7 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 									fillOpacity={0.2}
 								/>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="p90_latency"
 									stroke={LATENCY_COLORS.p90}
@@ -284,7 +240,7 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 									fillOpacity={0.25}
 								/>
 								<Area
-									isAnimationActive={false}
+									isAnimationActive
 									type="monotone"
 									dataKey="avg_latency"
 									stroke={LATENCY_COLORS.avg}
@@ -299,7 +255,7 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 									<Area
 										key={provider}
 										type="monotone"
-										isAnimationActive={false}
+										isAnimationActive
 										dataKey={`provider_${idx}`}
 										stroke={getModelColor(idx)}
 										fill={getModelColor(idx)}
@@ -314,5 +270,4 @@ function ProviderLatencyChartImpl({ data, chartType, startTime, endTime, selecte
 		</ChartErrorBoundary>
 	);
 }
-
 export const ProviderLatencyChart = memo(ProviderLatencyChartImpl);

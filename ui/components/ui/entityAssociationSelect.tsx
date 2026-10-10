@@ -4,10 +4,8 @@ import { Option } from "./multiselectUtils";
 import { cn } from "./utils";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
-
 // Entity types supported by this component
 export type EntityType = "virtualKey" | "team" | "customer" | "user" | "provider" | "apiKey";
-
 // Generic entity option
 export interface EntityOption {
 	id: string | number;
@@ -15,14 +13,12 @@ export interface EntityOption {
 	description?: string;
 	metadata?: Record<string, unknown>;
 }
-
 // Meta type for AsyncMultiSelect
 interface EntityOptionMeta {
 	id: string | number;
 	description?: string;
 	metadata?: Record<string, unknown>;
 }
-
 interface EntityAssociationSelectProps {
 	/** The type of entity being selected */
 	entityType: EntityType;
@@ -64,7 +60,6 @@ interface EntityAssociationSelectProps {
 	 */
 	noOptionsMessage?: () => string;
 }
-
 // 保持公共标签为字符串，并在读取时按当前语言解析。
 export const entityTypeLabels: Record<EntityType, string> = {
 	get virtualKey() {
@@ -86,7 +81,6 @@ export const entityTypeLabels: Record<EntityType, string> = {
 		return i18n.t("entityAssociation.apiKey.label", { ns: "observability" });
 	},
 };
-
 /** 本地化关联控件文案，保留选项内容、ID 类型和异步加载行为。 */
 export function EntityAssociationSelect({
 	entityType,
@@ -115,7 +109,6 @@ export function EntityAssociationSelect({
 			},
 		}));
 	}, [options]);
-
 	// Convert selected IDs to Option format
 	const selectedValues = useMemo((): Option<EntityOptionMeta>[] => {
 		return value.map((id) => {
@@ -142,7 +135,6 @@ export function EntityAssociationSelect({
 			};
 		});
 	}, [value, options]);
-
 	// Filter options based on query
 	const filterOptions = useCallback(
 		(query: string, callback: (options: Option<EntityOptionMeta>[]) => void) => {
@@ -154,10 +146,8 @@ export function EntityAssociationSelect({
 		},
 		[defaultOptions],
 	);
-
 	// Use custom reload if provided, otherwise use local filter
 	const reload = customReload || filterOptions;
-
 	// Handle selection change
 	const handleChange = useCallback(
 		(selected: Option<EntityOptionMeta>[]) => {
@@ -166,7 +156,6 @@ export function EntityAssociationSelect({
 		},
 		[onChange],
 	);
-
 	// Handle creating new option
 	const handleCreateOption = useCallback(
 		(inputValue: string) => {
@@ -176,7 +165,6 @@ export function EntityAssociationSelect({
 		},
 		[onCreateOption],
 	);
-
 	return (
 		<div className={cn("w-full", className)}>
 			<AsyncMultiSelect<EntityOptionMeta>
@@ -188,8 +176,8 @@ export function EntityAssociationSelect({
 				onChange={handleChange}
 				value={selectedValues}
 				isClearable
-				closeMenuOnSelect={false}
-				hideSelectedOptions={false}
+				closeMenuOnSelect
+				hideSelectedOptions
 				isCreatable={isCreatable}
 				onCreateOption={handleCreateOption}
 				formatCreateLabel={formatCreateLabel || ((value) => t("entityAssociation.addValue", { value }))}
@@ -221,7 +209,6 @@ export function EntityAssociationSelect({
 		</div>
 	);
 }
-
 /**
  * Helper function to create EntityOption from simple ID list
  * Useful when you just have IDs without full entity info
@@ -232,12 +219,16 @@ export function createOptionsFromIds(ids: (string | number)[]): EntityOption[] {
 		label: String(id),
 	}));
 }
-
 /**
  * Helper function to create EntityOption with label mapping
  */
 export function createOptionsWithLabels(
-	items: { id: string | number; name?: string; label?: string; description?: string }[],
+	items: {
+		id: string | number;
+		name?: string;
+		label?: string;
+		description?: string;
+	}[],
 ): EntityOption[] {
 	return items.map((item) => ({
 		id: item.id,

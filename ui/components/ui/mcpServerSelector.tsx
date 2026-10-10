@@ -6,7 +6,6 @@ import { Button } from "./button";
 import { Option } from "./multiselectUtils";
 import { cn } from "./utils";
 import { useTranslation } from "react-i18next";
-
 // Types
 export interface MCPServerInfo {
 	config: {
@@ -14,10 +13,11 @@ export interface MCPServerInfo {
 		name: string;
 		connection_type?: string;
 	};
-	tools?: { name: string }[];
+	tools?: {
+		name: string;
+	}[];
 	state?: string;
 }
-
 interface ServerOptionMeta {
 	clientId: string;
 	name: string;
@@ -25,7 +25,6 @@ interface ServerOptionMeta {
 	toolCount: number;
 	state?: string;
 }
-
 interface MCPServerSelectorProps {
 	value: string[];
 	onChange: (serverIds: string[]) => void;
@@ -36,7 +35,6 @@ interface MCPServerSelectorProps {
 	/** Base URL path for the MCP registry page (default: /workspace/mcp-registry) */
 	registryPath?: string;
 }
-
 export function MCPServerSelector({
 	value,
 	onChange,
@@ -62,7 +60,6 @@ export function MCPServerSelector({
 			},
 		}));
 	}, [mcpClients]);
-
 	// Get full server info for selected servers
 	const selectedServersWithInfo = useMemo(() => {
 		return value.map((serverId) => {
@@ -76,20 +73,16 @@ export function MCPServerSelector({
 			};
 		});
 	}, [value, mcpClients]);
-
 	// Filter out already selected servers from options
 	const availableOptions = useMemo(() => {
 		const selectedSet = new Set(value);
 		return allServerOptions.filter((opt) => !selectedSet.has(opt.value));
 	}, [allServerOptions, value]);
-
 	const handleSelectServer = useCallback(
 		(selected: Option<ServerOptionMeta>[]) => {
 			if (selected.length === 0) return;
-
 			const newServer = selected[selected.length - 1];
 			if (!newServer?.meta) return;
-
 			// Check if already selected
 			if (!value.includes(newServer.meta.clientId)) {
 				onChange([...value, newServer.meta.clientId]);
@@ -97,14 +90,12 @@ export function MCPServerSelector({
 		},
 		[value, onChange],
 	);
-
 	const handleRemoveServer = useCallback(
 		(serverId: string) => {
 			onChange(value.filter((id) => id !== serverId));
 		},
 		[value, onChange],
 	);
-
 	const reload = useCallback(
 		(query: string, callback: (options: Option<ServerOptionMeta>[]) => void) => {
 			const lowerQuery = query.toLowerCase();
@@ -113,7 +104,6 @@ export function MCPServerSelector({
 		},
 		[availableOptions],
 	);
-
 	const getConnectionTypeBadgeVariant = (type?: string) => {
 		switch (type) {
 			case "http":
@@ -126,7 +116,6 @@ export function MCPServerSelector({
 				return "outline";
 		}
 	};
-
 	const getStateBadgeVariant = (state?: string) => {
 		switch (state) {
 			case "healthy":
@@ -137,7 +126,6 @@ export function MCPServerSelector({
 				return "secondary";
 		}
 	};
-
 	return (
 		<div className={cn("space-y-3", className)}>
 			{/* Search dropdown */}
@@ -149,10 +137,10 @@ export function MCPServerSelector({
 				debounce={150}
 				onChange={handleSelectServer}
 				value={[]}
-				isClearable={false}
+				isClearable
 				closeMenuOnSelect={true}
 				hideSelectedOptions={true}
-				controlShouldRenderValue={false}
+				controlShouldRenderValue
 				noOptionsMessage={() => t("selectors.noServers")}
 				views={{
 					option: (props) => {

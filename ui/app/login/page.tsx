@@ -1,4 +1,4 @@
-import LoginView from "@enterprise/components/login/loginView";
+import LoginView from "@/components/login/loginView";
 import { getRouteApi } from "@tanstack/react-router";
 import SetupTokenView from "./views/setupTokenView";
 

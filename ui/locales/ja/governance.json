@@ -5,7 +5,6 @@
 		"bookDemo": "デモを予約",
 		"bookDemoAria": "デモを予約（新しいタブで Calendly を開きます）"
 	},
-	"unlockSharedDescription": "この機能は Bifrost エンタープライズライセンスの一部です。利用シーンと、どのように支援できるかをぜひ教えてください。",
 	"customers": {
 		"title": "顧客",
 		"description": "独自のチーム、予算、アクセス制御を持つ顧客アカウントを管理します。",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "webhook を検索…"
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "プロアクティブ監視向けにアラートチャネルをアンロック",
-		"channelsUnlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。Slack、PagerDuty、OpsGenie、webhook アラートを構成し、予算とパフォーマンスの問題に先手を打ちます。",
-		"rulesUnlockTitle": "プロアクティブ監視向けにアラートルールをアンロック",
-		"rulesUnlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。予算、レイテンシ、劣化の問題がインシデントになる前に捉えるアラートルールを定義します。",
-		"historyUnlockTitle": "プロアクティブ監視向けにアラート履歴をアンロック",
-		"historyUnlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。アラート配信の結果、失敗、解決イベントを一箇所で確認します。"
-	},
 	"guardrails": {
 		"unlockTitle": "セキュリティ向上のためガードレールをアンロック"
-	},
-	"auditLogs": {
-		"unlockTitle": "コンプライアンス向上のため監査ログをアンロック"
-	},
-	"rbac": {
-		"unlockTitle": "セキュリティ向上のためロールと権限をアンロック"
-	},
-	"projects": {
-		"unlockTitle": "スコープ付きアクセスと支出のためプロジェクトをアンロック",
-		"unlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。プロジェクトはリクエストが選択するもので、呼び出し元が既に持つ権限に加えてアクセスを付与し、支出をどの台帳に計上するかを決めます。"
-	},
-	"userRankings": {
-		"unlockTitle": "可視性向上のためユーザーランキングをアンロック"
-	},
-	"promptDeployments": {
-		"unlockTitle": "プロンプトのバージョン管理と A/B テストのためプロンプトデプロイをアンロック。"
-	},
-	"connectorsUnlock": {
-		"splunk": "オブザーバビリティ向上のためネイティブ Splunk データ取り込みをアンロック",
-		"pubsub": "Google Cloud Pub/Sub トレーシングストリームをアンロック",
-		"datadog": "オブザーバビリティ向上のためネイティブ Datadog データ取り込みをアンロック",
-		"bigquery": "分析のためネイティブ BigQuery データ取り込みをアンロック",
-		"kafka": "リアルタイムオブザーバビリティのためネイティブ Kafka ログストリームをアンロック",
-		"kafkaDescription": "この機能は Bifrost エンタープライズライセンスの一部です。完了したリクエストトレースを JSON として Kafka トピックへストリームし、リアルタイム分析、アラート、下流処理に使います。"
-	},
-	"accessProfiles": {
-		"unlockTitle": "パフォーマンス向上のためアクセスプロファイルをアンロック",
-		"unlockDescription": "この機能は Bifrost エンタープライズライセンスの一部です。リソースへのアクセスを制御するアクセスプロファイルを作成します。"
-	},
-	"users": {
-		"unlockTitle": "ユーザーとユーザーガバナンスをアンロック",
-		"unlockDescription": "ユーザーを管理し、ユーザーごとの予算とレート制限を設定し、エンタープライズ級ガバナンスでアクセスを制御します。この機能は Bifrost エンタープライズライセンスの一部です。"
-	},
-	"businessUnits": {
-		"unlockTitle": "ビジネスユニットと高度なガバナンスをアンロック",
-		"unlockDescription": "エンタープライズ級ガバナンスでユーザーとビジネスユニットを管理します。この機能は Bifrost エンタープライズライセンスの一部です。"
 	},
 	"sheet": {
 		"saving": "保存中…",

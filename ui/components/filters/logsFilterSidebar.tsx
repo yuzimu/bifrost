@@ -25,26 +25,20 @@ import {
 import type { LogFilters } from "@/lib/types/logs";
 import { cn } from "@/lib/utils";
 import { getRangeForPeriod } from "@/lib/utils/timeRange";
-import "@enterprise/lib/registrations/logs";
 import { ChevronDown, LoaderCircle, PanelLeftClose, Plus, RotateCcw, Search } from "lucide-react";
 import { Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 const COLLAPSE_STORAGE_KEY = "logs-filter-sidebar-collapsed";
-
 // ---------------------------------------------------------------------------
 // LogsSidebar – orchestrator
 // ---------------------------------------------------------------------------
-
 interface LogsSidebarProps {
 	filters: LogFilters;
 	onFiltersChange: (filters: LogFilters) => void;
 }
-
 export function LogsFilterSidebar({ filters, onFiltersChange }: LogsSidebarProps) {
 	const { t } = useTranslation("observability");
 	const isMobile = useIsMobile();
 	const [collapsed, setCollapsed] = useState(false);
-
 	// Load persisted collapsed state on mount
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -55,7 +49,6 @@ export function LogsFilterSidebar({ filters, onFiltersChange }: LogsSidebarProps
 		const stored = window.localStorage.getItem(COLLAPSE_STORAGE_KEY);
 		setCollapsed(stored === "true");
 	}, [isMobile]);
-
 	const toggleCollapsed = useCallback(() => {
 		setCollapsed((prev) => {
 			const next = !prev;
@@ -65,7 +58,6 @@ export function LogsFilterSidebar({ filters, onFiltersChange }: LogsSidebarProps
 			return next;
 		});
 	}, []);
-
 	const activeFilterCount = useMemo(() => {
 		const excludedKeys = ["start_time", "end_time", "content_search", "request_id", "metadata_filters", "period", "polling"];
 		let count = Object.entries(filters).reduce((c, [key, value]) => {
@@ -78,19 +70,16 @@ export function LogsFilterSidebar({ filters, onFiltersChange }: LogsSidebarProps
 		}
 		return count;
 	}, [filters]);
-
 	const handleReset = useCallback(() => {
 		onFiltersChange({
 			start_time: filters.start_time,
 			end_time: filters.end_time,
 		});
 	}, [filters.start_time, filters.end_time, onFiltersChange]);
-
 	// Collapsed: thin rail with vertical "Filters" label — whole rail is clickable to expand
 	if (collapsed) {
 		return <FilterSidebarTrigger activeFilterCount={activeFilterCount} onClick={toggleCollapsed} />;
 	}
-
 	return (
 		<div className="bg-card fixed inset-y-2 left-2 z-40 flex h-auto w-[calc(100vw-1rem)] max-w-72 shrink-0 flex-col rounded-md border shadow-xl md:static md:h-full md:w-64 md:max-w-none md:rounded-md md:shadow-none">
 			{/* Header */}
@@ -140,11 +129,11 @@ export function LogsFilterSidebar({ filters, onFiltersChange }: LogsSidebarProps
 					<RequestSessionFilter filters={filters} onFiltersChange={onFiltersChange} />
 					<AgentCorrelationFilter filters={filters} onFiltersChange={onFiltersChange} />
 					<LocalCachingFilter filters={filters} onFiltersChange={onFiltersChange} />
-					<UserFilter filters={filters} onFiltersChange={onFiltersChange} />
+					<></>
 					<TeamFilter filters={filters} onFiltersChange={onFiltersChange} />
 					<CustomerFilter filters={filters} onFiltersChange={onFiltersChange} />
-					<BusinessUnitFilter filters={filters} onFiltersChange={onFiltersChange} />
-					<ProjectFilter filters={filters} onFiltersChange={onFiltersChange} />
+					<></>
+					<></>
 					<SessionFilter filters={filters} onFiltersChange={onFiltersChange} />
 					<CostFilter filters={filters} onFiltersChange={onFiltersChange} />
 					<StopReasonFilter filters={filters} onFiltersChange={onFiltersChange} />
@@ -155,12 +144,15 @@ export function LogsFilterSidebar({ filters, onFiltersChange }: LogsSidebarProps
 		</div>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // Shared helpers & primitives
 // ---------------------------------------------------------------------------
-
-function groupByName(items: { name: string; id: string }[]) {
+function groupByName(
+	items: {
+		name: string;
+		id: string;
+	}[],
+) {
 	const map = new Map<string, string[]>();
 	for (const item of items) {
 		const ids = map.get(item.name) || [];
@@ -169,22 +161,22 @@ function groupByName(items: { name: string; id: string }[]) {
 	}
 	return map;
 }
-
-function dedup(items: { name: string }[]) {
+function dedup(
+	items: {
+		name: string;
+	}[],
+) {
 	return [...new Map(items.map((i) => [i.name, i])).values()].map((i) => i.name);
 }
-
 /** Shared props every individual filter component receives. */
 interface FilterComponentProps {
 	filters: LogFilters;
 	onFiltersChange: (filters: LogFilters) => void;
 	defaultOpen?: boolean;
 }
-
 // ---------------------------------------------------------------------------
 // FilterSection – collapsible wrapper
 // ---------------------------------------------------------------------------
-
 function FilterSectionSkeleton({ rows = 3 }: { rows?: number }) {
 	return (
 		<>
@@ -197,7 +189,6 @@ function FilterSectionSkeleton({ rows = 3 }: { rows?: number }) {
 		</>
 	);
 }
-
 function FilterSection({
 	title,
 	children,
@@ -214,16 +205,13 @@ function FilterSection({
 	testId?: string;
 }) {
 	const [open, setOpen] = useState(defaultOpen);
-
 	useEffect(() => {
 		if (defaultOpen) setOpen(true);
 	}, [defaultOpen]);
-
 	const handleOpenChange = (next: boolean) => {
 		setOpen(next);
 		onOpenChange?.(next);
 	};
-
 	return (
 		<Collapsible open={open} onOpenChange={handleOpenChange} className="last:pb-2">
 			<CollapsibleTrigger
@@ -239,11 +227,9 @@ function FilterSection({
 		</Collapsible>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // CheckboxFilterItem – single checkbox row
 // ---------------------------------------------------------------------------
-
 function CheckboxFilterItem({
 	label,
 	checked,
@@ -264,12 +250,10 @@ function CheckboxFilterItem({
 		</label>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // SearchableCheckboxList – list of checkbox rows with a search input.
 // Caller passes `inputRef` to control focus (see `useAutoFocusOnOpen`).
 // ---------------------------------------------------------------------------
-
 function useAutoFocusOnOpen(isOpen: boolean) {
 	const ref = useRef<HTMLInputElement>(null);
 	useEffect(() => {
@@ -277,7 +261,6 @@ function useAutoFocusOnOpen(isOpen: boolean) {
 	}, [isOpen]);
 	return ref;
 }
-
 function SearchableCheckboxList({
 	items,
 	isSelected,
@@ -290,7 +273,10 @@ function SearchableCheckboxList({
 	onSearch,
 	fetching,
 }: {
-	items: { key: string; label: string }[];
+	items: {
+		key: string;
+		label: string;
+	}[];
 	isSelected: (key: string) => boolean;
 	onToggle: (key: string) => void;
 	placeholder?: string;
@@ -311,7 +297,6 @@ function SearchableCheckboxList({
 	const trimmed = query.trim();
 	const hasExactMatch = trimmed !== "" && items.some((item) => item.label.toLowerCase() === trimmed.toLowerCase());
 	const showAddCustom = allowCustom && trimmed !== "" && !hasExactMatch;
-
 	useEffect(() => {
 		if (!onSearch) return;
 		const timer = setTimeout(() => {
@@ -319,13 +304,11 @@ function SearchableCheckboxList({
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [query, onSearch]);
-
 	const commitCustom = () => {
 		if (!showAddCustom) return;
 		onToggle(trimmed);
 		setQuery("");
 	};
-
 	return (
 		<>
 			<div className="relative border-b">
@@ -386,11 +369,9 @@ function SearchableCheckboxList({
 		</>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // StatusFilter
 // ---------------------------------------------------------------------------
-
 function StatusFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.status || []).length > 0;
@@ -413,11 +394,9 @@ function StatusFilter({ filters, onFiltersChange, defaultOpen }: FilterComponent
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // StopReasonFilter – fetches available stop reasons internally
 // ---------------------------------------------------------------------------
-
 function StopReasonFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.stop_reasons || []).length > 0;
@@ -436,9 +415,7 @@ function StopReasonFilter({ filters, onFiltersChange, defaultOpen }: FilterCompo
 		const extras = (filters.stop_reasons || []).filter((r) => !seen.has(r));
 		return [...availableStopReasons, ...extras].map((r) => ({ key: r, label: r }));
 	}, [availableStopReasons, filters.stop_reasons]);
-
 	if (!isUninitialized && !isLoading && availableStopReasons.length === 0 && !hasActive && !opened) return null;
-
 	return (
 		<FilterSection
 			title={t("logs.detail.stopReason")}
@@ -465,11 +442,9 @@ function StopReasonFilter({ filters, onFiltersChange, defaultOpen }: FilterCompo
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // ToolCallsFilter
 // ---------------------------------------------------------------------------
-
 function ToolCallsFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.tool_call_names || []).length > 0;
@@ -488,9 +463,7 @@ function ToolCallsFilter({ filters, onFiltersChange, defaultOpen }: FilterCompon
 		const extras = (filters.tool_call_names || []).filter((n) => !seen.has(n));
 		return [...availableToolCallNames, ...extras].map((n) => ({ key: n, label: n }));
 	}, [availableToolCallNames, filters.tool_call_names]);
-
 	if (!isUninitialized && !isLoading && availableToolCallNames.length === 0 && !hasActive && !opened) return null;
-
 	return (
 		<FilterSection
 			title={t("filters.toolCalls")}
@@ -517,11 +490,9 @@ function ToolCallsFilter({ filters, onFiltersChange, defaultOpen }: FilterCompon
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // AppFilter
 // ---------------------------------------------------------------------------
-
 function AppFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.apps || []).length > 0;
@@ -538,9 +509,7 @@ function AppFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPro
 		[availableApps, filters.apps],
 	);
 	if (!isUninitialized && !isLoading && availableApps.length === 0 && !hasActive && !opened) return null;
-
 	const selectedSet = new Set(filters.apps || []);
-
 	return (
 		<FilterSection
 			title={t("labels.app")}
@@ -565,11 +534,9 @@ function AppFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPro
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // ProvidersFilter – fetches providers internally
 // ---------------------------------------------------------------------------
-
 function ProvidersFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.providers || []).length > 0;
@@ -577,10 +544,8 @@ function ProvidersFilter({ filters, onFiltersChange, defaultOpen }: FilterCompon
 	const searchInputRef = useAutoFocusOnOpen(opened);
 	const { data: providersData, isUninitialized, isLoading } = useGetProvidersQuery(undefined, { skip: !opened && !hasActive });
 	const availableProviders = providersData || [];
-
 	// Hide only if data was fetched (not loading) and came back empty, and the user hasn't opened the section
 	if (!isUninitialized && !isLoading && availableProviders.length === 0 && !hasActive && !opened) return null;
-
 	return (
 		<FilterSection
 			title={t("labels.providers")}
@@ -604,11 +569,9 @@ function ProvidersFilter({ filters, onFiltersChange, defaultOpen }: FilterCompon
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // TypeFilter
 // ---------------------------------------------------------------------------
-
 function TypeFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.objects || []).length > 0;
@@ -633,11 +596,9 @@ function TypeFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPr
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // ModelsFilter – fetches available models internally
 // ---------------------------------------------------------------------------
-
 function ModelsFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.models || []).length > 0;
@@ -656,9 +617,7 @@ function ModelsFilter({ filters, onFiltersChange, defaultOpen }: FilterComponent
 		const extras = (filters.models || []).filter((m) => !seen.has(m));
 		return [...availableModels, ...extras].map((m) => ({ key: m, label: m }));
 	}, [availableModels, filters.models]);
-
 	if (!isUninitialized && !isLoading && availableModels.length === 0 && !hasActive && !opened) return null;
-
 	return (
 		<FilterSection
 			title={t("filters.models")}
@@ -685,11 +644,9 @@ function ModelsFilter({ filters, onFiltersChange, defaultOpen }: FilterComponent
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // AliasesFilter – fetches available aliases internally
 // ---------------------------------------------------------------------------
-
 function AliasesFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.aliases || []).length > 0;
@@ -708,9 +665,7 @@ function AliasesFilter({ filters, onFiltersChange, defaultOpen }: FilterComponen
 		const extras = (filters.aliases || []).filter((a) => !seen.has(a));
 		return [...availableAliases, ...extras].map((a) => ({ key: a, label: a }));
 	}, [availableAliases, filters.aliases]);
-
 	if (!isUninitialized && !isLoading && availableAliases.length === 0 && !hasActive && !opened) return null;
-
 	return (
 		<FilterSection
 			title={t("filters.aliases")}
@@ -737,11 +692,9 @@ function AliasesFilter({ filters, onFiltersChange, defaultOpen }: FilterComponen
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // SelectedKeysFilter – fetches keys, resolves name→IDs for deduplication
 // ---------------------------------------------------------------------------
-
 function SelectedKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.selected_key_ids || []).length > 0;
@@ -756,9 +709,7 @@ function SelectedKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 	} = useGetAvailableFilterDataQuery({ dimensions: ["selected_keys"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
 	const availableSelectedKeys = filterData?.selected_keys || [];
 	const nameToIds = useMemo(() => groupByName(availableSelectedKeys), [availableSelectedKeys]);
-
 	if (!isUninitialized && !isLoading && availableSelectedKeys.length === 0 && !hasActive && !opened) return null;
-
 	const toggle = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.selected_key_ids || [];
@@ -768,13 +719,11 @@ function SelectedKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
 		onFiltersChange({ ...filters, selected_key_ids: next });
 	};
-
 	const isSelected = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.selected_key_ids || [];
 		return resolvedIds.every((id) => current.includes(id));
 	};
-
 	return (
 		<FilterSection
 			title={t("filters.selectedKeys")}
@@ -796,11 +745,9 @@ function SelectedKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // VirtualKeysFilter
 // ---------------------------------------------------------------------------
-
 function VirtualKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.virtual_key_ids || []).length > 0;
@@ -815,9 +762,7 @@ function VirtualKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterComp
 	} = useGetAvailableFilterDataQuery({ dimensions: ["virtual_keys"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
 	const availableVirtualKeys = filterData?.virtual_keys || [];
 	const nameToIds = useMemo(() => groupByName(availableVirtualKeys), [availableVirtualKeys]);
-
 	if (!isUninitialized && !isLoading && availableVirtualKeys.length === 0 && !hasActive && !opened) return null;
-
 	const toggle = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.virtual_key_ids || [];
@@ -827,13 +772,11 @@ function VirtualKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterComp
 			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
 		onFiltersChange({ ...filters, virtual_key_ids: next });
 	};
-
 	const isSelected = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.virtual_key_ids || [];
 		return resolvedIds.every((id) => current.includes(id));
 	};
-
 	return (
 		<FilterSection
 			title={t("filters.virtualKeys")}
@@ -855,11 +798,9 @@ function VirtualKeysFilter({ filters, onFiltersChange, defaultOpen }: FilterComp
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // RoutingEnginesFilter
 // ---------------------------------------------------------------------------
-
 function RoutingEnginesFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.routing_engine_used || []).length > 0;
@@ -873,9 +814,7 @@ function RoutingEnginesFilter({ filters, onFiltersChange, defaultOpen }: FilterC
 		isFetching,
 	} = useGetAvailableFilterDataQuery({ dimensions: ["routing_engines"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
 	const availableRoutingEngines = filterData?.routing_engines || [];
-
 	if (!isUninitialized && !isLoading && availableRoutingEngines.length === 0 && !hasActive && !opened) return null;
-
 	return (
 		<FilterSection
 			title={t("filters.routingEngines")}
@@ -904,11 +843,9 @@ function RoutingEnginesFilter({ filters, onFiltersChange, defaultOpen }: FilterC
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // RoutingRulesFilter
 // ---------------------------------------------------------------------------
-
 function RoutingRulesFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.routing_rule_ids || []).length > 0;
@@ -923,9 +860,7 @@ function RoutingRulesFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 	} = useGetAvailableFilterDataQuery({ dimensions: ["routing_rules"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
 	const availableRoutingRules = filterData?.routing_rules || [];
 	const nameToIds = useMemo(() => groupByName(availableRoutingRules), [availableRoutingRules]);
-
 	if (!isUninitialized && !isLoading && availableRoutingRules.length === 0 && !hasActive && !opened) return null;
-
 	const toggle = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.routing_rule_ids || [];
@@ -935,13 +870,11 @@ function RoutingRulesFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
 		onFiltersChange({ ...filters, routing_rule_ids: next });
 	};
-
 	const isSelected = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.routing_rule_ids || [];
 		return resolvedIds.every((id) => current.includes(id));
 	};
-
 	return (
 		<FilterSection
 			title={t("filters.routingRules")}
@@ -963,17 +896,18 @@ function RoutingRulesFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // ComplexityTierFilter – static enum, no fetch (tiers are a closed value set)
 // ---------------------------------------------------------------------------
-
 function ComplexityTierFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.complexity_tiers || []).length > 0;
 	// Legacy tiers (REASONING, merged into COMPLEX) are offered so historical
 	// rows recorded under the old scheme stay reachable through the filter.
-	const tiers: { value: string; label: string }[] = [
+	const tiers: {
+		value: string;
+		label: string;
+	}[] = [
 		...COMPLEXITY_TIER_VALUES.map((tier) => ({ value: tier as string, label: tier.toLowerCase() })),
 		...LEGACY_COMPLEXITY_TIER_VALUES.map((tier) => ({
 			value: tier as string,
@@ -999,11 +933,9 @@ function ComplexityTierFilter({ filters, onFiltersChange, defaultOpen }: FilterC
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // ComplexityMechanismFilter – static enum, no fetch (mechanisms are a closed value set)
 // ---------------------------------------------------------------------------
-
 function ComplexityMechanismFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.complexity_mechanisms || []).length > 0;
@@ -1029,11 +961,9 @@ function ComplexityMechanismFilter({ filters, onFiltersChange, defaultOpen }: Fi
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // RequestSessionFilter
 // ---------------------------------------------------------------------------
-
 // 按 Agent 名称筛选日志，保留当前选中但未返回的名称。
 function AgentFilter({ filters, onFiltersChange }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
@@ -1049,7 +979,6 @@ function AgentFilter({ filters, onFiltersChange }: FilterComponentProps) {
 				.map((name) => ({ key: name, label: name })),
 		[data?.agents, filters.agent_names],
 	);
-
 	return (
 		<FilterSection
 			title={t("filters.agent")}
@@ -1073,7 +1002,6 @@ function AgentFilter({ filters, onFiltersChange }: FilterComponentProps) {
 		</FilterSection>
 	);
 }
-
 function RequestSessionFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = !!filters.session_id;
@@ -1092,7 +1020,6 @@ function RequestSessionFilter({ filters, onFiltersChange, defaultOpen }: FilterC
 		</FilterSection>
 	);
 }
-
 function AgentCorrelationFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = !!filters.agent_correlation_id;
@@ -1111,11 +1038,9 @@ function AgentCorrelationFilter({ filters, onFiltersChange, defaultOpen }: Filte
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // SessionFilter
 // ---------------------------------------------------------------------------
-
 function SessionFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = !!filters.parent_request_id;
@@ -1135,63 +1060,9 @@ function SessionFilter({ filters, onFiltersChange, defaultOpen }: FilterComponen
 		</FilterSection>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// UserFilter
-// ---------------------------------------------------------------------------
-
-function UserFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
-	const { t } = useTranslation("observability");
-	const hasActive = (filters.user_ids || []).length > 0;
-	const [opened, setOpened] = useState(defaultOpen || hasActive);
-	const searchInputRef = useAutoFocusOnOpen(opened);
-	const [searchQuery, setSearchQuery] = useState("");
-	const {
-		data: filterData,
-		isUninitialized,
-		isLoading,
-		isFetching,
-	} = useGetAvailableFilterDataQuery({ dimensions: ["users"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
-	const availableUsers = filterData?.users || [];
-	const items = useMemo(() => {
-		const seen = new Set(availableUsers.map((u) => u.id));
-		const extras = (filters.user_ids || []).filter((id) => !seen.has(id));
-		return [...availableUsers.map((u) => ({ key: u.id, label: u.name || u.id })), ...extras.map((id) => ({ key: id, label: id }))];
-	}, [availableUsers, filters.user_ids]);
-
-	if (!isUninitialized && !isLoading && availableUsers.length === 0 && !hasActive && !opened) return null;
-
-	return (
-		<FilterSection
-			title={t("labels.user")}
-			defaultOpen={defaultOpen || hasActive}
-			loading={isLoading}
-			onOpenChange={setOpened}
-			testId="user-filter-toggle"
-		>
-			<SearchableCheckboxList
-				inputRef={searchInputRef}
-				placeholder={t("filters.searchOrAddAUser")}
-				items={items}
-				allowCustom
-				isSelected={(id) => (filters.user_ids || []).includes(id)}
-				onToggle={(id) => {
-					const current = filters.user_ids || [];
-					const next = current.includes(id) ? current.filter((u) => u !== id) : [...current, id];
-					onFiltersChange({ ...filters, user_ids: next });
-				}}
-				onSearch={setSearchQuery}
-				fetching={isFetching}
-				testIdPrefix="user-filter"
-			/>
-		</FilterSection>
-	);
-}
-
 // ---------------------------------------------------------------------------
 // TeamFilter
 // ---------------------------------------------------------------------------
-
 function TeamFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.team_ids || []).length > 0;
@@ -1206,9 +1077,7 @@ function TeamFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPr
 	} = useGetAvailableFilterDataQuery({ dimensions: ["teams"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
 	const availableTeams = filterData?.teams || [];
 	const nameToIds = useMemo(() => groupByName(availableTeams), [availableTeams]);
-
 	if (!isUninitialized && !isLoading && availableTeams.length === 0 && !hasActive && !opened) return null;
-
 	const toggle = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.team_ids || [];
@@ -1218,13 +1087,11 @@ function TeamFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPr
 			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
 		onFiltersChange({ ...filters, team_ids: next });
 	};
-
 	const isSelected = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.team_ids || [];
 		return resolvedIds.every((id) => current.includes(id));
 	};
-
 	return (
 		<FilterSection
 			title={t("mcpLogs.detail.teams")}
@@ -1246,11 +1113,9 @@ function TeamFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPr
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // CustomerFilter
 // ---------------------------------------------------------------------------
-
 function CustomerFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.customer_ids || []).length > 0;
@@ -1265,9 +1130,7 @@ function CustomerFilter({ filters, onFiltersChange, defaultOpen }: FilterCompone
 	} = useGetAvailableFilterDataQuery({ dimensions: ["customers"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
 	const availableCustomers = filterData?.customers || [];
 	const nameToIds = useMemo(() => groupByName(availableCustomers), [availableCustomers]);
-
 	if (!isUninitialized && !isLoading && availableCustomers.length === 0 && !hasActive && !opened) return null;
-
 	const toggle = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.customer_ids || [];
@@ -1277,13 +1140,11 @@ function CustomerFilter({ filters, onFiltersChange, defaultOpen }: FilterCompone
 			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
 		onFiltersChange({ ...filters, customer_ids: next });
 	};
-
 	const isSelected = (name: string) => {
 		const resolvedIds = nameToIds.get(name) || [name];
 		const current = filters.customer_ids || [];
 		return resolvedIds.every((id) => current.includes(id));
 	};
-
 	return (
 		<FilterSection
 			title={t("mcpLogs.detail.customers")}
@@ -1306,131 +1167,9 @@ function CustomerFilter({ filters, onFiltersChange, defaultOpen }: FilterCompone
 		</FilterSection>
 	);
 }
-
-// ---------------------------------------------------------------------------
-// BusinessUnitFilter
-// ---------------------------------------------------------------------------
-
-function BusinessUnitFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
-	const { t } = useTranslation("observability");
-	const hasActive = (filters.business_unit_ids || []).length > 0;
-	const [opened, setOpened] = useState(defaultOpen || hasActive);
-	const searchInputRef = useAutoFocusOnOpen(opened);
-	const [searchQuery, setSearchQuery] = useState("");
-	const {
-		data: filterData,
-		isUninitialized,
-		isLoading,
-		isFetching,
-	} = useGetAvailableFilterDataQuery({ dimensions: ["business_units"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
-	const availableBusinessUnits = filterData?.business_units || [];
-	const nameToIds = useMemo(() => groupByName(availableBusinessUnits), [availableBusinessUnits]);
-
-	if (!isUninitialized && !isLoading && availableBusinessUnits.length === 0 && !hasActive && !opened) return null;
-
-	const toggle = (name: string) => {
-		const resolvedIds = nameToIds.get(name) || [name];
-		const current = filters.business_unit_ids || [];
-		const allSelected = resolvedIds.every((id) => current.includes(id));
-		const next = allSelected
-			? current.filter((v) => !resolvedIds.includes(v))
-			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
-		onFiltersChange({ ...filters, business_unit_ids: next });
-	};
-
-	const isSelected = (name: string) => {
-		const resolvedIds = nameToIds.get(name) || [name];
-		const current = filters.business_unit_ids || [];
-		return resolvedIds.every((id) => current.includes(id));
-	};
-
-	return (
-		<FilterSection
-			title={t("mcpLogs.detail.businessUnits")}
-			defaultOpen={defaultOpen || hasActive}
-			loading={isLoading}
-			onOpenChange={setOpened}
-			testId="business-units-filter-toggle"
-		>
-			<SearchableCheckboxList
-				inputRef={searchInputRef}
-				placeholder={t("filters.searchOrAddABusinessUnit")}
-				items={dedup(availableBusinessUnits).map((name) => ({ key: name, label: name }))}
-				allowCustom
-				isSelected={isSelected}
-				onToggle={toggle}
-				onSearch={setSearchQuery}
-				fetching={isFetching}
-				testIdPrefix="business-units-filter"
-			/>
-		</FilterSection>
-	);
-}
-
-// ---------------------------------------------------------------------------
-// ProjectFilter
-// ---------------------------------------------------------------------------
-
-function ProjectFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
-	const { t } = useTranslation("observability");
-	const hasActive = (filters.project_ids || []).length > 0;
-	const [opened, setOpened] = useState(defaultOpen || hasActive);
-	const searchInputRef = useAutoFocusOnOpen(opened);
-	const [searchQuery, setSearchQuery] = useState("");
-	const {
-		data: filterData,
-		isUninitialized,
-		isLoading,
-		isFetching,
-	} = useGetAvailableFilterDataQuery({ dimensions: ["projects"], q: searchQuery || undefined }, { skip: !opened && !hasActive });
-	const availableProjects = filterData?.projects || [];
-	const nameToIds = useMemo(() => groupByName(availableProjects), [availableProjects]);
-
-	if (!isUninitialized && !isLoading && availableProjects.length === 0 && !hasActive && !opened) return null;
-
-	const toggle = (name: string) => {
-		const resolvedIds = nameToIds.get(name) || [name];
-		const current = filters.project_ids || [];
-		const allSelected = resolvedIds.every((id) => current.includes(id));
-		const next = allSelected
-			? current.filter((v) => !resolvedIds.includes(v))
-			: [...current, ...resolvedIds.filter((id) => !current.includes(id))];
-		onFiltersChange({ ...filters, project_ids: next });
-	};
-
-	const isSelected = (name: string) => {
-		const resolvedIds = nameToIds.get(name) || [name];
-		const current = filters.project_ids || [];
-		return resolvedIds.every((id) => current.includes(id));
-	};
-
-	return (
-		<FilterSection
-			title={t("mcpLogs.detail.projects")}
-			defaultOpen={defaultOpen || hasActive}
-			loading={isLoading}
-			onOpenChange={setOpened}
-			testId="projects-filter-toggle"
-		>
-			<SearchableCheckboxList
-				inputRef={searchInputRef}
-				placeholder={t("filters.searchOrAddAProject")}
-				items={dedup(availableProjects).map((name) => ({ key: name, label: name }))}
-				allowCustom
-				isSelected={isSelected}
-				onToggle={toggle}
-				onSearch={setSearchQuery}
-				fetching={isFetching}
-				testIdPrefix="projects-filter"
-			/>
-		</FilterSection>
-	);
-}
-
 // ---------------------------------------------------------------------------
 // CostFilter
 // ---------------------------------------------------------------------------
-
 function CostFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = !!filters.missing_cost_only;
@@ -1445,16 +1184,16 @@ function CostFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentPr
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // LocalCachingFilter – filter by semantic-cache hit type (direct / semantic)
 // ---------------------------------------------------------------------------
-
-const LocalCachingOptions: { key: string; label: string }[] = [
+const LocalCachingOptions: {
+	key: string;
+	label: string;
+}[] = [
 	{ key: "direct", label: "Direct cache" },
 	{ key: "semantic", label: "Semantic cache" },
 ];
-
 function LocalCachingFilter({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const hasActive = (filters.cache_hit_types || []).length > 0;
@@ -1476,11 +1215,9 @@ function LocalCachingFilter({ filters, onFiltersChange, defaultOpen }: FilterCom
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // LabelledMetadataFilter – a registered group of metadata keys under readable names
 // ---------------------------------------------------------------------------
-
 // setMetadataFilter sets one metadata key's filter value, or clears it when value is undefined.
 function setMetadataFilter(filters: LogFilters, key: string, value: string | undefined): LogFilters {
 	const current = { ...(filters.metadata_filters || {}) };
@@ -1491,17 +1228,14 @@ function setMetadataFilter(filters: LogFilters, key: string, value: string | und
 	}
 	return { ...filters, metadata_filters: Object.keys(current).length > 0 ? current : undefined };
 }
-
 // Keys a registered group offers under readable names; the generic Metadata section leaves them to it.
 function labelledMetadataKeys(): Set<string> {
 	return new Set(getMetadataFilterGroups().flatMap((group) => group.fields.map((field) => field.key)));
 }
-
 // useNoRecordedValues stands in for a group that cannot say which values rows hold: it lists every option.
 function useNoRecordedValues(): RecordedMetadataValues {
 	return { values: undefined, isLoading: false };
 }
-
 // LabelledMetadataFilter draws a registered group: each field's values under its label, one value
 // per key, as the metadata filter holds them. A group that can read which values rows in the time
 // range hold lists only those, and a field with none is left out.
@@ -1510,7 +1244,9 @@ function LabelledMetadataFilter({
 	filters,
 	onFiltersChange,
 	defaultOpen,
-}: FilterComponentProps & { group: LabelledMetadataFilterGroup }) {
+}: FilterComponentProps & {
+	group: LabelledMetadataFilterGroup;
+}) {
 	const { t } = useTranslation("observability");
 	const hasActive = group.fields.some((field) => filters.metadata_filters?.[field.key] !== undefined);
 	const [opened, setOpened] = useState(defaultOpen || hasActive);
@@ -1562,11 +1298,9 @@ function LabelledMetadataFilter({
 		</FilterSection>
 	);
 }
-
 // ---------------------------------------------------------------------------
 // MetadataFilters – fetches metadata keys internally
 // ---------------------------------------------------------------------------
-
 function MetadataFilters({ filters, onFiltersChange, defaultOpen }: FilterComponentProps) {
 	const { t } = useTranslation("observability");
 	const labelled = labelledMetadataKeys();
@@ -1574,12 +1308,10 @@ function MetadataFilters({ filters, onFiltersChange, defaultOpen }: FilterCompon
 	const [opened, setOpened] = useState(defaultOpen || hasActive);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [debouncedQuery, setDebouncedQuery] = useState("");
-
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
-
 	const {
 		data: filterData,
 		isUninitialized,
@@ -1588,15 +1320,12 @@ function MetadataFilters({ filters, onFiltersChange, defaultOpen }: FilterCompon
 	} = useGetAvailableFilterDataQuery({ dimensions: ["metadata_keys"], q: debouncedQuery || undefined }, { skip: !opened && !hasActive });
 	const availableMetadataKeys = filterData?.metadata_keys || {};
 	const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
-
 	const handleChange = useCallback(
 		(metadataKey: string, value: string | undefined) => onFiltersChange(setMetadataFilter(filters, metadataKey, value)),
 		[filters, onFiltersChange],
 	);
-
 	const entries = Object.entries(availableMetadataKeys);
 	const isEmpty = !isUninitialized && !isLoading && entries.length === 0 && !hasActive && !searchQuery;
-
 	return (
 		<FilterSection
 			title={t("mcpLogs.detail.metadata")}

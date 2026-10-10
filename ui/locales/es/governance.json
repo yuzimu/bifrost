@@ -5,7 +5,6 @@
 		"bookDemo": "Reserva una demo",
 		"bookDemoAria": "Reserva una demo (opens Calendly en nueva pestaña)"
 	},
-	"unlockSharedDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. Nos gustaría conocer tu caso de uso y cómo podemos ayudarte.",
 	"customers": {
 		"title": "Clientes",
 		"description": "Administrar cuentas de clientes con tus propios equipos, presupuestos y controles de acceso.",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "Buscar webhooks..."
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "Desbloquear canales de alerta para la vigilancia proactiva",
-		"channelsUnlockDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. Configure Slack, PagerDuty, OpsGenie, and webhook alerts to stay ahead of budget and performance issues.",
-		"rulesUnlockTitle": "Desbloquear reglas de alerta para la vigilancia proactiva",
-		"rulesUnlockDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. Define alerting rules to catch budget, latency, and degradation issues before they become incidents.",
-		"historyUnlockTitle": "Desbloquear la historia de alerta para la vigilancia proactiva",
-		"historyUnlockDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. Review alert delivery outcomes, failures, and resolution events in one place."
-	},
 	"guardrails": {
 		"unlockTitle": "Desbloquear los guardias para una mejor seguridad"
-	},
-	"auditLogs": {
-		"unlockTitle": "Desbloquear los registros de auditoría para mejorar el cumplimiento"
-	},
-	"rbac": {
-		"unlockTitle": "Desbloquear funciones y permisos para una mejor seguridad"
-	},
-	"projects": {
-		"unlockTitle": "Desbloquear proyectos para el acceso y el gasto",
-		"unlockDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. A project is something a request opts into: it grants access alongside what the caller already holds, and decides whose ledger the spend lands on."
-	},
-	"userRankings": {
-		"unlockTitle": "Desbloquear la clasificación de los usuarios para una mejor visibilidad"
-	},
-	"promptDeployments": {
-		"unlockTitle": "Desbloquear despliegues rápidos para una mejor versión rápida y pruebas A/B."
-	},
-	"connectorsUnlock": {
-		"splunk": "Desbloquear la ingestión nativa de datos Splunk para una mejor observabilidad",
-		"pubsub": "Desbloquear Google Cloud Pub/Sub seguimiento",
-		"datadog": "Desbloquear la ingestión de datos nativos de Datadog para una mejor observabilidad",
-		"bigquery": "Desbloquear la ingestión nativa de datos BigQuery para análisis",
-		"kafka": "Desbloquear el registro nativo de Kafka streaming para la observabilidad en tiempo real",
-		"kafkaDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. Stream completed request traces as JSON to a Kafka topic for real-time analytics, alerting, and downstream processing."
-	},
-	"accessProfiles": {
-		"unlockTitle": "Desbloquear los perfiles de acceso para mejorar el rendimiento",
-		"unlockDescription": "Esta función forma parte de la licencia Enterprise de Bifrost. Create access profiles to control access to your resources."
-	},
-	"users": {
-		"unlockTitle": "Desbloquear la gobernanza de los usuarios",
-		"unlockDescription": "Gestione los usuarios, establezca presupuestos por usuario y límites de tarifas, y controle el acceso con la gobernanza de grado empresarial. Esta característica es parte de la licencia Enterprise Bifrost."
-	},
-	"businessUnits": {
-		"unlockTitle": "Desbloquear las unidades de negocio \" gobernanza avanzada \"",
-		"unlockDescription": "Administrar usuarios, unidades de negocio con nuestra gobernanza de nivel empresarial. Esta característica es parte de la licencia Enterprise Bifrost."
 	},
 	"sheet": {
 		"saving": "Salvando...",

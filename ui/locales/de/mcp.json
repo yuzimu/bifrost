@@ -781,16 +781,6 @@
 			"searchUsers": "Nach Name oder E-Mail suchen"
 		}
 	},
-	"toolGroups": {
-		"title": "MCP-Tool-Gruppen",
-		"description": "Konfiguriere Tool-Gruppen für MCP-Server, um Tools zu organisieren und zu verwalten.",
-		"unlockTitle": "MCP-Tool-Gruppen freischalten",
-		"unlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Konfiguriere Tool-Gruppen für MCP-Server, um deine MCP-Tools zu organisieren und in deiner gesamten Organisation zu verwalten."
-	},
-	"authConfig": {
-		"unlockTitle": "MCP-Auth-Konfiguration freischalten",
-		"unlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Konfiguriere die Authentifizierung für MCP-Server, um deine MCP-Verbindungen zu sichern."
-	},
 	"credentials": {
 		"justNow": "gerade eben",
 		"minutesAgo": "vor {{minutes}} Min.",

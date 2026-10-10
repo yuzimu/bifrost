@@ -8,14 +8,12 @@ import { getErrorMessage, setProviderFormDirtyState, useAppDispatch } from "@/li
 import { useUpdateProviderMutation } from "@/lib/store/apis/providersApi";
 import { ModelProvider, NetworkConfig } from "@/lib/types/config";
 import { betaHeadersFormSchema, type BetaHeadersFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 // Known beta headers with their prefixes, descriptions, and default support per provider.
 // This mirrors the Go ProviderFeatures map in core/providers/anthropic/types.go.
 const KNOWN_BETA_HEADERS = [
@@ -35,19 +33,37 @@ const KNOWN_BETA_HEADERS = [
 		prefix: "advanced-tool-use-",
 		label: "Advanced Tool Use",
 		description: "defer_loading, input_examples, allowed_callers",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: true },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: true,
+		},
 	},
 	{
 		prefix: "mcp-client-",
 		label: "MCP Client",
 		description: "MCP connector support",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: true },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: true,
+		},
 	},
 	{
 		prefix: "prompt-caching-scope-",
 		label: "Prompt Caching Scope",
 		description: "Prompt caching scope control",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: true },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: true,
+		},
 	},
 	{
 		prefix: "compact-",
@@ -65,7 +81,13 @@ const KNOWN_BETA_HEADERS = [
 		prefix: "files-api-",
 		label: "Files API",
 		description: "Files API support",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: true },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: true,
+		},
 	},
 	{
 		prefix: "interleaved-thinking-",
@@ -77,7 +99,13 @@ const KNOWN_BETA_HEADERS = [
 		prefix: "skills-",
 		label: "Skills",
 		description: "Agent Skills",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: true },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: true,
+		},
 	},
 	{
 		prefix: "context-1m-",
@@ -89,22 +117,30 @@ const KNOWN_BETA_HEADERS = [
 		prefix: "fast-mode-",
 		label: "Fast Mode",
 		description: "Fast mode (Opus 4.6 research preview)",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: false },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: false,
+		},
 	},
 	{
 		prefix: "redact-thinking-",
 		label: "Redact Thinking",
 		description: "Redact thinking blocks in responses",
-		defaults: { anthropic: true, vertex: false, bedrock: false, bedrock_mantle: false, azure: true },
+		defaults: {
+			anthropic: true,
+			vertex: false,
+			bedrock: false,
+			bedrock_mantle: false,
+			azure: true,
+		},
 	},
 ] as const;
-
 const KNOWN_PREFIXES = new Set<string>(KNOWN_BETA_HEADERS.map((h) => h.prefix));
-
 type ProviderKey = "anthropic" | "vertex" | "bedrock" | "bedrock_mantle" | "azure";
-
 const ANTHROPIC_FAMILY_PROVIDERS: ProviderKey[] = ["anthropic", "vertex", "bedrock", "bedrock_mantle", "azure"];
-
 function getProviderKey(providerName: string): ProviderKey | null {
 	const name = providerName.toLowerCase();
 	if (ANTHROPIC_FAMILY_PROVIDERS.includes(name as ProviderKey)) {
@@ -112,20 +148,16 @@ function getProviderKey(providerName: string): ProviderKey | null {
 	}
 	return null;
 }
-
 interface BetaHeadersFormFragmentProps {
 	provider: ModelProvider;
 }
-
 export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentProps) {
 	const { t } = useTranslation("models");
 	const dispatch = useAppDispatch();
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
 	const providerKey = getProviderKey(provider.name);
 	const [newPrefix, setNewPrefix] = useState("");
 	const [newPrefixError, setNewPrefixError] = useState<string | null>(null);
-
 	const form = useForm<BetaHeadersFormSchema, any, BetaHeadersFormSchema>({
 		resolver: zodResolver(betaHeadersFormSchema) as Resolver<BetaHeadersFormSchema, any, BetaHeadersFormSchema>,
 		mode: "onChange",
@@ -134,15 +166,12 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 			beta_header_overrides: provider.network_config?.beta_header_overrides ?? {},
 		},
 	});
-
 	useEffect(() => {
 		form.reset({
 			beta_header_overrides: provider.network_config?.beta_header_overrides ?? {},
 		});
 	}, [form, provider.name, provider.network_config?.beta_header_overrides]);
-
 	const overrides = form.watch("beta_header_overrides") ?? {};
-
 	// Manual dirty tracking — RHF's deep equality on records is unreliable with setValue
 	const savedOverrides = provider.network_config?.beta_header_overrides ?? {};
 	const isManuallyDirty = useMemo(() => {
@@ -151,16 +180,13 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 		if (currentKeys.length !== savedKeys.length) return true;
 		return currentKeys.some((key) => overrides[key] !== savedOverrides[key]);
 	}, [overrides, savedOverrides]);
-
 	useEffect(() => {
 		dispatch(setProviderFormDirtyState(isManuallyDirty));
 	}, [isManuallyDirty, dispatch]);
-
 	// Custom prefixes are overrides that don't match any known prefix
 	const customPrefixes = useMemo(() => {
 		return Object.keys(overrides).filter((prefix) => !KNOWN_PREFIXES.has(prefix));
 	}, [overrides]);
-
 	const headerRows = useMemo(() => {
 		if (!providerKey) return [];
 		return KNOWN_BETA_HEADERS.map((header) => {
@@ -169,7 +195,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 			return { ...header, defaultSupported, override };
 		});
 	}, [providerKey, overrides]);
-
 	const onSubmit = (data: BetaHeadersFormSchema) => {
 		const cleanedOverrides: Record<string, boolean> = {};
 		if (data.beta_header_overrides) {
@@ -177,7 +202,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 				cleanedOverrides[prefix] = value;
 			}
 		}
-
 		updateProvider(
 			buildProviderUpdatePayload(provider, {
 				network_config: {
@@ -197,7 +221,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 				});
 			});
 	};
-
 	const setOverride = useCallback(
 		(prefix: string, value: "default" | "enabled" | "disabled") => {
 			const current = form.getValues("beta_header_overrides") ?? {};
@@ -211,7 +234,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 		},
 		[form],
 	);
-
 	const removeCustomPrefix = useCallback(
 		(prefix: string) => {
 			const current = form.getValues("beta_header_overrides") ?? {};
@@ -221,16 +243,13 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 		},
 		[form],
 	);
-
 	const addCustomPrefix = useCallback(() => {
 		let prefix = newPrefix.trim().toLowerCase();
 		if (!prefix) return;
-
 		// Ensure prefix ends with "-"
 		if (!prefix.endsWith("-")) {
 			prefix = prefix + "-";
 		}
-
 		// Validate
 		if (KNOWN_PREFIXES.has(prefix)) {
 			setNewPrefixError(t("providers.betaHeaders.knownHeaderError"));
@@ -244,21 +263,17 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 			setNewPrefixError(t("providers.betaHeaders.prefixCharset"));
 			return;
 		}
-
 		const current = form.getValues("beta_header_overrides") ?? {};
 		form.setValue("beta_header_overrides", { ...current, [prefix]: true }, { shouldDirty: true });
 		setNewPrefix("");
 		setNewPrefixError(null);
 	}, [newPrefix, overrides, form, t]);
-
 	const getSelectValue = (prefix: string): string => {
 		const override = overrides[prefix];
 		if (override === undefined) return "default";
 		return override ? "enabled" : "disabled";
 	};
-
 	if (!providerKey) return null;
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} data-testid="provider-config-beta-headers-content">
@@ -279,9 +294,7 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 										<td className="px-3 py-2">
 											<div className="flex flex-col gap-0.5">
 												<span className="font-mono text-xs">{row.prefix}*</span>
-												<span className="text-muted-foreground text-xs">
-													{t(`providers.betaHeaders.known.${row.prefix}.description`)}
-												</span>
+												<span className="text-muted-foreground text-xs">{t(`providers.betaHeaders.known.${row.prefix}.description`)}</span>
 											</div>
 										</td>
 										<td className="px-3 py-2">
@@ -293,7 +306,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 											<Select
 												value={getSelectValue(row.prefix)}
 												onValueChange={(val) => setOverride(row.prefix, val as "default" | "enabled" | "disabled")}
-												disabled={!hasUpdateProviderAccess}
 											>
 												<SelectTrigger
 													className="h-8 text-xs"
@@ -328,7 +340,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 												<Select
 													value={overrides[prefix] ? "enabled" : "disabled"}
 													onValueChange={(val) => setOverride(prefix, val as "enabled" | "disabled")}
-													disabled={!hasUpdateProviderAccess}
 												>
 													<SelectTrigger
 														className="h-8 text-xs"
@@ -346,7 +357,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 													variant="ghost"
 													size="icon"
 													className="h-8 w-8 shrink-0"
-													disabled={!hasUpdateProviderAccess}
 													onClick={() => removeCustomPrefix(prefix)}
 													data-testid={`provider-beta-remove-prefix-btn-${prefix.replace(/-/g, "")}`}
 													aria-label={t("providers.betaHeaders.removeCustomPrefix", { prefix })}
@@ -376,7 +386,6 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 										addCustomPrefix();
 									}
 								}}
-								disabled={!hasUpdateProviderAccess}
 								className="h-8 text-xs"
 								data-testid="provider-beta-custom-prefix-input"
 								aria-label={t("providers.betaHeaders.customPrefixAria")}
@@ -393,7 +402,7 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 							variant="outline"
 							size="sm"
 							className="h-8"
-							disabled={!hasUpdateProviderAccess || !newPrefix.trim()}
+							disabled={!newPrefix.trim()}
 							onClick={addCustomPrefix}
 							data-testid="provider-beta-add-prefix-btn"
 						>
@@ -406,7 +415,7 @@ export function BetaHeadersFormFragment({ provider }: BetaHeadersFormFragmentPro
 				<div className="bg-card sticky bottom-0 flex justify-end gap-2 rounded-b-sm border-t px-4 py-4 md:px-6">
 					<Button
 						type="submit"
-						disabled={!isManuallyDirty || !hasUpdateProviderAccess || isUpdatingProvider}
+						disabled={!isManuallyDirty || isUpdatingProvider}
 						isLoading={isUpdatingProvider}
 						data-testid="provider-beta-save-btn"
 					>

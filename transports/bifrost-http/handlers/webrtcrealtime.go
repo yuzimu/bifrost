@@ -319,6 +319,10 @@ func (h *WebRTCRealtimeHandler) runWebRTCRelay(
 		return
 	}
 
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, nil, nil)); gateErr != nil {
+		SendBifrostError(ctx, gateErr)
+		return
+	}
 	authKey, selectedKey, err := h.resolveRealtimeWebRTCKeys(bifrostCtx, providerKey, model, inboundToken, mapping, mapped)
 	if err != nil {
 		SendBifrostError(ctx, newRealtimeWebRTCError(fasthttp.StatusBadRequest, "invalid_request_error", err.Error(), nil))
@@ -330,6 +334,10 @@ func (h *WebRTCRealtimeHandler) runWebRTCRelay(
 		model = selectedKey.Aliases.Resolve(model)
 	} else {
 		model = authKey.Aliases.Resolve(model)
+	}
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, nil, nil)); gateErr != nil {
+		SendBifrostError(ctx, gateErr)
+		return
 	}
 
 	if transcriptionSession {
@@ -527,6 +535,7 @@ func (h *WebRTCRealtimeHandler) establishRelay(
 		requestType: schemas.RealtimeRequest,
 		handler: &realtimeWebRTCMessages{
 			client:               h.client,
+			config:               h.config,
 			session:              session,
 			bifrostCtx:           relayCtx,
 			provider:             provider,
@@ -551,6 +560,7 @@ func (h *WebRTCRealtimeHandler) establishRelay(
 // pass per turn.
 type realtimeWebRTCMessages struct {
 	client               *bifrost.Bifrost
+	config               *lib.Config
 	session              *bfws.Session
 	bifrostCtx           *schemas.BifrostContext
 	provider             schemas.RealtimeProvider
@@ -561,10 +571,18 @@ type realtimeWebRTCMessages struct {
 }
 
 func (m *realtimeWebRTCMessages) fromBrowser(r *webrtcRelay, msg webrtc.DataChannelMessage) {
+	if gateErr := validateRealtimeOutput(m.config, m.bifrostCtx, buildRealtimeTurnPreRequest(m.providerKey, m.model, nil, m.session.RealtimeSessionTools(), nil)); gateErr != nil {
+		r.closeWithErrorEvent(newRealtimeTurnErrorEventPayload(gateErr))
+		return
+	}
 	event, err := schemas.ParseRealtimeEvent(msg.Data)
 	if err != nil {
 		logger.Warn("failed to parse browser realtime event: %v", err)
 		r.sendUpstream(msg.Data, msg.IsString)
+		return
+	}
+	if gateErr := validateRealtimeOutput(m.config, m.bifrostCtx, buildRealtimeOutputGateRequest(m.providerKey, m.model, m.session.RealtimeSessionTools(), event)); gateErr != nil {
+		r.closeWithErrorEvent(newRealtimeTurnErrorEventPayload(gateErr))
 		return
 	}
 	toolItemID, toolSummary := pendingRealtimeToolOutputUpdate(event)
@@ -619,6 +637,10 @@ func (m *realtimeWebRTCMessages) fromBrowser(r *webrtcRelay, msg webrtc.DataChan
 }
 
 func (m *realtimeWebRTCMessages) fromProvider(r *webrtcRelay, msg webrtc.DataChannelMessage) {
+	if gateErr := validateRealtimeOutput(m.config, m.bifrostCtx, buildRealtimeTurnPreRequest(m.providerKey, m.model, nil, m.session.RealtimeSessionTools(), nil)); gateErr != nil {
+		r.closeWithErrorEvent(newRealtimeTurnErrorEventPayload(gateErr))
+		return
+	}
 	event, err := m.provider.ToBifrostRealtimeEvent(msg.Data)
 	if err != nil {
 		if finalizeErr := finalizeRealtimeTurnHooksOnTransportError(
@@ -640,6 +662,10 @@ func (m *realtimeWebRTCMessages) fromProvider(r *webrtcRelay, msg webrtc.DataCha
 		return
 	}
 	if event != nil {
+		if gateErr := validateRealtimeOutput(m.config, m.bifrostCtx, buildRealtimeOutputGateRequest(m.providerKey, m.model, m.session.RealtimeSessionTools(), event)); gateErr != nil {
+			r.closeWithErrorEvent(newRealtimeTurnErrorEventPayload(gateErr))
+			return
+		}
 		if event.Session != nil && event.Session.ID != "" {
 			m.session.SetProviderSessionID(event.Session.ID)
 		}

@@ -14,7 +14,6 @@ import { dateUtils } from "@/lib/types/logs";
 import { parseAsSafeArrayOf, parseAsSafeString } from "@/lib/queryParamsParser";
 import type { WebhookDeliveryFilters, WebhookDeliveryOutcome, WebhookDeliveryStatusClass, WebhookEvent } from "@/lib/types/webhooks";
 import { getLiveToggleState } from "@/lib/utils/timeRange";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
@@ -25,17 +24,12 @@ import { normalizeDeliveriesPagination } from "./deliveries.page.utils";
 import { createColumns, WEBHOOK_DELIVERY_COLUMN_LABELS } from "./views/columns";
 import { DeliveriesTable, type DeliveriesPagination } from "./views/deliveriesTable";
 import { DeliveriesHeaderView } from "./views/deliveriesHeaderView";
-
 const COLUMN_IDS = ["expand", "time", "webhook", "delivery_id", "request_id", "event", "status", "responses", "actions"];
-
 export default function WebhookDeliveriesPage() {
 	const { t, i18n } = useTranslation("governance");
 	const navigate = useNavigate();
-	const canManage = useRbac(RbacResource.Governance, RbacOperation.Update);
 	const { copy } = useCopyToClipboard();
-
 	const defaultTimeRange = useMemo(() => dateUtils.getDefaultTimeRange(), []);
-
 	const [urlState, setUrlState] = useQueryStates(
 		{
 			// `webhook_id` is the endpoint id — what the UI calls a webhook. The
@@ -55,9 +49,7 @@ export default function WebhookDeliveriesPage() {
 		},
 		{ history: "push", shallow: false },
 	);
-
 	const polling = urlState.polling;
-
 	// Both URL values are user-editable; clamp to a usable page size and a
 	// non-negative, page-aligned offset so a hand-edited "?offset=-25" or
 	// "?limit=0" never 400s the query and blocks recovery.
@@ -65,7 +57,6 @@ export default function WebhookDeliveriesPage() {
 		() => normalizeDeliveriesPagination(urlState.limit, urlState.offset),
 		[urlState.limit, urlState.offset],
 	);
-
 	const filters: WebhookDeliveryFilters = useMemo(
 		() => ({
 			endpoint_ids: urlState.webhook_id.length ? urlState.webhook_id : undefined,
@@ -95,14 +86,11 @@ export default function WebhookDeliveriesPage() {
 			urlState.end_time,
 		],
 	);
-
 	const pagination: DeliveriesPagination = useMemo(() => ({ limit, offset }), [limit, offset]);
-
 	const { data, isLoading, isFetching, error, refetch } = useSearchWebhookDeliveriesQuery(
 		{ ...filters, limit: pagination.limit, offset: pagination.offset },
 		{ pollingInterval: polling ? 10000 : 0, skipPollingIfUnfocused: true },
 	);
-
 	// Endpoint names for the Webhook column. History outlives its endpoint, so
 	// the column falls back to the raw id when a lookup misses.
 	const { data: endpointsData } = useGetWebhookEndpointsQuery({ limit: 100, offset: 0 });
@@ -110,10 +98,8 @@ export default function WebhookDeliveriesPage() {
 		() => new Map((endpointsData?.endpoints ?? []).map((endpoint) => [endpoint.id, endpoint.name || endpoint.url])),
 		[endpointsData],
 	);
-
 	const deliveries = useMemo(() => groupDeliveries(data?.deliveries ?? []), [data, t]);
 	const totalItems = data?.pagination.total_count ?? 0;
-
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const toggleExpanded = useCallback((webhookId: string) => {
 		setExpandedIds((prev) => {
@@ -126,12 +112,14 @@ export default function WebhookDeliveriesPage() {
 			return next;
 		});
 	}, []);
-
 	const [redeliverWebhookDelivery] = useRedeliverWebhookDeliveryMutation();
 	const [redeliveringIds, setRedeliveringIds] = useState<Set<string>>(new Set());
-
 	const handleRedeliver = useCallback(
-		async (group: { latest: { id: string } }) => {
+		async (group: {
+			latest: {
+				id: string;
+			};
+		}) => {
 			const deliveryId = group.latest.id;
 			setRedeliveringIds((prev) => new Set(prev).add(deliveryId));
 			try {
@@ -149,7 +137,6 @@ export default function WebhookDeliveriesPage() {
 		},
 		[redeliverWebhookDelivery, t],
 	);
-
 	const handleCopy = useCallback(
 		(value: string) => {
 			copy(value);
@@ -157,14 +144,12 @@ export default function WebhookDeliveriesPage() {
 		},
 		[copy, t],
 	);
-
 	const handleOpenRequest = useCallback(
 		(requestId: string) => {
 			navigate({ to: "/workspace/logs", search: { request_id: requestId } as never });
 		},
 		[navigate],
 	);
-
 	const setFilters = useCallback(
 		(newFilters: WebhookDeliveryFilters) => {
 			const timeChanged = newFilters.start_time !== undefined || newFilters.end_time !== undefined;
@@ -184,14 +169,12 @@ export default function WebhookDeliveriesPage() {
 		},
 		[setUrlState],
 	);
-
 	const setPagination = useCallback(
 		(newPagination: DeliveriesPagination) => {
 			setUrlState({ limit: newPagination.limit, offset: newPagination.offset });
 		},
 		[setUrlState],
 	);
-
 	const handlePeriodChange = useCallback(
 		(period?: string, from?: Date, to?: Date) => {
 			setUrlState({
@@ -203,7 +186,6 @@ export default function WebhookDeliveriesPage() {
 		},
 		[setUrlState],
 	);
-
 	const {
 		entries: columnEntries,
 		columnOrder,
@@ -219,7 +201,6 @@ export default function WebhookDeliveriesPage() {
 		storageKey: "bifrost.webhookDeliveries.cols",
 		fixedColumns: { left: ["expand"], right: ["actions"] },
 	});
-
 	const columns = useMemo(
 		() =>
 			createColumns({
@@ -229,21 +210,10 @@ export default function WebhookDeliveriesPage() {
 				onCopy: handleCopy,
 				onRedeliver: handleRedeliver,
 				redeliveringIds,
-				canManage,
+				canManage: true,
 				onOpenRequest: handleOpenRequest,
 			}),
-		[
-			endpointNames,
-			expandedIds,
-			toggleExpanded,
-			handleCopy,
-			handleRedeliver,
-			redeliveringIds,
-			canManage,
-			handleOpenRequest,
-			t,
-			i18n.resolvedLanguage,
-		],
+		[endpointNames, expandedIds, toggleExpanded, handleCopy, handleRedeliver, redeliveringIds, handleOpenRequest, t, i18n.resolvedLanguage],
 	);
 	const columnLabels = {
 		...WEBHOOK_DELIVERY_COLUMN_LABELS,
@@ -255,13 +225,11 @@ export default function WebhookDeliveriesPage() {
 		responses: t("webhooks.details.responses"),
 		actions: t("common:actions"),
 	};
-
 	const displayError = error ? getErrorMessage(error) : undefined;
-
 	return (
 		<div className="no-padding-parent no-border-parent bg-background flex h-[calc(var(--app-content-viewport)_-_var(--app-bottom-padding))] w-full gap-3">
 			{/* The trail replaces the old in-page back button: navigating up is the
-			    topbar's job, and it frees the header row for the filters. */}
+              topbar's job, and it frees the header row for the filters. */}
 			<PageTitle
 				breadcrumbs={[{ label: t("webhooks.title"), to: "/workspace/webhooks" }, { label: t("webhooks.deliveries.breadcrumb") }]}
 			/>

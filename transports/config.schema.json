@@ -83,12 +83,29 @@
       "allOf": [
         {
           "if": {
-            "properties": { "mcp_server_auth_mode": { "enum": ["oauth", "both"] } },
-            "required": ["mcp_server_auth_mode"]
+            "properties": {
+              "mcp_server_auth_mode": {
+                "enum": [
+                  "both",
+                  "oauth"
+                ]
+              }
+            },
+            "required": [
+              "mcp_server_auth_mode"
+            ]
           },
           "then": {
-            "required": ["oauth2_server_config"],
-            "properties": { "oauth2_server_config": { "required": ["issuer_url"] } }
+            "required": [
+              "oauth2_server_config"
+            ],
+            "properties": {
+              "oauth2_server_config": {
+                "required": [
+                  "issuer_url"
+                ]
+              }
+            }
           }
         }
       ],
@@ -137,17 +154,17 @@
         },
         "retain_content_in_object_storage": {
           "type": "boolean",
-          "description": "When content logging is disabled, offload the full content to object storage as hidden instead of dropping it. Hidden content is never served back through the API/UI \u2014 the database row stays metadata-only and is only readable with direct access to the storage bucket. Requires object storage to be configured on the logs store.",
+          "description": "When content logging is disabled, offload the full content to object storage as hidden instead of dropping it. Hidden content is never served back through the API/UI — the database row stays metadata-only and is only readable with direct access to the storage bucket. Requires object storage to be configured on the logs store.",
           "default": false
         },
         "allow_per_request_content_storage_override": {
           "type": "boolean",
-          "description": "Allow individual requests to override content storage via the x-bf-disable-content-logging header or context key, and to opt in to raw-byte persistence in logs via x-bf-store-raw-request-response. When false (default), the global disable_content_logging setting is authoritative and per-request storage overrides are ignored. Does not control sending raw bytes back to callers \u2014 see allow_per_request_raw_override.",
+          "description": "Allow individual requests to override content storage via the x-bf-disable-content-logging header or context key, and to opt in to raw-byte persistence in logs via x-bf-store-raw-request-response. When false (default), the global disable_content_logging setting is authoritative and per-request storage overrides are ignored. Does not control sending raw bytes back to callers — see allow_per_request_raw_override.",
           "default": false
         },
         "allow_per_request_raw_override": {
           "type": "boolean",
-          "description": "Allow individual requests to send raw provider request/response bytes back to the caller via the x-bf-send-back-raw-request and x-bf-send-back-raw-response headers. When false (default), the provider-level send_back_raw_request/response settings are authoritative and per-request overrides are ignored. Does not affect raw-byte persistence in logs \u2014 see allow_per_request_content_storage_override.",
+          "description": "Allow individual requests to send raw provider request/response bytes back to the caller via the x-bf-send-back-raw-request and x-bf-send-back-raw-response headers. When false (default), the provider-level send_back_raw_request/response settings are authoritative and per-request overrides are ignored. Does not affect raw-byte persistence in logs — see allow_per_request_content_storage_override.",
           "default": false
         },
         "disable_db_pings_in_health": {
@@ -365,7 +382,7 @@
         },
         "mcp_enable_temp_token_auth": {
           "type": "boolean",
-          "description": "When true, Bifrost mints and accepts scoped temp tokens for MCP per-user OAuth and per-user-headers auth pages so anonymous browser visitors can complete the flow without a dashboard session. User-mode flows are never minted regardless of this setting \u2014 they always require SSO login.",
+          "description": "When true, Bifrost mints and accepts scoped temp tokens for MCP per-user OAuth and per-user-headers auth pages so anonymous browser visitors can complete the flow without a dashboard session. User-mode flows are never minted regardless of this setting — they always require SSO login.",
           "default": false
         },
         "routing_chain_max_depth": {
@@ -449,14 +466,17 @@
             "both",
             "oauth"
           ],
-          "description": "How /mcp authenticates inbound MCP clients. 'headers' (default): VK/api-key/session headers only, discovery disabled. 'both': accepts header credentials and Bifrost-issued JWTs, discovery enabled. 'oauth': Bifrost JWTs only \u2014 WARNING: disables VK/header MCP access."
+          "description": "How /mcp authenticates inbound MCP clients. 'headers' (default): VK/api-key/session headers only, discovery disabled. 'both': accepts header credentials and Bifrost-issued JWTs, discovery enabled. 'oauth': Bifrost JWTs only — WARNING: disables VK/header MCP access."
         },
         "oauth2_server_config": {
           "type": "object",
           "properties": {
             "allowed_redirect_uris": {
               "type": "array",
-              "items": { "type": "string", "format": "uri" },
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
               "default": [],
               "description": "Exact remote OAuth client callback URIs approved by the administrator. Local loopback and cursor://anysphere.cursor-mcp callbacks are permitted without entries. Remote callbacks are denied by default; changing this list through the API requires dashboard authentication."
             },
@@ -506,36 +526,7 @@
           "description": "OAuth2 authorization server settings for /mcp. Only relevant when mcp_server_auth_mode is 'both' or 'oauth'."
         }
       },
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "mcp_server_auth_mode": {
-                "enum": [
-                  "both",
-                  "oauth"
-                ]
-              }
-            },
-            "required": [
-              "mcp_server_auth_mode"
-            ]
-          },
-          "then": {
-            "required": [
-              "oauth2_server_config"
-            ],
-            "properties": {
-              "oauth2_server_config": {
-                "required": [
-                  "issuer_url"
-                ]
-              }
-            }
-          }
-        }
-      ]
+      "additionalProperties": false
     },
     "framework": {
       "type": "object",
@@ -1474,7 +1465,7 @@
               },
               "budget_id": {
                 "type": "string",
-                "description": "Deprecated \u2014 single budget reference. Use budget_ids instead."
+                "description": "Deprecated — single budget reference. Use budget_ids instead."
               },
               "budget_ids": {
                 "type": "array",
@@ -2488,13 +2479,13 @@
                       "timeout": {
                         "type": "string",
                         "description": "Command timeout as a Go duration string (default: 10s)",
-                        "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+                        "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
                         "default": "10s"
                       },
                       "cache_ttl": {
                         "type": "string",
                         "description": "How long a resolved password is reused across new physical connections (Go duration string, default 60s). Without caching the command runs on every new connection. Keep this below the credential's validity window: a rotation shorter than the TTL will fail connections until the cached value expires.",
-                        "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+                        "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
                         "default": "60s"
                       }
                     },
@@ -2526,24 +2517,24 @@
                   "conn_max_lifetime": {
                     "type": "string",
                     "description": "Maximum lifetime for physical database connections as a Go duration string",
-                    "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$"
+                    "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$"
                   },
                   "conn_max_idle_time": {
                     "type": "string",
                     "description": "How long an idle physical connection is kept before being closed (Go duration string, default 5m). Without this the idle cap alone controls pool size, so bursts above max_idle_conns close and reopen connections repeatedly. Note the logs store and config store open separate pools, so a pod's connection ceiling is the sum of their max_open_conns.",
-                    "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+                    "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
                     "default": "5m"
                   },
                   "statement_timeout": {
                     "type": "string",
                     "description": "Server-side statement_timeout set on every runtime pool connection (Go duration string, default 120s). Bounds a runaway query so it cannot hold a pooled connection and its locks indefinitely. \"0\" or a negative value leaves the server default. Migrations and background index builds are never bound by it.",
-                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+)$",
+                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)$",
                     "default": "120s"
                   },
                   "idle_in_transaction_session_timeout": {
                     "type": "string",
                     "description": "Server-side idle_in_transaction_session_timeout set on every runtime pool connection (Go duration string, default 120s). Ends a session left idle inside an open transaction, which would otherwise hold row locks and block vacuum. \"0\" or a negative value leaves the server default.",
-                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+)$",
+                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)$",
                     "default": "120s"
                   }
                 },
@@ -3023,13 +3014,13 @@
                       "timeout": {
                         "type": "string",
                         "description": "Command timeout as a Go duration string (default: 10s)",
-                        "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+                        "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
                         "default": "10s"
                       },
                       "cache_ttl": {
                         "type": "string",
                         "description": "How long a resolved password is reused across new physical connections (Go duration string, default 60s). Without caching the command runs on every new connection. Keep this below the credential's validity window: a rotation shorter than the TTL will fail connections until the cached value expires.",
-                        "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+                        "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
                         "default": "60s"
                       }
                     },
@@ -3061,35 +3052,35 @@
                   "matview_refresh_interval": {
                     "type": "string",
                     "description": "How often to refresh dashboard materialized views. Go duration string (e.g. '1m', '5m', '1h'). Default 1m. Raise this when matview refresh CPU cost is material on the database instance. Positive values below 5s are clamped up to 5s. Set 'off' or a zero duration (e.g. '0s') to disable materialized-view maintenance entirely; dashboard queries fall back to the raw tables.",
-                    "pattern": "^(off|[0-9]+(ns|us|\u00b5s|ms|s|m|h))$",
+                    "pattern": "^(off|[0-9]+(ns|us|µs|ms|s|m|h))$",
                     "default": "1m"
                   },
                   "matview_refresh_timeout": {
                     "type": "string",
                     "description": "Maximum time for a single materialized view refresh pass. Go duration string, min 30s, max 30m. Unset derives a budget from matview_refresh_interval (5x the interval, at least 5m). A refresh holds a pooled connection and a session advisory lock across every view, so without a bound one stuck refresh leaves the views permanently stale across all replicas.",
-                    "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$"
+                    "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$"
                   },
                   "conn_max_lifetime": {
                     "type": "string",
                     "description": "Maximum lifetime for physical database connections as a Go duration string",
-                    "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$"
+                    "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$"
                   },
                   "conn_max_idle_time": {
                     "type": "string",
                     "description": "How long an idle physical connection is kept before being closed (Go duration string, default 5m). Without this the idle cap alone controls pool size, so bursts above max_idle_conns close and reopen connections repeatedly. Note the logs store and config store open separate pools, so a pod's connection ceiling is the sum of their max_open_conns.",
-                    "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+                    "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
                     "default": "5m"
                   },
                   "statement_timeout": {
                     "type": "string",
                     "description": "Server-side statement_timeout set on every runtime pool connection (Go duration string, default 120s). Bounds a runaway query so it cannot hold a pooled connection and its locks indefinitely. \"0\" or a negative value leaves the server default. Migrations and background index builds are never bound by it.",
-                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+)$",
+                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)$",
                     "default": "120s"
                   },
                   "idle_in_transaction_session_timeout": {
                     "type": "string",
                     "description": "Server-side idle_in_transaction_session_timeout set on every runtime pool connection (Go duration string, default 120s). Ends a session left idle inside an open transaction, which would otherwise hold row locks and block vacuum. \"0\" or a negative value leaves the server default.",
-                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+)$",
+                    "pattern": "^(0|[-+]?([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)$",
                     "default": "120s"
                   }
                 },
@@ -3196,7 +3187,7 @@
             "batch_interval": {
               "type": "string",
               "description": "Maximum time to wait before flushing a partial batch as a Go duration string (default: 5s)",
-              "pattern": "^[1-9][0-9]*(ns|us|\u00b5s|ms|s|m|h)$",
+              "pattern": "^[1-9][0-9]*(ns|us|µs|ms|s|m|h)$",
               "default": "5s"
             },
             "max_batch_bytes": {
@@ -3822,7 +3813,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Name of the plugin (built-in: telemetry, prompts, logging, governance, maxim, semantic_cache, otel, or custom plugin name)"
+            "description": "Builtin names include guardrails, adaptive-routing, circuit-breaker, telemetry, prompts, logging, governance, routing, maxim, semantic_cache, otel and compat."
           },
           "config": {
             "type": "object",
@@ -3867,7 +3858,7 @@
           "inject_timeout": {
             "type": "string",
             "description": "For plugins that implement ObservabilityPlugin: timeout for a single Inject call from the tracer, as a Go duration string (default: 5s). Bounds how long a hung connector can hold a concurrency-budget slot. Ignored by plugins that don't receive traces.",
-            "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$",
+            "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$",
             "default": "5s"
           }
         },
@@ -3998,7 +3989,7 @@
                     },
                     "allow_per_request_content_storage_override": {
                       "type": "boolean",
-                      "description": "Allow individual requests to override content storage via the x-bf-disable-content-logging header or context key, and to opt in to raw-byte persistence in logs via x-bf-store-raw-request-response. When false (default), per-request storage overrides are ignored. Does not control sending raw bytes back to callers \u2014 see allow_per_request_raw_override.",
+                      "description": "Allow individual requests to override content storage via the x-bf-disable-content-logging header or context key, and to opt in to raw-byte persistence in logs via x-bf-store-raw-request-response. When false (default), per-request storage overrides are ignored. Does not control sending raw bytes back to callers — see allow_per_request_raw_override.",
                       "default": false
                     },
                     "logging_headers": {
@@ -4147,7 +4138,7 @@
                       "oneOf": [
                         {
                           "type": "string",
-                          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$"
+                          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
                         },
                         {
                           "type": "integer",
@@ -4925,7 +4916,7 @@
                     },
                     "topic_id": {
                       "type": "string",
-                      "description": "Pub/Sub topic ID \u2014 just the ID, not the full resource name (required)"
+                      "description": "Pub/Sub topic ID — just the ID, not the full resource name (required)"
                     },
                     "service_account_key": {
                       "anyOf": [
@@ -4976,6 +4967,63 @@
                     "topic_id"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "name": {
+                  "const": "guardrails"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "then": {
+              "properties": {
+                "config": {
+                  "$ref": "#/$defs/guardrails_config"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "name": {
+                  "const": "adaptive-routing"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "then": {
+              "properties": {
+                "config": {
+                  "$ref": "#/$defs/load_balancer_config"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "name": {
+                  "const": "circuit-breaker"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "then": {
+              "properties": {
+                "config": {
+                  "$ref": "#/$defs/circuit_breaker_config"
                 }
               }
             }
@@ -5092,13 +5140,19 @@
         "signals": {
           "type": "array",
           "maxItems": 12,
-          "items": { "type": "string", "maxLength": 300 },
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          },
           "description": "Replaces this tier's shipped signals. Omit to use the default."
         },
         "examples": {
           "type": "array",
           "maxItems": 12,
-          "items": { "type": "string", "maxLength": 300 },
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          },
           "description": "Replaces this tier's shipped examples. Omit to use the default."
         }
       },
@@ -5224,7 +5278,9 @@
         },
         "excluded_attributes": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Span attribute names to drop before export, matched exactly (e.g. \"gen_ai.request.tools\"). Unknown names are ignored.",
           "default": []
         },
@@ -5658,7 +5714,9 @@
           "description": "Registered agent name granted to this virtual key"
         }
       },
-      "required": ["agent_name"],
+      "required": [
+        "agent_name"
+      ],
       "additionalProperties": false
     },
     "virtual_key_mcp_config": {
@@ -5679,7 +5737,7 @@
         },
         "mcp_client_name": {
           "type": "string",
-          "description": "MCP client name (config file format \u2014 resolved to mcp_client_id at startup)"
+          "description": "MCP client name (config file format — resolved to mcp_client_id at startup)"
         },
         "tools_to_execute": {
           "type": "array",
@@ -5947,7 +6005,7 @@
           "oneOf": [
             {
               "type": "string",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$"
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
             },
             {
               "type": "number",
@@ -6015,7 +6073,7 @@
           "oneOf": [
             {
               "type": "string",
-              "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h)$"
+              "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)$"
             },
             {
               "type": "number",
@@ -6593,7 +6651,7 @@
                 },
                 "endpoints": {
                   "type": "object",
-                  "description": "Interface VPC endpoint (AWS PrivateLink) hosts to dial instead of the public regional endpoints. Use the endpoint's DNS name from the VPC console, not the endpoint ID \u2014 AWS appends a random string that cannot be derived. Region is still required: it sets the SigV4 credential scope.",
+                  "description": "Interface VPC endpoint (AWS PrivateLink) hosts to dial instead of the public regional endpoints. Use the endpoint's DNS name from the VPC console, not the endpoint ID — AWS appends a random string that cannot be derived. Region is still required: it sets the SigV4 credential scope.",
                   "properties": {
                     "runtime": {
                       "type": "string",
@@ -6682,7 +6740,7 @@
                 },
                 "endpoints": {
                   "type": "object",
-                  "description": "Interface VPC endpoint (AWS PrivateLink) hosts to dial instead of the public regional endpoints. Use the endpoint's DNS name from the VPC console, not the endpoint ID \u2014 AWS appends a random string that cannot be derived. Region is still required: it sets the SigV4 credential scope.",
+                  "description": "Interface VPC endpoint (AWS PrivateLink) hosts to dial instead of the public regional endpoints. Use the endpoint's DNS name from the VPC console, not the endpoint ID — AWS appends a random string that cannot be derived. Region is still required: it sets the SigV4 credential scope.",
                   "properties": {
                     "mantle": {
                       "type": "string",
@@ -7924,7 +7982,7 @@
             "client_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Identity-provider application authorized to perform exchanges for this audience \u2014 typically a dedicated registration carrying the token-exchange (or on-behalf-of) grant, separate from the SSO login application. Required unless use_idp_credentials is true. Can use env. or vault. prefix."
+              "description": "Identity-provider application authorized to perform exchanges for this audience — typically a dedicated registration carrying the token-exchange (or on-behalf-of) grant, separate from the SSO login application. Required unless use_idp_credentials is true. Can use env. or vault. prefix."
             },
             "client_secret": {
               "type": "string",
@@ -7971,27 +8029,27 @@
         },
         "oauth_config": {
           "type": "object",
-          "description": "Inline OAuth provider configuration for auth_type 'oauth' or 'per_user_oauth'. All inner fields are optional \u2014 missing URLs are resolved via RFC 8414 discovery and a missing client_id triggers RFC 7591 dynamic client registration at admin-click time. The client lands in `pending_verification` state at boot; an admin runs the verification flow once from the MCP Gateway UI.",
+          "description": "Inline OAuth provider configuration for auth_type 'oauth' or 'per_user_oauth'. All inner fields are optional — missing URLs are resolved via RFC 8414 discovery and a missing client_id triggers RFC 7591 dynamic client registration at admin-click time. The client lands in `pending_verification` state at boot; an admin runs the verification flow once from the MCP Gateway UI.",
           "properties": {
             "client_id": {
               "type": "string",
-              "description": "OAuth client ID (optional \u2014 Dynamic Client Registration is used when omitted; can use env. or vault. prefix)"
+              "description": "OAuth client ID (optional — Dynamic Client Registration is used when omitted; can use env. or vault. prefix)"
             },
             "client_secret": {
               "type": "string",
-              "description": "OAuth client secret (optional \u2014 omit for PKCE public clients or DCR; can use env. or vault. prefix)"
+              "description": "OAuth client secret (optional — omit for PKCE public clients or DCR; can use env. or vault. prefix)"
             },
             "authorize_url": {
               "type": "string",
-              "description": "Provider authorize endpoint (optional \u2014 discovered from the MCP server URL when omitted)"
+              "description": "Provider authorize endpoint (optional — discovered from the MCP server URL when omitted)"
             },
             "token_url": {
               "type": "string",
-              "description": "Provider token endpoint (optional \u2014 discovered when omitted)"
+              "description": "Provider token endpoint (optional — discovered when omitted)"
             },
             "registration_url": {
               "type": "string",
-              "description": "Dynamic Client Registration endpoint (optional \u2014 discovered when omitted)"
+              "description": "Dynamic Client Registration endpoint (optional — discovered when omitted)"
             },
             "scopes": {
               "type": "array",
@@ -8014,7 +8072,7 @@
             "minLength": 1
           },
           "minItems": 1,
-          "description": "Required header names each end-user must supply when auth_type is 'per_user_headers'. Schema only \u2014 values are submitted per-user at runtime. The MCP client lands in `pending_verification` state at boot; an admin submits sample values once from the UI to verify the connection and discover tools."
+          "description": "Required header names each end-user must supply when auth_type is 'per_user_headers'. Schema only — values are submitted per-user at runtime. The MCP client lands in `pending_verification` state at boot; an admin submits sample values once from the UI to verify the connection and discover tools."
         },
         "headers": {
           "type": "object",
@@ -8083,7 +8141,7 @@
           "oneOf": [
             {
               "type": "string",
-              "pattern": "^(?:\\d+(?:\\.\\d+)?(?:ns|us|\u00b5s|ms|s|m|h))+$"
+              "pattern": "^(?:\\d+(?:\\.\\d+)?(?:ns|us|µs|ms|s|m|h))+$"
             },
             {
               "type": "integer",
@@ -8166,7 +8224,7 @@
       "additionalProperties": false,
       "allOf": [
         {
-          "$comment": "per_user_headers requires the admin to declare which header names users must submit. OAuth-based types have no required input \u2014 the connection_string drives RFC 8414 discovery + RFC 7591 dynamic client registration when oauth_config is omitted or its inner fields are blank.",
+          "$comment": "per_user_headers requires the admin to declare which header names users must submit. OAuth-based types have no required input — the connection_string drives RFC 8414 discovery + RFC 7591 dynamic client registration when oauth_config is omitted or its inner fields are blank.",
           "if": {
             "properties": {
               "auth_type": {
@@ -8641,7 +8699,7 @@
         },
         "timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Timeout for Weaviate operations (e.g., '5s')"
         },
         "class_name": {
@@ -8720,32 +8778,32 @@
         },
         "conn_max_lifetime": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Connection maximum lifetime (e.g., '30m')"
         },
         "conn_max_idle_time": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Connection maximum idle time (e.g., '5m')"
         },
         "dial_timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Timeout for socket connection (e.g., '5s')"
         },
         "read_timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Timeout for socket reads (e.g., '3s')"
         },
         "write_timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Timeout for socket writes (e.g., '3s')"
         },
         "context_timeout": {
           "type": "string",
-          "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
           "description": "Timeout for Redis operations (e.g., '10s')"
         }
       },
@@ -10013,7 +10071,7 @@
     },
     "scim_auth_proxy": {
       "type": "object",
-      "description": "Identity-aware proxy (IAP) fronting this SCIM/SSO provider \u2014 e.g. Cloudflare Access, a generic OIDC proxy, or AWS ALB (Zero Trust / ZTNA). When enabled, Bifrost takes the login credential from the proxy's header and validates it against the proxy's own keys (not the IdP's), then feeds the resulting claims into the active provider's mapping. Shared across every provider.",
+      "description": "Identity-aware proxy (IAP) fronting this SCIM/SSO provider — e.g. Cloudflare Access, a generic OIDC proxy, or AWS ALB (Zero Trust / ZTNA). When enabled, Bifrost takes the login credential from the proxy's header and validates it against the proxy's own keys (not the IdP's), then feeds the resulting claims into the active provider's mapping. Shared across every provider.",
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -10036,7 +10094,7 @@
             "login_only"
           ],
           "default": "login_only",
-          "description": "'login_only' (default) authenticates an already-provisioned user by identity (email/sub) without deriving permissions from the token. 'full' also runs attribute\u2192role/team/business-unit mapping from the proxy token's claims \u2014 the IdP claims used for mapping must be passed through into the proxy-signed token."
+          "description": "'login_only' (default) authenticates an already-provisioned user by identity (email/sub) without deriving permissions from the token. 'full' also runs attribute→role/team/business-unit mapping from the proxy token's claims — the IdP claims used for mapping must be passed through into the proxy-signed token."
         },
         "headerName": {
           "type": "string",
@@ -10067,7 +10125,7 @@
         },
         "expectedSigner": {
           "type": "string",
-          "description": "AWS ALB only: the ALB ARN to pin the token's signer to. Required for the aws-alb provider \u2014 the regional key signs tokens for every ALB in the region, so without this pin any ALB could mint an accepted token. Supports the env. prefix."
+          "description": "AWS ALB only: the ALB ARN to pin the token's signer to. Required for the aws-alb provider — the regional key signs tokens for every ALB in the region, so without this pin any ALB could mint an accepted token. Supports the env. prefix."
         },
         "publicKeyBaseUrl": {
           "type": "string",
@@ -10209,12 +10267,8 @@
     },
     "load_balancer_config": {
       "type": "object",
-      "description": "Load balancer configuration for intelligent request routing",
+      "description": "Process-local adaptive routing configuration. Management PUT replaces exactly these five boolean switches.",
       "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Whether load balancing is enabled"
-        },
         "direction_selection_enabled": {
           "type": "boolean",
           "description": "Enable adaptive provider (direction) selection. Defaults to true; omit to leave on."
@@ -10234,33 +10288,8 @@
         "prune_failed_fallbacks": {
           "type": "boolean",
           "description": "Drop unhealthy directions from a request's configured fallbacks. Defaults to false."
-        },
-        "tracker_config": {
-          "type": "object",
-          "description": "Configuration for tracking route metrics and performance"
-        },
-        "bootstrap": {
-          "type": "object",
-          "description": "Bootstrap data for initializing load balancer with historical metrics",
-          "properties": {
-            "route_metrics": {
-              "type": "object",
-              "description": "Historical metrics per route"
-            },
-            "direction_metrics": {
-              "type": "object",
-              "description": "Historical metrics per direction"
-            },
-            "routes": {
-              "type": "object",
-              "description": "Known routes"
-            }
-          }
         }
       },
-      "required": [
-        "enabled"
-      ],
       "additionalProperties": false
     },
     "guardrails_config": {
@@ -10301,38 +10330,6 @@
               "cel_expression": {
                 "type": "string",
                 "description": "CEL (Common Expression Language) expression for rule evaluation"
-              },
-              "query": {
-                "description": "Visual rule builder state for the management UI (react-querybuilder). Omitted unless exported from the dashboard. Not evaluated at runtime (cel_expression is).",
-                "anyOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "type": "object",
-                    "required": [
-                      "combinator",
-                      "rules"
-                    ],
-                    "properties": {
-                      "combinator": {
-                        "type": "string",
-                        "enum": [
-                          "and",
-                          "or"
-                        ]
-                      },
-                      "rules": {
-                        "type": "array",
-                        "items": {
-                          "type": "object"
-                        },
-                        "description": "Leaf rules and/or nested combinator+rules groups from the query builder."
-                      }
-                    },
-                    "additionalProperties": true
-                  }
-                ]
               },
               "apply_to": {
                 "type": "string",
@@ -10409,7 +10406,7 @@
               },
               "provider_name": {
                 "type": "string",
-                "description": "Name of the guardrail provider (e.g., 'bedrock', 'azure')"
+                "description": "Implemented provider names: regex, secrets, prompt-guardrail, presidio; additional real adapters may be registered by the host."
               },
               "policy_name": {
                 "type": "string",
@@ -10437,6 +10434,11 @@
             ],
             "additionalProperties": false
           }
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Global enforcement. Profile and rule management does not enable enforcement."
         }
       },
       "additionalProperties": false
@@ -11226,13 +11228,13 @@
         },
         "archive_interval": {
           "type": "string",
-          "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))*$",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$",
           "description": "Archival window size and job period, as a Go duration string (e.g. '24h', '1h', '30m'). Each window is archived as one set of objects. The supported range is 5m and above: this schema accepts any valid duration, and the runtime raises anything shorter to 5m rather than failing startup. Only used when object_storage is set. Default: 24h",
           "default": "24h"
         },
         "archive_grace_period": {
           "type": "string",
-          "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))*$",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$",
           "description": "How long to hold a window open past its end before archiving it, as a Go duration string. Absorbs clock skew and late inserts. Must be shorter than archive_interval, otherwise no window would ever close and archival would silently do nothing; the runtime substitutes a safe default if it is not. Only used when object_storage is set. Default: 15m",
           "default": "15m"
         },
@@ -11240,7 +11242,7 @@
           "type": "integer",
           "minimum": 1048576,
           "maximum": 4294967296,
-          "description": "Roll a new part object once the current part reaches this many uncompressed bytes. Bounds memory on the archiving node: peak usage is roughly 2x this value when compress is true, since gzip allocates a second full buffer. The minimum and maximum above are strict validation limits \u2014 a config outside [1MiB, 4GiB] is rejected as invalid rather than accepted and adjusted. (The runtime additionally clamps to the same range, as a safety net for configs that never pass through schema validation.) Only used when object_storage is set. Default: 134217728 (128MiB)",
+          "description": "Roll a new part object once the current part reaches this many uncompressed bytes. Bounds memory on the archiving node: peak usage is roughly 2x this value when compress is true, since gzip allocates a second full buffer. The minimum and maximum above are strict validation limits — a config outside [1MiB, 4GiB] is rejected as invalid rather than accepted and adjusted. (The runtime additionally clamps to the same range, as a safety net for configs that never pass through schema validation.) Only used when object_storage is set. Default: 134217728 (128MiB)",
           "default": 134217728
         },
         "object_storage": {
@@ -12258,7 +12260,7 @@
               },
               "default_cooldown": {
                 "type": "string",
-                "pattern": "^[0-9]+(ns|us|\u00b5s|ms|s|m|h)$",
+                "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$",
                 "description": "How long to keep the circuit open when no header-based cooldown is available. Accepts a Go duration string (e.g. '30s', '5m'). Defaults to 30s."
               },
               "cooldown_header": {
@@ -12323,7 +12325,7 @@
         "scim"
       ],
       "default": "both",
-      "description": "When SCIM is enabled, selects whether IdP login/refresh claims still drive role/team/business-unit/profile sync and JIT user creation: 'both' (default) keeps syncing from both claims and SCIM; 'scim' makes SCIM the sole source of truth \u2014 claims are ignored for provisioning and new users must be pushed by SCIM. Inert when SCIM is disabled (claims always sync then)."
+      "description": "When SCIM is enabled, selects whether IdP login/refresh claims still drive role/team/business-unit/profile sync and JIT user creation: 'both' (default) keeps syncing from both claims and SCIM; 'scim' makes SCIM the sole source of truth — claims are ignored for provisioning and new users must be pushed by SCIM. Inert when SCIM is disabled (claims always sync then)."
     },
     "scim_attribute_team_mappings": {
       "type": "array",
@@ -12461,7 +12463,7 @@
           "oneOf": [
             {
               "type": "string",
-              "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h)$"
+              "pattern": "^[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)$"
             },
             {
               "type": "number",
@@ -12474,9 +12476,15 @@
           "type": "object",
           "description": "Per-tier overrides of the shipped decision-model definitions, signals, and examples. Any tier or field left out sends the default.",
           "properties": {
-            "SIMPLE": { "$ref": "#/$defs/complexity_decision_tier_criteria" },
-            "MEDIUM": { "$ref": "#/$defs/complexity_decision_tier_criteria" },
-            "COMPLEX": { "$ref": "#/$defs/complexity_decision_tier_criteria" }
+            "SIMPLE": {
+              "$ref": "#/$defs/complexity_decision_tier_criteria"
+            },
+            "MEDIUM": {
+              "$ref": "#/$defs/complexity_decision_tier_criteria"
+            },
+            "COMPLEX": {
+              "$ref": "#/$defs/complexity_decision_tier_criteria"
+            }
           },
           "additionalProperties": false
         }

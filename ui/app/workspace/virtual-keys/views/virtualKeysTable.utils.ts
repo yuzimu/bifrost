@@ -19,7 +19,7 @@ export function latestGraceDeadline(virtualKeys: { previous_value_expires_at?: s
 	return latest;
 }
 
-/** 统一表格与 CSV 的归属标签，保留业务单元名称及未解析时的类型。 */
+/** 统一 OSS 表格与 CSV 的团队及客户归属标签。 */
 export function assignedToLabel(vk: {
 	team?: { name: string };
 	customer?: { name: string };
@@ -29,23 +29,10 @@ export function assignedToLabel(vk: {
 }): string | null {
 	if (vk.team) return i18n.t("virtualKeys.teamNamed", { ns: "models", name: vk.team.name });
 	if (vk.customer) return i18n.t("virtualKeys.customerNamed", { ns: "models", name: vk.customer.name });
-	if (vk.business_unit_id)
-		return vk.business_unit?.name
-			? i18n.t("virtualKeys.businessUnitNamed", { ns: "models", name: vk.business_unit.name, defaultValue: "Business unit: {{name}}" })
-			: i18n.t("virtualKeys.businessUnit", { ns: "models" });
-	if (vk.assigned_user) return i18n.t("virtualKeys.userNamed", { ns: "models", name: vk.assigned_user.name || vk.assigned_user.email });
 	return null;
 }
 
-/**
- * Renders the "Assigned To" cell for the CSV export.
- *
- * The table can render an unknown assignee as "-" and let the reader ask; an export
- * cannot. A blank cell in a spreadsheet reads as a fact - this key is assigned to
- * nobody - so an assignee the server could not resolve has to say so rather than
- * borrow the blank that means unassigned. `assigned_user` is absent (not null) exactly
- * in that case; null is a resolved "no user".
- */
+/** 导出真实 OSS 归属；没有团队或客户时保持单元格为空。 */
 export function csvAssignedToCell(vk: {
 	team?: { name: string };
 	customer?: { name: string };
@@ -55,8 +42,6 @@ export function csvAssignedToCell(vk: {
 }): string {
 	const label = assignedToLabel(vk);
 	if (label) return label;
-	// Team, customer and business unit ride on the row itself, so they are never the unresolved case.
-	if (!vk.team && !vk.customer && !vk.business_unit_id && vk.assigned_user === undefined)
-		return i18n.t("virtualKeys.unknownNotResolved", { ns: "models" });
+
 	return "";
 }

@@ -781,16 +781,6 @@
 			"searchUsers": "按姓名或郵箱搜尋"
 		}
 	},
-	"toolGroups": {
-		"title": "MCP 工具組",
-		"description": "為 MCP 伺服器配置工具組，以組織並治理工具。",
-		"unlockTitle": "解鎖 MCP 工具組",
-		"unlockDescription": "此功能屬於 Bifrost 企業版許可證。為 MCP 伺服器配置工具組，以便在組織內組織並治理 MCP 工具。"
-	},
-	"authConfig": {
-		"unlockTitle": "解鎖 MCP 驗證配置",
-		"unlockDescription": "此功能屬於 Bifrost 企業版許可證。為 MCP 伺服器配置驗證以保護 MCP 連線。"
-	},
 	"credentials": {
 		"justNow": "剛剛",
 		"minutesAgo": "{{minutes}} 分鐘前",

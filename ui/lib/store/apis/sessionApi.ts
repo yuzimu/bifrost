@@ -66,13 +66,8 @@ export const sessionApi = baseApi.injectEndpoints({
 					method: "POST",
 				});
 
-				const oauthLogout = await baseQuery({
-					url: "/scim/oauth/logout",
-					method: "POST",
-				});
-
-				if (passwordLogout.error && oauthLogout.error) {
-					return { error: oauthLogout.error };
+				if (passwordLogout.error) {
+					return { error: passwordLogout.error };
 				}
 
 				return { data: { message: "Logout successful" } };

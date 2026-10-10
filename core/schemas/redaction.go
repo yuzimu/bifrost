@@ -131,12 +131,19 @@ func (d RedactionData) HasReplacements() bool {
 	return d.LiteralReplacements.HasReplacements() || d.ReversibleMappings.HasReplacements()
 }
 
-// RedactionDataFromContext returns the redaction data stored on ctx.
+// RedactionDataFromContext 解析宿主小句柄，保留既有类型值的读取契约。
 func RedactionDataFromContext(ctx *BifrostContext) (RedactionData, bool) {
 	if ctx == nil {
 		return RedactionData{}, false
 	}
-	data, ok := ctx.Value(BifrostContextKeyRedactionData).(RedactionData)
+	value := ctx.Value(BifrostContextKeyRedactionData)
+	if resolver, ok := value.(interface {
+		ResolveRedactionData() (RedactionData, bool)
+	}); ok {
+		data, found := resolver.ResolveRedactionData()
+		return data, found && data.HasReplacements()
+	}
+	data, ok := value.(RedactionData)
 	if !ok || !data.HasReplacements() {
 		return RedactionData{}, false
 	}

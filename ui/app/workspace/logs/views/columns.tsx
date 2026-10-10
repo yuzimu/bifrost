@@ -28,7 +28,6 @@ import { type ReactNode, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
-
 // Passed to useReactTable({ meta }) by the logs page so the expander column can
 // read/toggle chain expansion without threading props through column factories.
 export interface LogsTableMeta {
@@ -39,8 +38,10 @@ export interface LogsTableMeta {
 	loadingSessionIds: Set<string>;
 	onToggleSession: (log: LogEntry) => void;
 }
-
-function batchAccountingDisplay(log: LogEntry): { model: string; usage: LLMUsage } | null {
+function batchAccountingDisplay(log: LogEntry): {
+	model: string;
+	usage: LLMUsage;
+} | null {
 	const breakdowns = log.batch_debug?.accounting?.model_breakdowns;
 	if (!breakdowns) {
 		return null;
@@ -61,11 +62,9 @@ function batchAccountingDisplay(log: LogEntry): { model: string; usage: LLMUsage
 	}
 	return { model, usage };
 }
-
 function LogActionsMenu({ log, onDelete }: { log: LogEntry; onDelete: (log: LogEntry) => void }) {
 	const { t } = useTranslation("observability");
 	const [isOpen, setIsOpen] = useState(false);
-
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
@@ -91,7 +90,6 @@ function LogActionsMenu({ log, onDelete }: { log: LogEntry; onDelete: (log: LogE
 		</DropdownMenu>
 	);
 }
-
 function getAssistantToolCallSummary(log?: LogEntry): string {
 	const toolCalls = log?.output_message?.tool_calls || [];
 	if (toolCalls.length === 0) {
@@ -110,7 +108,6 @@ function getAssistantToolCallSummary(log?: LogEntry): string {
 		.filter(Boolean)
 		.join("\n");
 }
-
 function getMessageFromContent(content?: ChatMessageContent): string {
 	if (content == undefined) {
 		return "";
@@ -126,7 +123,6 @@ function getMessageFromContent(content?: ChatMessageContent): string {
 	}
 	return lastTextContentBlock;
 }
-
 export function getRealtimeTurnMessages(log?: LogEntry): {
 	tool?: string;
 	user?: string;
@@ -150,7 +146,6 @@ export function getRealtimeTurnMessages(log?: LogEntry): {
 		assistantToolCall: getAssistantToolCallSummary(log),
 	};
 }
-
 export function getMessage(log?: LogEntry) {
 	if (log?.object === "list_models") {
 		return i18n.t("labels.nA", { ns: "observability" });
@@ -165,7 +160,10 @@ export function getMessage(log?: LogEntry) {
 			messages.tool ? i18n.t("logs.realtime.toolResult", { ns: "observability", message: messages.tool }) : "",
 			messages.user ? i18n.t("logs.realtime.user", { ns: "observability", message: messages.user }) : "",
 			messages.assistantToolCall
-				? i18n.t("logs.realtime.assistantToolCall", { ns: "observability", message: messages.assistantToolCall })
+				? i18n.t("logs.realtime.assistantToolCall", {
+						ns: "observability",
+						message: messages.assistantToolCall,
+					})
 				: "",
 			messages.assistant ? i18n.t("logs.realtime.assistant", { ns: "observability", message: messages.assistant }) : "",
 		].filter(Boolean);
@@ -222,7 +220,6 @@ export function getMessage(log?: LogEntry) {
 	}
 	return "";
 }
-
 export function LogMessageCell({
 	log,
 	contentClassName = "max-w-full",
@@ -237,7 +234,6 @@ export function LogMessageCell({
 	const input = getMessage(log);
 	const isLargePayload = log.is_large_payload_request || log.is_large_payload_response;
 	const realtimeMessages = log.object === "realtime.turn" ? getRealtimeTurnMessages(log) : null;
-
 	return (
 		<div className="flex items-center gap-1.5">
 			{isLargePayload && (
@@ -262,7 +258,11 @@ export function LogMessageCell({
 					) : null}
 					{realtimeMessages.user ? <div className="truncate">{t("logs.realtime.user", { message: realtimeMessages.user })}</div> : null}
 					{realtimeMessages.assistantToolCall ? (
-						<div className="truncate">{t("logs.realtime.assistantToolCall", { message: realtimeMessages.assistantToolCall })}</div>
+						<div className="truncate">
+							{t("logs.realtime.assistantToolCall", {
+								message: realtimeMessages.assistantToolCall,
+							})}
+						</div>
 					) : null}
 					{realtimeMessages.assistant ? (
 						<div className="truncate">{t("logs.realtime.assistant", { message: realtimeMessages.assistant })}</div>
@@ -283,27 +283,25 @@ export function LogMessageCell({
 		</div>
 	);
 }
-
 // The grouped view's first column says what each group is in words, since the
 // two groupings look alike but mean different things: a session is separate
 // requests sharing a session_id (counted as turns), a chain is one request's
 // fallback attempts linked by parent_request_id. A settled batch or video nests
 // its cost row the same way, so a chain under one is "linked", not "fallbacks".
 function chainSummary(log: LogEntry, count: number, t: TFunction<"observability">): string {
-	return t(log.batch_debug || log.video_debug ? "logs.session.linked" : "logs.session.fallbacks", { count });
+	return t(log.batch_debug || log.video_debug ? "logs.session.linked" : "logs.session.fallbacks", {
+		count,
+	});
 }
-
 function nestedRowLabel(log: DisplayLogEntry, t: TFunction<"observability">): string {
 	if (log.__rowKind === "session-member") return t("logs.session.turn", { number: log.__turn ?? "" });
 	if (log.batch_debug?.accounting || log.video_debug?.accounting) return t("logs.settledCost");
 	return log.fallback_index > 0 ? t("logs.session.fallback", { number: log.fallback_index }) : t("logs.session.linkedRow");
 }
-
 // Tree geometry, in px from the cell's left edge. The trunk sits under the
 // top-level chevron; a session member's own chain hangs from a second trunk
 // under that member's chevron.
 const TREE_TRUNK_X = [11, 22] as const;
-
 // Draws the branch for a nested row: the trunk at its depth (cut at the middle
 // on the last sibling), a tick out to the label, and, under a session member
 // that is not last, the outer trunk carried through. Positioned against the
@@ -321,7 +319,6 @@ function TreeBranch({ log, opensChildren }: { log: DisplayLogEntry; opensChildre
 		</>
 	);
 }
-
 function GroupToggle({
 	testId,
 	label,
@@ -379,7 +376,6 @@ function GroupToggle({
 		</>
 	);
 }
-
 export const createColumns = (
 	onDelete: (log: LogEntry) => void,
 	hasDeleteAccess = true,
@@ -424,9 +420,14 @@ export const createColumns = (
 											ariaLabel={
 												isExpanded
 													? t("logs.collapseFallbackChain")
-													: t("logs.session.expandTurn", { summary: chainSummary(log, childCount, t) })
+													: t("logs.session.expandTurn", {
+															summary: chainSummary(log, childCount, t),
+														})
 											}
-											tooltip={t("logs.session.turnTooltip", { turn: nestedRowLabel(log, t), summary: chainSummary(log, childCount, t) })}
+											tooltip={t("logs.session.turnTooltip", {
+												turn: nestedRowLabel(log, t),
+												summary: chainSummary(log, childCount, t),
+											})}
 											isExpanded={isExpanded}
 											isLoading={meta.loadingChainIds.has(log.id)}
 											onToggle={() => meta.onToggleChain(log)}
@@ -441,7 +442,7 @@ export const createColumns = (
 									className="text-muted-foreground flex h-full w-full items-center overflow-hidden text-[11px] whitespace-nowrap"
 									style={{ paddingLeft: TREE_TRUNK_X[depth - 1] + 8 }}
 								>
-									<TreeBranch log={log} opensChildren={false} />
+									<TreeBranch log={log} opensChildren />
 									<span className="truncate">{nestedRowLabel(log, t)}</span>
 								</div>
 							);
@@ -460,7 +461,10 @@ export const createColumns = (
 									stubX={TREE_TRUNK_X[0]}
 									label={<span className="truncate tabular-nums">{t("logs.session.turns", { count: sessionCount + 1 })}</span>}
 									ariaLabel={isExpanded ? t("logs.session.collapse") : t("logs.session.expand", { count: sessionCount })}
-									tooltip={t("logs.session.tooltip", { count: sessionCount + 1, others: sessionCount })}
+									tooltip={t("logs.session.tooltip", {
+										count: sessionCount + 1,
+										others: sessionCount,
+									})}
 									isExpanded={isExpanded}
 									isLoading={meta.loadingSessionIds.has(log.id) || meta.loadingChainIds.has(log.id)}
 									onToggle={() => meta.onToggleSession(log)}
@@ -492,7 +496,6 @@ export const createColumns = (
 				},
 			]
 		: [];
-
 	const baseColumns: ColumnDef<LogEntry>[] = [
 		{
 			accessorKey: "status",
@@ -528,8 +531,13 @@ export const createColumns = (
 						type="button"
 						data-testid="logs-row-open-btn"
 						aria-label={t("logs.openLogDetails", {
-							timestamp: format(date, "MMM dd HH:mm:ss", { locale: dateFnsLocale(i18n.resolvedLanguage) }),
-							relative: formatDistanceToNow(date, { addSuffix: true, locale: dateFnsLocale(i18n.resolvedLanguage) }),
+							timestamp: format(date, "MMM dd HH:mm:ss", {
+								locale: dateFnsLocale(i18n.resolvedLanguage),
+							}),
+							relative: formatDistanceToNow(date, {
+								addSuffix: true,
+								locale: dateFnsLocale(i18n.resolvedLanguage),
+							}),
 						})}
 						className="focus-visible:ring-ring flex cursor-pointer flex-col rounded-sm text-left leading-tight focus-visible:ring-2 focus-visible:outline-none"
 					>
@@ -537,7 +545,10 @@ export const createColumns = (
 							{format(date, "MMM dd  HH:mm:ss", { locale: dateFnsLocale(i18n.resolvedLanguage) })}
 						</span>
 						<span className="text-muted-foreground text-[10.5px] tabular-nums">
-							{formatDistanceToNow(date, { addSuffix: true, locale: dateFnsLocale(i18n.resolvedLanguage) })}
+							{formatDistanceToNow(date, {
+								addSuffix: true,
+								locale: dateFnsLocale(i18n.resolvedLanguage),
+							})}
 						</span>
 					</button>
 				);
@@ -739,7 +750,7 @@ export const createColumns = (
 									<div className="text-muted-foreground pl-4 font-mono text-sm tabular-nums">{formatCost(settledCost)}</div>
 								</TooltipTrigger>
 								{/* The expand chevron only exists in the grouped view, so pointing at
-								    it anywhere else sends people looking for a control that is not there. */}
+                                            it anywhere else sends people looking for a control that is not there. */}
 								<TooltipContent>{groupedView ? t("logs.settledTooltipGrouped") : t("logs.settledTooltipFlat")}</TooltipContent>
 							</Tooltip>
 						);
@@ -750,7 +761,6 @@ export const createColumns = (
 			},
 		},
 	];
-
 	const attributionColumns: ColumnDef<LogEntry>[] = [
 		{
 			id: "session",
@@ -831,33 +841,7 @@ export const createColumns = (
 				/>
 			),
 		},
-		{
-			id: "user",
-			header: t("labels.user"),
-			size: 150,
-			cell: ({ row }) => <AttributionCell name={row.original.user_name} id={row.original.user_id} />,
-		},
-		{
-			id: "business_unit",
-			header: t("labels.businessUnit"),
-			size: 150,
-			cell: ({ row }) => (
-				<AttributionCell
-					names={row.original.business_unit_names}
-					name={row.original.business_unit_name}
-					ids={row.original.business_unit_ids}
-					id={row.original.business_unit_id}
-				/>
-			),
-		},
-		{
-			id: "project",
-			header: t("labels.project"),
-			size: 150,
-			cell: ({ row }) => <AttributionCell name={row.original.project_name} id={row.original.project_id} />,
-		},
 	];
-
 	const metadataColumns: ColumnDef<LogEntry>[] = metadataKeys.map((key) => ({
 		id: `metadata_${key}`,
 		header: key.charAt(0).toUpperCase() + key.slice(1),
@@ -867,7 +851,6 @@ export const createColumns = (
 			return <div className="max-w-[150px] truncate font-mono text-xs">{value ?? "-"}</div>;
 		},
 	}));
-
 	const actionsColumn: ColumnDef<LogEntry>[] = hasDeleteAccess
 		? [
 				{
@@ -885,6 +868,5 @@ export const createColumns = (
 				},
 			]
 		: [];
-
 	return [...expandColumn, ...baseColumns, ...attributionColumns, ...metadataColumns, ...actionsColumn];
 };

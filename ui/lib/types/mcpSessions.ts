@@ -35,7 +35,7 @@ export interface VirtualKeySummary {
 }
 
 // UserSummary: preloaded on user-keyed session and flow rows by the
-// enterprise backend (joins against the SCIM users table). OSS leaves it
+
 // absent — the UI falls back to rendering the raw user_id.
 export interface UserSummary {
 	id: string;
@@ -106,7 +106,7 @@ export interface MCPSessionsQueryParams {
 	auth_mode?: AuthMode[];
 	mcp_client_id?: string[];
 	virtual_key_id?: string[];
-	// Multi-select user filter (enterprise only — see the Users sidebar
+
 	// section). Distinct from `identity` above: this is a facet, not a
 	// single deep-link pin.
 	user_id?: string[];

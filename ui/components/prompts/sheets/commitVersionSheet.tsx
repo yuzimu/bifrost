@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,25 +13,21 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
 const LazyMarkdown = lazy(() => import("@/components/ui/markdown").then((m) => ({ default: m.Markdown })));
 const Markdown = (props: ComponentProps<typeof LazyMarkdown>) => (
-	<Suspense fallback={null}>
+	<Suspense fallback>
 		<LazyMarkdown {...props} />
 	</Suspense>
 );
-
 interface CommitVersionFormData {
 	commitMessage: string;
 }
-
 interface CommitVersionSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	session: PromptSession;
 	onCommitted: (versionId: number) => void;
 }
-
 function MessagePreview({
 	sessionMessage,
 	selected,
@@ -58,7 +53,6 @@ function MessagePreview({
 						: null;
 	const content = msg.content;
 	const hasToolCalls = msg.type === MessageType.CompletionResult && msg.toolCalls && msg.toolCalls.length > 0;
-
 	return (
 		<label
 			htmlFor={checkboxId}
@@ -72,7 +66,11 @@ function MessagePreview({
 				<span className="text-xs font-medium uppercase">{roleKey ? t(roleKey) : role}</span>
 				<div className="text-muted-foreground mt-1 line-clamp-3 text-sm">
 					{hasToolCalls && !content ? (
-						<span className="italic">{t("promptRepo.toolCallPreview", { names: msg.toolCalls!.map((tc) => tc.function.name).join(", ") })}</span>
+						<span className="italic">
+							{t("promptRepo.toolCallPreview", {
+								names: msg.toolCalls!.map((tc) => tc.function.name).join(", "),
+							})}
+						</span>
 					) : content ? (
 						<Markdown content={content} className="text-muted-foreground [&_*]:text-sm" />
 					) : (
@@ -83,14 +81,11 @@ function MessagePreview({
 		</label>
 	);
 }
-
 export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }: CommitVersionSheetProps) {
 	const { t } = useTranslation("config");
 	const { t: tc } = useTranslation("common");
 	const [commitSession, { isLoading }] = useCommitSessionMutation();
-	const canCommit = useRbac(RbacResource.PromptRepository, RbacOperation.Update);
 	const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-
 	const {
 		register,
 		trigger,
@@ -101,7 +96,6 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 		defaultValues: { commitMessage: "" },
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	// Reset form and select only the first message when sheet opens
 	useEffect(() => {
 		if (open) {
@@ -109,7 +103,6 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 			setSelectedIndices(new Set(session.messages.length > 0 ? [0] : []));
 		}
 	}, [open, reset, session?.messages?.length]);
-
 	const toggleMessage = useCallback((index: number) => {
 		setSelectedIndices((prev) => {
 			const next = new Set(prev);
@@ -121,9 +114,7 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 			return next;
 		});
 	}, []);
-
 	const allSelected = selectedIndices.size === session.messages.length;
-
 	const toggleAll = useCallback(() => {
 		if (allSelected) {
 			setSelectedIndices(new Set());
@@ -131,7 +122,6 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 			setSelectedIndices(new Set(session.messages.map((_, i) => i)));
 		}
 	}, [allSelected, session.messages]);
-
 	async function onSubmit(data: CommitVersionFormData) {
 		if (selectedIndices.size === 0) {
 			toast.error(t("promptRepo.toastSelectMessages"));
@@ -139,7 +129,10 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 		}
 		try {
 			const sortedIndices = Array.from(selectedIndices).sort((a, b) => a - b);
-			const commitData: { commit_message: string; message_indices?: number[] } = {
+			const commitData: {
+				commit_message: string;
+				message_indices?: number[];
+			} = {
 				commit_message: data.commitMessage.trim(),
 			};
 			// Only send message_indices if not all messages are selected
@@ -161,7 +154,6 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 			});
 		}
 	}
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
@@ -181,7 +173,10 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 					<div className="mt-4 flex flex-1 flex-col overflow-hidden">
 						<div className="mb-2 flex items-center justify-between">
 							<Label className="text-sm">
-								{t("promptRepo.messagesCount", { selected: selectedIndices.size, total: session.messages.length })}
+								{t("promptRepo.messagesCount", {
+									selected: selectedIndices.size,
+									total: session.messages.length,
+								})}
 							</Label>
 							<button type="button" onClick={toggleAll} className="text-muted-foreground hover:text-foreground text-xs transition-colors">
 								{allSelected ? t("promptRepo.deselectAll") : t("promptRepo.selectAll")}
@@ -229,8 +224,8 @@ export function CommitVersionSheet({ open, onOpenChange, session, onCommitted }:
 							<Button
 								type="submit"
 								data-testid="commit-version-submit"
-								disabled={isLoading || selectedIndices.size === 0 || !canCommit}
-								title={canCommit ? undefined : t("mcp:promptExecution.noPermission")}
+								disabled={isLoading || selectedIndices.size === 0}
+								title={undefined}
 								className={selectedIndices.size === 0 ? "opacity-50" : ""}
 							>
 								{isLoading ? t("promptRepo.committing") : t("promptRepo.commitVersion")}

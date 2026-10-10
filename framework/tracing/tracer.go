@@ -291,6 +291,19 @@ func (t *Tracer) SetTraceRedactionReplacements(traceID string, phase schemas.Red
 	trace.SetRedactionReplacements(phase, replacements)
 }
 
+// SetTraceGuardrailOutputReview 注册完成出口门禁，trace 不存在时明确拒绝注册。
+func (t *Tracer) SetTraceGuardrailOutputReview(traceID string, review *schemas.GuardrailOutputReview) bool {
+	if t == nil || t.store == nil || strings.TrimSpace(traceID) == "" || review == nil {
+		return false
+	}
+	trace := t.store.GetTrace(strings.TrimSpace(traceID))
+	if trace == nil {
+		return false
+	}
+	trace.SetGuardrailOutputReview(review)
+	return true
+}
+
 // CreateTrace creates a new trace with optional parent ID and returns the trace ID.
 func (t *Tracer) CreateTrace(parentID string, requestID ...string) string {
 	return t.store.CreateTrace(parentID, requestID...)

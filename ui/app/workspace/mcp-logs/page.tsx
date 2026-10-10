@@ -18,7 +18,6 @@ import type { MCPToolLogEntry, MCPToolLogFilters, Pagination } from "@/lib/types
 import { dateUtils } from "@/lib/types/logs";
 import { COMPACT_NUMBER_FORMAT } from "@/lib/utils/numbers";
 import { getLiveToggleState } from "@/lib/utils/timeRange";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import NumberFlow from "@number-flow/react";
 import { useLocation } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Clock, DollarSign, Hash } from "lucide-react";
@@ -30,7 +29,6 @@ import { MCPEmptyState } from "./views/emptyState";
 import { McpHeaderView } from "./views/mcpHeaderView";
 import { MCPLogDetailSheet } from "./views/mcpLogDetailsSheet";
 import { MCPLogsDataTable } from "./views/mcpLogsTable";
-
 /** 展示 MCP 日志，并随数据和语言更新统计卡片。 */
 export default function MCPLogsPage() {
 	const { t, i18n } = useTranslation("observability");
@@ -38,33 +36,21 @@ export default function MCPLogsPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [showEmptyState, setShowEmptyState] = useState(false);
 	const hasCheckedEmptyState = useRef(false);
-	const hasDeleteAccess = useRbac(RbacResource.MCPLogs, RbacOperation.Delete);
-	const hasRevealAccess = useRbac(RbacResource.Logs, RbacOperation.Reveal);
-
 	const [deleteLogs] = useDeleteMCPLogsMutation();
 	// Lazy query kept only for handleLogNavigate (fetches adjacent pages on demand)
 	const [triggerGetLogs] = useLazyGetMCPLogsQuery();
-
 	// Track if user has manually modified the time range
 	const userModifiedTimeRange = useRef<boolean>(false);
-
 	const defaultTimeRange = useMemo(() => dateUtils.getDefaultTimeRange(), []);
-
 	const { search } = useLocation();
 	const hasExplicitTimeRange = (search as Record<string, unknown>)?.start_time && (search as Record<string, unknown>)?.end_time;
-
 	// URL state management
 	const [urlState, setUrlState] = useQueryStates(
 		{
 			tool_names: parseAsArrayOf(parseAsString).withDefault([]),
-			user_ids: parseAsArrayOf(parseAsString).withDefault([]),
 			team_ids: parseAsArrayOf(parseAsString).withDefault([]),
 			customer_ids: parseAsArrayOf(parseAsString).withDefault([]),
-			business_unit_ids: parseAsArrayOf(parseAsString).withDefault([]),
-			project_ids: parseAsArrayOf(parseAsString).withDefault([]),
-			device_ids: parseAsArrayOf(parseAsString).withDefault([]),
 			apps: parseAsArrayOf(parseAsString).withDefault([]),
-
 			server_labels: parseAsArrayOf(parseAsString).withDefault([]),
 			status: parseAsArrayOf(parseAsString).withDefault([]),
 			virtual_key_ids: parseAsArrayOf(parseAsString).withDefault([]),
@@ -87,25 +73,18 @@ export default function MCPLogsPage() {
 			shallow: false,
 		},
 	);
-
-	const selectedLogId = urlState.selected_log || null;
+	const selectedLogId = urlState.selected_log;
 	const polling = urlState.polling;
 	const [isChartOpen, setIsChartOpen] = useState(true);
-
 	// Convert URL state to filters and pagination for API calls.
 	// When period is set, send it to the backend so the server computes the time window fresh
 	// on every request. For custom absolute ranges (period === "") use the stored timestamps.
 	const filters: MCPToolLogFilters = useMemo(
 		() => ({
 			tool_names: urlState.tool_names,
-			user_ids: urlState.user_ids,
 			team_ids: urlState.team_ids,
 			customer_ids: urlState.customer_ids,
-			business_unit_ids: urlState.business_unit_ids,
-			project_ids: urlState.project_ids,
-			device_ids: urlState.device_ids,
 			apps: urlState.apps,
-
 			server_labels: urlState.server_labels,
 			status: urlState.status,
 			virtual_key_ids: urlState.virtual_key_ids,
@@ -122,12 +101,8 @@ export default function MCPLogsPage() {
 		}),
 		[
 			urlState.tool_names,
-			urlState.user_ids,
 			urlState.team_ids,
 			urlState.customer_ids,
-			urlState.business_unit_ids,
-			urlState.project_ids,
-			urlState.device_ids,
 			urlState.apps,
 			urlState.server_labels,
 			urlState.status,
@@ -141,7 +116,6 @@ export default function MCPLogsPage() {
 			urlState.end_time,
 		],
 	);
-
 	const pagination: Pagination = useMemo(
 		() => ({
 			limit: urlState.limit,
@@ -151,7 +125,6 @@ export default function MCPLogsPage() {
 		}),
 		[urlState.limit, urlState.offset, urlState.sort_by, urlState.order],
 	);
-
 	const {
 		data: logsData,
 		isLoading: logsIsLoading,
@@ -165,7 +138,6 @@ export default function MCPLogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const {
 		data: statsData,
 		isFetching: statsIsFetching,
@@ -177,7 +149,6 @@ export default function MCPLogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const {
 		data: histogram,
 		isLoading: histogramIsLoading,
@@ -189,13 +160,11 @@ export default function MCPLogsPage() {
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const refreshAllData = useCallback(() => {
 		refetchLogs();
 		refetchStats();
 		refetchHistogram();
 	}, [refetchLogs, refetchStats, refetchHistogram]);
-
 	const handleTimeRangeChange = useCallback(
 		(startTime: number, endTime: number) => {
 			userModifiedTimeRange.current = true;
@@ -209,7 +178,6 @@ export default function MCPLogsPage() {
 		},
 		[setUrlState],
 	);
-
 	const handleResetZoom = useCallback(() => {
 		const now = Math.floor(Date.now() / 1000);
 		const oneHour = now - 1 * 60 * 60;
@@ -221,20 +189,16 @@ export default function MCPLogsPage() {
 			polling: true,
 		});
 	}, [setUrlState]);
-
 	const isZoomed = useMemo(() => {
 		if (urlState.period) return false;
 		const currentRange = urlState.end_time - urlState.start_time;
 		const defaultRange = 1 * 60 * 60;
 		return currentRange < defaultRange * 0.9;
 	}, [urlState.start_time, urlState.end_time, urlState.period]);
-
 	// Derive data directly from RTK
 	const logs = logsData?.logs ?? [];
 	const totalItems = logsData?.pagination?.total_count ?? 0;
-
 	const selectedLog = useMemo(() => (selectedLogId ? (logs.find((l) => l.id === selectedLogId) ?? null) : null), [selectedLogId, logs]);
-
 	// Set showEmptyState on first response; clear it as soon as logs appear.
 	useEffect(() => {
 		if (!logsData) return;
@@ -245,24 +209,17 @@ export default function MCPLogsPage() {
 			setShowEmptyState(false);
 		}
 	}, [logsData, showEmptyState]);
-
 	// Helper to update filters in URL
 	const setFilters = useCallback(
 		(newFilters: MCPToolLogFilters) => {
 			const timeChanged = newFilters.start_time !== undefined || newFilters.end_time !== undefined;
 			if (timeChanged) userModifiedTimeRange.current = true;
-
 			setUrlState({
 				...(timeChanged && { period: "" }),
 				tool_names: newFilters.tool_names || [],
-				user_ids: newFilters.user_ids || [],
 				team_ids: newFilters.team_ids || [],
 				customer_ids: newFilters.customer_ids || [],
-				business_unit_ids: newFilters.business_unit_ids || [],
-				project_ids: newFilters.project_ids || [],
-				device_ids: newFilters.device_ids || [],
 				apps: newFilters.apps || [],
-
 				server_labels: newFilters.server_labels || [],
 				status: newFilters.status || [],
 				virtual_key_ids: newFilters.virtual_key_ids || [],
@@ -277,7 +234,6 @@ export default function MCPLogsPage() {
 		},
 		[setUrlState],
 	);
-
 	// Helper to update pagination in URL
 	const setPagination = useCallback(
 		(newPagination: Pagination) => {
@@ -290,10 +246,8 @@ export default function MCPLogsPage() {
 		},
 		[setUrlState],
 	);
-
 	const handleDelete = useCallback(
 		async (log: MCPToolLogEntry) => {
-			if (!hasDeleteAccess) throw new Error(t("common:form.noPermission"));
 			try {
 				await deleteLogs({ ids: [log.id] }).unwrap();
 				if (urlState.selected_log === log.id) {
@@ -306,9 +260,8 @@ export default function MCPLogsPage() {
 				throw new Error(errorMessage);
 			}
 		},
-		[deleteLogs, hasDeleteAccess, urlState.selected_log, setUrlState, refreshAllData, t],
+		[deleteLogs, urlState.selected_log, setUrlState, refreshAllData, t],
 	);
-
 	const handlePeriodChange = useCallback(
 		(p?: string, from?: Date, to?: Date) => {
 			if (p) {
@@ -329,7 +282,6 @@ export default function MCPLogsPage() {
 		},
 		[setUrlState],
 	);
-
 	const handlePollToggle = useCallback(
 		(enabled: boolean) => {
 			const next = getLiveToggleState(enabled, urlState.period);
@@ -339,7 +291,6 @@ export default function MCPLogsPage() {
 		},
 		[setUrlState, refreshAllData, urlState.period],
 	);
-
 	const statCards = useMemo(
 		() => [
 			{
@@ -378,7 +329,6 @@ export default function MCPLogsPage() {
 		],
 		[statsData, t, locale],
 	);
-
 	const { data: userAgentMappingsData } = useGetUserAgentMappingsQuery();
 	const customAppIcons = useMemo(() => {
 		const icons: Record<string, string> = {};
@@ -389,17 +339,11 @@ export default function MCPLogsPage() {
 		}
 		return icons;
 	}, [userAgentMappingsData?.mappings]);
-
-	const columns = useMemo(
-		() => createMCPColumns(handleDelete, hasDeleteAccess, customAppIcons, t),
-		[customAppIcons, handleDelete, hasDeleteAccess, t],
-	);
-
+	const columns = useMemo(() => createMCPColumns(handleDelete, true, customAppIcons, t), [customAppIcons, handleDelete, t]);
 	const columnIds = useMemo(
 		() => columns.map((col) => ("id" in col && col.id ? col.id : "accessorKey" in col ? String(col.accessorKey) : "")).filter(Boolean),
 		[columns],
 	);
-
 	const {
 		entries: columnEntries,
 		columnOrder,
@@ -413,31 +357,24 @@ export default function MCPLogsPage() {
 		columnIds,
 		paramName: "mcp_cols",
 		storageKey: "bifrost.mcp_logs.cols",
-		defaultHidden: ["virtual_key", "customer", "business_unit", "project", "device"],
-		fixedColumns: hasDeleteAccess ? { right: ["actions"] } : undefined,
+		defaultHidden: ["virtual_key", "customer"],
+		fixedColumns: { right: ["actions"] },
 	});
-
 	const MCP_COLUMN_LABELS: Record<string, string> = useMemo(
 		() => ({
 			timestamp: t("labels.time"),
 			tool_name: t("labels.toolName"),
 			server_label: t("labels.server"),
 			source: t("labels.source"),
-			user: t("labels.user"),
 			team: t("labels.team"),
 			customer: t("labels.customer"),
-			business_unit: t("labels.businessUnit"),
-			project: t("labels.project"),
-			device: t("labels.device"),
 			latency: t("labels.latency"),
 			cost: t("labels.cost"),
 			virtual_key: t("labels.virtualKey"),
 		}),
 		[t],
 	);
-
 	const selectedLogIndex = useMemo(() => (selectedLogId ? logs.findIndex((l) => l.id === selectedLogId) : -1), [selectedLogId, logs]);
-
 	const handleLogNavigate = useCallback(
 		(direction: "prev" | "next") => {
 			const replaceHistory = { history: "replace" as const };
@@ -484,9 +421,7 @@ export default function MCPLogsPage() {
 		},
 		[selectedLogId, selectedLogIndex, logs, pagination, totalItems, filters, setUrlState, triggerGetLogs],
 	);
-
 	const displayError = error ?? (logsError ? getErrorMessage(logsError as Parameters<typeof getErrorMessage>[0]) : null);
-
 	return (
 		<div className="dark:bg-card bg-white">
 			{logsIsLoading ? (
@@ -584,8 +519,8 @@ export default function MCPLogsPage() {
 						log={selectedLog}
 						open={selectedLogId !== null}
 						onOpenChange={(open) => !open && setUrlState({ selected_log: "" }, { history: "replace" })}
-						handleDelete={hasDeleteAccess ? handleDelete : undefined}
-						canReveal={hasRevealAccess}
+						handleDelete={handleDelete}
+						canReveal={true}
 						onNavigate={handleLogNavigate}
 						hasPrev={selectedLogIndex > 0 || (selectedLogIndex !== -1 && pagination.offset > 0)}
 						hasNext={selectedLogIndex !== -1 && (selectedLogIndex < logs.length - 1 || pagination.offset + pagination.limit < totalItems)}

@@ -1611,7 +1611,7 @@ export interface UserRankingsResponse {
 	rankings: UserRankingEntry[];
 }
 
-export type RankingDimension = "team" | "customer" | "business_unit" | "project" | "user" | "app" | "user_agent" | "virtual_key";
+export type RankingDimension = "team" | "customer" | "app" | "user_agent" | "virtual_key";
 
 export interface DimensionRankingTrend {
 	has_previous_period: boolean;

@@ -27,7 +27,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePromptContext } from "../context";
-
 /**
  * Renders the prompt-manager sidebar including search, folder hierarchy, root prompts, and drag-and-drop reorganization.
  *
@@ -47,11 +46,7 @@ export function PromptSidebar() {
 		setPromptSheet,
 		setDeletePromptDialog,
 		handleMovePrompt: onMovePrompt,
-		canCreate,
-		canUpdate,
-		canDelete,
 	} = usePromptContext();
-
 	const onCreateFolder = useCallback(() => setFolderSheet({ open: true }), [setFolderSheet]);
 	const onEditFolder = useCallback((folder: Folder) => setFolderSheet({ open: true, folder }), [setFolderSheet]);
 	const onDeleteFolder = useCallback((folder: Folder) => setDeleteFolderDialog({ open: true, folder }), [setDeleteFolderDialog]);
@@ -61,7 +56,6 @@ export function PromptSidebar() {
 	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 	const [searchQuery, setSearchQuery] = useState("");
 	const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
-
 	// Auto-expand the folder containing the selected prompt
 	useEffect(() => {
 		if (!selectedPromptId) return;
@@ -75,7 +69,6 @@ export function PromptSidebar() {
 			});
 		}
 	}, [selectedPromptId, prompts]);
-
 	const toggleFolder = useCallback((folderId: string) => {
 		setExpandedFolders((prev) => {
 			const next = new Set(prev);
@@ -87,7 +80,6 @@ export function PromptSidebar() {
 			return next;
 		});
 	}, []);
-
 	// Group prompts by folder, root prompts have no folder_id
 	const { promptsByFolder, rootPrompts } = useMemo(() => {
 		const map = new Map<string, Prompt[]>();
@@ -103,18 +95,15 @@ export function PromptSidebar() {
 		}
 		return { promptsByFolder: map, rootPrompts: root };
 	}, [prompts]);
-
 	// Filter folders and prompts based on search
 	const filteredData = useMemo(() => {
 		if (!searchQuery.trim()) {
 			return { folders, promptsByFolder, rootPrompts };
 		}
-
 		const query = searchQuery.toLowerCase();
 		const matchedFolderIds = new Set<string>();
 		const filteredPromptsByFolder = new Map<string, Prompt[]>();
 		const filteredRootPrompts: Prompt[] = [];
-
 		for (const prompt of prompts) {
 			if (prompt.name.toLowerCase().includes(query)) {
 				if (!prompt.folder_id) {
@@ -127,45 +116,35 @@ export function PromptSidebar() {
 				}
 			}
 		}
-
 		const filteredFolders = folders.filter((folder) => folder.name.toLowerCase().includes(query) || matchedFolderIds.has(folder.id));
-
 		return {
 			folders: filteredFolders,
 			promptsByFolder: filteredPromptsByFolder,
 			rootPrompts: filteredRootPrompts,
 		};
 	}, [folders, prompts, promptsByFolder, rootPrompts, searchQuery]);
-
 	// Prompt lookup for drag events
 	const promptMap = useMemo(() => {
 		const map = new Map<string, Prompt>();
 		for (const p of prompts) map.set(p.id, p);
 		return map;
 	}, [prompts]);
-
 	return (
 		<DragDropProvider
 			onDragOver={(event) => {
-				if (!canUpdate) return;
 				const targetId = event.operation.target?.id as string | undefined;
 				setDragOverTarget(targetId ?? null);
 			}}
 			onDragEnd={(event) => {
 				setDragOverTarget(null);
-				if (!canUpdate) return;
 				if (event.canceled || !onMovePrompt) return;
-
 				const sourceId = event.operation.source?.id as string | undefined;
 				const targetId = event.operation.target?.id as string | undefined;
 				if (!sourceId || !targetId) return;
-
 				const promptId = sourceId.startsWith("prompt-") ? sourceId.slice(7) : null;
 				if (!promptId) return;
-
 				const prompt = promptMap.get(promptId);
 				if (!prompt) return;
-
 				let targetFolderId: string | null = null;
 				if (targetId === "root-drop-zone") {
 					targetFolderId = null;
@@ -191,7 +170,7 @@ export function PromptSidebar() {
 							className="h-8 pl-8"
 						/>
 					</div>
-					{canCreate && (
+					{
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button
@@ -224,13 +203,15 @@ export function PromptSidebar() {
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
-					)}
+					}
 				</div>
 
 				<ScrollArea className="grow overflow-y-auto" viewportClassName="no-table viewport-table-height-full">
 					<div className="flex flex-col p-2 px-3">
 						{filteredData.folders.length === 0 && filteredData.rootPrompts.length === 0 ? (
-							<div className="text-muted-foreground py-8 text-center text-sm">{searchQuery ? t("promptRepo.noResultsFound") : t("promptRepo.noPromptsYet")}</div>
+							<div className="text-muted-foreground py-8 text-center text-sm">
+								{searchQuery ? t("promptRepo.noResultsFound") : t("promptRepo.noPromptsYet")}
+							</div>
 						) : (
 							<>
 								{filteredData.folders.map((folder) => (
@@ -248,9 +229,6 @@ export function PromptSidebar() {
 										onCreatePrompt={() => onCreatePrompt(folder.id)}
 										onEditPrompt={onEditPrompt}
 										onDeletePrompt={onDeletePrompt}
-										canCreate={canCreate}
-										canUpdate={canUpdate}
-										canDelete={canDelete}
 									/>
 								))}
 								<RootDropZone
@@ -260,8 +238,6 @@ export function PromptSidebar() {
 									onSelectPrompt={onSelectPrompt}
 									onEditPrompt={onEditPrompt}
 									onDeletePrompt={onDeletePrompt}
-									canUpdate={canUpdate}
-									canDelete={canDelete}
 								/>
 							</>
 						)}
@@ -271,7 +247,6 @@ export function PromptSidebar() {
 		</DragDropProvider>
 	);
 }
-
 interface RootDropZoneProps {
 	isDragOver: boolean;
 	rootPrompts: Prompt[];
@@ -279,10 +254,7 @@ interface RootDropZoneProps {
 	onSelectPrompt: (promptId: string) => void;
 	onEditPrompt: (prompt: Prompt) => void;
 	onDeletePrompt: (prompt: Prompt) => void;
-	canUpdate: boolean;
-	canDelete: boolean;
 }
-
 /**
  * Renders the droppable root area that lists and hosts draggable root-level prompts.
  *
@@ -296,18 +268,8 @@ interface RootDropZoneProps {
  * @param canDelete - Whether prompts may be deleted (controls delete action visibility).
  * @returns The JSX element for the root drop zone containing draggable prompt items.
  */
-function RootDropZone({
-	isDragOver,
-	rootPrompts,
-	selectedPromptId,
-	onSelectPrompt,
-	onEditPrompt,
-	onDeletePrompt,
-	canUpdate,
-	canDelete,
-}: RootDropZoneProps) {
+function RootDropZone({ isDragOver, rootPrompts, selectedPromptId, onSelectPrompt, onEditPrompt, onDeletePrompt }: RootDropZoneProps) {
 	const { ref } = useDroppable({ id: "root-drop-zone" });
-
 	return (
 		<div ref={ref} className={cn("min-h-[8px] grow rounded-sm transition-colors", isDragOver && "bg-primary/10 ring-primary/30 ring-1")}>
 			{rootPrompts.map((prompt) => (
@@ -318,14 +280,11 @@ function RootDropZone({
 					onSelect={() => onSelectPrompt(prompt.id)}
 					onEdit={() => onEditPrompt(prompt)}
 					onDelete={() => onDeletePrompt(prompt)}
-					canUpdate={canUpdate}
-					canDelete={canDelete}
 				/>
 			))}
 		</div>
 	);
 }
-
 interface DroppableFolderProps {
 	folder: Folder;
 	prompts: Prompt[];
@@ -339,11 +298,7 @@ interface DroppableFolderProps {
 	onCreatePrompt: () => void;
 	onEditPrompt: (prompt: Prompt) => void;
 	onDeletePrompt: (prompt: Prompt) => void;
-	canCreate: boolean;
-	canUpdate: boolean;
-	canDelete: boolean;
 }
-
 /**
  * Renders a droppable folder header with optional action menu and its list of prompts.
  *
@@ -377,14 +332,9 @@ function DroppableFolder({
 	onCreatePrompt,
 	onEditPrompt,
 	onDeletePrompt,
-	canCreate,
-	canUpdate,
-	canDelete,
 }: DroppableFolderProps) {
 	const { t } = useTranslation("config");
 	const { ref } = useDroppable({ id: `folder-${folder.id}` });
-	const showActions = canCreate || canUpdate || canDelete;
-
 	return (
 		<div ref={ref} className="mb-1 last:mb-0">
 			<div
@@ -410,7 +360,7 @@ function DroppableFolder({
 				)}
 				<span className="flex-1 truncate text-sm font-medium">{folder.name}</span>
 				<span className="text-muted-foreground mr-1 shrink-0 text-xs">{prompts.length}</span>
-				{showActions && (
+				{
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()} className="bg-card absolute top-1/2 right-2 -translate-y-1/2">
 							<Button
@@ -424,7 +374,7 @@ function DroppableFolder({
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
-							{canCreate && (
+							{
 								<DropdownMenuItem
 									data-testid="folder-create-prompt"
 									onClick={(e) => {
@@ -435,9 +385,9 @@ function DroppableFolder({
 									<Plus className="mr-2 h-4 w-4" />
 									{t("promptRepo.newPrompt")}
 								</DropdownMenuItem>
-							)}
-							{canCreate && (canUpdate || canDelete) && <DropdownMenuSeparator />}
-							{canUpdate && (
+							}
+							{<DropdownMenuSeparator />}
+							{
 								<DropdownMenuItem
 									data-testid="folder-action-edit"
 									onClick={(e) => {
@@ -448,8 +398,8 @@ function DroppableFolder({
 									<Pencil className="h-4 w-4" />
 									{t("promptRepo.editFolder")}
 								</DropdownMenuItem>
-							)}
-							{canDelete && (
+							}
+							{
 								<DropdownMenuItem
 									variant="destructive"
 									data-testid="folder-action-delete"
@@ -461,16 +411,18 @@ function DroppableFolder({
 									<Trash2 className="h-4 w-4" />
 									{t("promptRepo.deleteFolder")}
 								</DropdownMenuItem>
-							)}
+							}
 						</DropdownMenuContent>
 					</DropdownMenu>
-				)}
+				}
 			</div>
 
 			{isExpanded && (
 				<div className="ml-4 border-l pl-2">
 					{prompts.length === 0 ? (
-						<div className="text-muted-foreground py-2 pl-4 text-xs">{isDragOver ? t("promptRepo.dropHere") : t("promptRepo.noPrompts")}</div>
+						<div className="text-muted-foreground py-2 pl-4 text-xs">
+							{isDragOver ? t("promptRepo.dropHere") : t("promptRepo.noPrompts")}
+						</div>
 					) : (
 						prompts.map((prompt) => (
 							<DraggablePromptItem
@@ -480,8 +432,6 @@ function DroppableFolder({
 								onSelect={() => onSelectPrompt(prompt.id)}
 								onEdit={() => onEditPrompt(prompt)}
 								onDelete={() => onDeletePrompt(prompt)}
-								canUpdate={canUpdate}
-								canDelete={canDelete}
 							/>
 						))
 					)}
@@ -490,17 +440,13 @@ function DroppableFolder({
 		</div>
 	);
 }
-
 interface DraggablePromptItemProps {
 	prompt: Prompt;
 	isSelected: boolean;
 	onSelect: () => void;
 	onEdit: () => void;
 	onDelete: () => void;
-	canUpdate: boolean;
-	canDelete: boolean;
 }
-
 /**
  * Renders a draggable prompt list item that shows the prompt name, selection/drag states, and an actions menu when permitted.
  *
@@ -515,15 +461,13 @@ interface DraggablePromptItemProps {
  * @param canDelete - When true, shows the delete action.
  * @returns The rendered prompt item JSX element.
  */
-function DraggablePromptItem({ prompt, isSelected, onSelect, onEdit, onDelete, canUpdate, canDelete }: DraggablePromptItemProps) {
+function DraggablePromptItem({ prompt, isSelected, onSelect, onEdit, onDelete }: DraggablePromptItemProps) {
 	const { t } = useTranslation("config");
 	const { t: tc } = useTranslation("common");
 	const { ref, isDragging } = useDraggable({
 		id: `prompt-${prompt.id}`,
-		disabled: !canUpdate,
+		disabled: false,
 	});
-	const showActions = canUpdate || canDelete;
-
 	return (
 		<div
 			ref={ref}
@@ -551,7 +495,7 @@ function DraggablePromptItem({ prompt, isSelected, onSelect, onEdit, onDelete, c
 		>
 			<FileText className="h-4 w-4 shrink-0" />
 			<span className="flex-1 truncate text-sm">{prompt.name}</span>
-			{showActions && (
+			{
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
 						<Button
@@ -565,7 +509,7 @@ function DraggablePromptItem({ prompt, isSelected, onSelect, onEdit, onDelete, c
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
-						{canUpdate && (
+						{
 							<DropdownMenuItem
 								className="cursor-pointer"
 								data-testid="prompt-action-rename"
@@ -577,8 +521,8 @@ function DraggablePromptItem({ prompt, isSelected, onSelect, onEdit, onDelete, c
 								<Pencil className="h-4 w-4" />
 								{t("promptRepo.rename")}
 							</DropdownMenuItem>
-						)}
-						{canDelete && (
+						}
+						{
 							<DropdownMenuItem
 								variant="destructive"
 								className="cursor-pointer"
@@ -591,10 +535,10 @@ function DraggablePromptItem({ prompt, isSelected, onSelect, onEdit, onDelete, c
 								<Trash2 className="h-4 w-4" />
 								{tc("delete")}
 							</DropdownMenuItem>
-						)}
+						}
 					</DropdownMenuContent>
 				</DropdownMenu>
-			)}
+			}
 		</div>
 	);
 }

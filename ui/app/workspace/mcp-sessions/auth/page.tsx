@@ -18,10 +18,8 @@
 //                  the values form, submitting back to the flow row's
 //                  PUT endpoint. The backend verifies upstream, upserts
 //                  the credential, and consumes the flow row + temp token.
-
 import HeadersForm from "@/components/headersForm";
 import FullPageLoader from "@/components/fullPageLoader";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -38,20 +36,17 @@ import {
 import { MCPFlowDetail } from "@/lib/types/mcpSessions";
 import { MCPHeadersFlowDetail } from "@/lib/types/mcpPerUserHeaders";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, ExternalLink, Fingerprint, KeyRound, Loader2, LogIn, ShieldCheck, TriangleAlert, UserRound } from "lucide-react";
+import { CheckCircle2, ExternalLink, Fingerprint, KeyRound, Loader2, LogIn, ShieldCheck, UserRound } from "lucide-react";
 import { useQueryState } from "nuqs";
 import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
-
 // Mirrors handlers.TempTokenRejectedCode: a presented token was refused.
 const TEMP_TOKEN_REJECTED_CODE = "temp_token_rejected";
-
 export default function MCPSessionsAuthPage() {
 	const [flowId] = useQueryState("flow");
 	const [kind] = useQueryState("kind");
-
 	// Both surfaces ride on ?flow={id}; `kind=headers` selects the headers
 	// backend. Default (no kind / kind=oauth) is the OAuth branch — keeps the
 	// OAuth URL shape unchanged.
@@ -60,7 +55,6 @@ export default function MCPSessionsAuthPage() {
 	}
 	return <OAuthAuthView />;
 }
-
 function OAuthAuthView() {
 	const { t } = useTranslation("mcp");
 	const { toast } = useToast();
@@ -82,8 +76,6 @@ function OAuthAuthView() {
 	const loginHref = useMemo(() => `/login?goto=${encodeURIComponent(loginGoto)}`, [loginGoto]);
 	const signedOut = authState?.is_auth_enabled === true && authState.has_valid_token === false;
 	const showLoginOption = usingTempToken && signedOut;
-	const showTempTokenSSOWarning = showLoginOption && authState.auth_type === "sso";
-
 	if (!flowId) {
 		return (
 			<CenteredCard>
@@ -97,13 +89,17 @@ function OAuthAuthView() {
 			</CenteredCard>
 		);
 	}
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	if (isError || !flow) {
-		const status = (error as { status?: number } | undefined)?.status;
+		const status = (
+			error as
+				| {
+						status?: number;
+				  }
+				| undefined
+		)?.status;
 		if (status === 401) {
 			// A rejected token is the only 401 that means the link is finished.
 			// Anything else is fixed by having a session — go get one.
@@ -116,9 +112,7 @@ function OAuthAuthView() {
 			return (
 				<CenteredCard>
 					<h1 className="text-xl font-semibold">{t("sessions.auth.notYoursTitle")}</h1>
-					<p className="text-muted-foreground mt-2 text-sm">
-						{t("sessions.auth.notYoursBody")}
-					</p>
+					<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.notYoursBody")}</p>
 					<div className="mt-6">
 						<SessionsTabLink />
 					</div>
@@ -129,9 +123,7 @@ function OAuthAuthView() {
 			return (
 				<CenteredCard>
 					<h1 className="text-xl font-semibold">{t("sessions.auth.expiredTitle")}</h1>
-					<p className="text-muted-foreground mt-2 text-sm">
-						{t("sessions.auth.expiredBody")}
-					</p>
+					<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.expiredBody")}</p>
 					<div className="mt-6">
 						<SessionsTabLink />
 					</div>
@@ -145,14 +137,12 @@ function OAuthAuthView() {
 			</CenteredCard>
 		);
 	}
-
 	// Flow row exists but isn't pending: it's already been completed, failed,
 	// or expired. Don't show the "Authenticate" button since startFlow would
 	// reject (BuildUpstreamAuthorizeURL rejects non-pending flows).
 	if (flow.status !== "pending") {
 		return <CompletedFlowView flow={flow} />;
 	}
-
 	const handleAuthenticate = async () => {
 		try {
 			const res = await startFlow(flowId).unwrap();
@@ -165,17 +155,17 @@ function OAuthAuthView() {
 			});
 		}
 	};
-
 	const mcpClientName = flow.mcp_client?.name || flow.mcp_client?.client_id || t("sessions.auth.fallbackServer");
 	const isReauth = flow.has_active_token === true;
-
 	return (
 		<CenteredCard>
 			<div className="bg-primary/10 mb-5 flex size-12 items-center justify-center rounded-full">
 				<ShieldCheck className="text-primary size-6" />
 			</div>
 			<h1 className="text-xl font-semibold tracking-tight">
-				{isReauth ? t("sessions.auth.reauthenticateWith", { name: mcpClientName }) : t("sessions.auth.authenticateWith", { name: mcpClientName })}
+				{isReauth
+					? t("sessions.auth.reauthenticateWith", { name: mcpClientName })
+					: t("sessions.auth.authenticateWith", { name: mcpClientName })}
 			</h1>
 			<p className="text-muted-foreground mt-2 text-sm">
 				{isReauth ? (
@@ -196,7 +186,7 @@ function OAuthAuthView() {
 					{starting ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}
 					<span>{isReauth ? t("sessions.actions.reauthenticate") : t("sessions.auth.authenticate")}</span>
 				</Button>
-				{showLoginOption && !showTempTokenSSOWarning ? (
+				{showLoginOption ? (
 					<Button asChild variant="outline" data-testid="mcp-auth-login-instead-inline-button">
 						<a href={loginHref}>
 							<LogIn className="size-4" />
@@ -209,7 +199,6 @@ function OAuthAuthView() {
 		</CenteredCard>
 	);
 }
-
 // HeadersAuthView renders the per-user-headers submission form. Fetches the
 // pending flow row + schema from /api/mcp/per-user-headers/flows/{id},
 // renders one input per required key, PUTs the values back to the same flow
@@ -226,7 +215,6 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 	// "expired" view on top of a freshly successful submission.
 	const { data: detail, isLoading, isError, error } = useGetMCPPerUserHeadersFlowQuery(flowId, { skip: submitted === "true" });
 	const [submit, { isLoading: submitting }] = useSubmitMCPPerUserHeadersFlowMutation();
-
 	if (submitted === "true") {
 		return (
 			<CenteredCard>
@@ -234,22 +222,24 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 					<CheckCircle2 className="size-6 text-emerald-600" />
 				</div>
 				<h1 className="text-xl font-semibold tracking-tight">{t("sessions.auth.headersSaved")}</h1>
-				<p className="text-muted-foreground mt-2 text-sm">
-					{t("sessions.auth.headersSavedBody")}
-				</p>
+				<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.headersSavedBody")}</p>
 				<div className="mt-6 flex gap-3">
 					<SessionsTabLink />
 				</div>
 			</CenteredCard>
 		);
 	}
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	if (isError || !detail) {
-		const status = (error as { status?: number } | undefined)?.status;
+		const status = (
+			error as
+				| {
+						status?: number;
+				  }
+				| undefined
+		)?.status;
 		if (status === 401) {
 			// Same reasoning as the OAuth branch above.
 			const signedOut = authState?.is_auth_enabled === true && authState.has_valid_token === false;
@@ -259,7 +249,7 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 			}
 			return <InvalidLinkView />;
 		}
-		// Enterprise RBAC middleware short-circuits flow endpoints with 403
+
 		// when the caller doesn't own the flow. Mirrors the OAuth branch above
 		// so headers flows get the same dedicated card instead of falling
 		// through to the generic load-failure state.
@@ -267,9 +257,7 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 			return (
 				<CenteredCard>
 					<h1 className="text-xl font-semibold">{t("sessions.auth.submissionNotYoursTitle")}</h1>
-					<p className="text-muted-foreground mt-2 text-sm">
-						{t("sessions.auth.notYoursBody")}
-					</p>
+					<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.notYoursBody")}</p>
 					<div className="mt-6">
 						<SessionsTabLink />
 					</div>
@@ -280,9 +268,7 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 			return (
 				<CenteredCard>
 					<h1 className="text-xl font-semibold">{t("sessions.auth.submissionExpiredTitle")}</h1>
-					<p className="text-muted-foreground mt-2 text-sm">
-						{t("sessions.auth.submissionExpiredBody")}
-					</p>
+					<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.submissionExpiredBody")}</p>
 					<div className="mt-6">
 						<SessionsTabLink />
 					</div>
@@ -296,7 +282,6 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 			</CenteredCard>
 		);
 	}
-
 	const handleSubmit = async (values: Record<string, string>) => {
 		try {
 			await submit({ flowId, body: { headers: values } }).unwrap();
@@ -309,11 +294,11 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 			});
 		}
 	};
-
 	const mcpClientName = detail.mcp_client?.name || detail.mcp_client?.client_id || t("sessions.auth.fallbackServer");
 	const isEdit = detail.has_active_credential;
-	const title = isEdit ? t("sessions.auth.updateCredentials", { name: mcpClientName }) : t("sessions.auth.submitCredentials", { name: mcpClientName });
-
+	const title = isEdit
+		? t("sessions.auth.updateCredentials", { name: mcpClientName })
+		: t("sessions.auth.submitCredentials", { name: mcpClientName });
 	return (
 		<CenteredCard>
 			<div className="bg-primary/10 mb-5 flex size-12 items-center justify-center rounded-full">
@@ -348,7 +333,6 @@ function HeadersAuthView({ flowId }: { flowId: string }) {
 		</CenteredCard>
 	);
 }
-
 function HeadersBindingValue({ flow }: { flow: MCPHeadersFlowDetail }) {
 	const { t } = useTranslation("mcp");
 	if (flow.flow_mode === "user") {
@@ -387,7 +371,6 @@ function HeadersBindingValue({ flow }: { flow: MCPHeadersFlowDetail }) {
 	}
 	return <span className="text-muted-foreground italic">{t("oauthGrants.unknown")}</span>;
 }
-
 function CompletedFlowView({ flow }: { flow: MCPFlowDetail }) {
 	const { t } = useTranslation("mcp");
 	const mcpClientName = flow.mcp_client?.name || flow.mcp_client?.client_id || t("sessions.auth.fallbackThisServer");
@@ -399,9 +382,7 @@ function CompletedFlowView({ flow }: { flow: MCPFlowDetail }) {
 		: flow.status === "expired"
 			? t("sessions.auth.flowExpired")
 			: t("sessions.auth.flowNoLonger");
-	const body = effectivelyAuthorized
-		? t("sessions.auth.alreadyStored", { name: mcpClientName })
-		: t("sessions.auth.triggerAgain");
+	const body = effectivelyAuthorized ? t("sessions.auth.alreadyStored", { name: mcpClientName }) : t("sessions.auth.triggerAgain");
 	return (
 		<CenteredCard>
 			<h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -416,7 +397,6 @@ function CompletedFlowView({ flow }: { flow: MCPFlowDetail }) {
 		</CenteredCard>
 	);
 }
-
 function DetailRow({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
 	return (
 		<div className="flex items-start justify-between gap-4">
@@ -425,7 +405,6 @@ function DetailRow({ label, value, mono = false }: { label: string; value: React
 		</div>
 	);
 }
-
 function BindingValue({ flow }: { flow: MCPFlowDetail }) {
 	const { t } = useTranslation("mcp");
 	if (flow.flow_mode === "user") {
@@ -464,14 +443,13 @@ function BindingValue({ flow }: { flow: MCPFlowDetail }) {
 	}
 	return <span className="text-muted-foreground italic">{t("oauthGrants.unknown")}</span>;
 }
-
 function formatExpiry(iso: string): string {
 	try {
 		const t = new Date(iso).getTime();
 		if (Number.isNaN(t)) return iso;
 		const diffMs = t - Date.now();
 		if (diffMs < 0) return i18n.t("sessions.auth.expired", { ns: "mcp" });
-		const mins = Math.floor(diffMs / 60_000);
+		const mins = Math.floor(diffMs / 60000);
 		if (mins < 1) return i18n.t("sessions.auth.inLessThanMinute", { ns: "mcp" });
 		if (mins === 1) return i18n.t("sessions.auth.inOneMinute", { ns: "mcp" });
 		return i18n.t("sessions.auth.inMinutes", { ns: "mcp", minutes: mins });
@@ -479,7 +457,6 @@ function formatExpiry(iso: string): string {
 		return iso;
 	}
 }
-
 function CenteredCard({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="mx-auto flex min-h-[calc(100dvh-6rem)] w-full max-w-xl items-center justify-center p-6">
@@ -487,7 +464,6 @@ function CenteredCard({ children }: { children: React.ReactNode }) {
 		</div>
 	);
 }
-
 function SessionsTabLink({ variant = "outline" }: { variant?: "outline" | "ghost" }) {
 	const { t } = useTranslation("mcp");
 	// Hide the link only when the visitor has no dashboard session — for them,
@@ -504,7 +480,6 @@ function SessionsTabLink({ variant = "outline" }: { variant?: "outline" | "ghost
 		</Button>
 	);
 }
-
 // 将未登录访客跳转到登录页，并保留完成当前鉴权流程的返回地址。
 function RedirectToSignIn({ loginHref }: { loginHref: string }) {
 	const { t } = useTranslation("mcp");
@@ -512,16 +487,13 @@ function RedirectToSignIn({ loginHref }: { loginHref: string }) {
 		// replace(), so Back from /login doesn't re-enter the redirect.
 		window.location.replace(loginHref);
 	}, [loginHref]);
-
 	return (
 		<CenteredCard>
 			<div className="bg-primary/10 mb-5 flex size-12 items-center justify-center rounded-full">
 				<LogIn className="text-primary size-6" />
 			</div>
 			<h1 className="text-xl font-semibold tracking-tight">{t("sessions.auth.signInRequiredTitle")}</h1>
-			<p className="text-muted-foreground mt-2 text-sm">
-				{t("sessions.auth.signInRequiredBody")}
-			</p>
+			<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.signInRequiredBody")}</p>
 			<div className="mt-6">
 				<Button asChild data-testid="mcp-auth-signin-required-link">
 					<a href={loginHref}>
@@ -533,7 +505,6 @@ function RedirectToSignIn({ loginHref }: { loginHref: string }) {
 		</CenteredCard>
 	);
 }
-
 // A 401 the visitor's own session can't explain: the mcp_auth temp token itself
 // was refused. Signed-out visitors are sent to sign in instead.
 function InvalidLinkView() {
@@ -541,9 +512,7 @@ function InvalidLinkView() {
 	return (
 		<CenteredCard>
 			<h1 className="text-xl font-semibold tracking-tight">{t("sessions.auth.invalidLinkTitle")}</h1>
-			<p className="text-muted-foreground mt-2 text-sm">
-				{t("sessions.auth.invalidLinkBody")}
-			</p>
+			<p className="text-muted-foreground mt-2 text-sm">{t("sessions.auth.invalidLinkBody")}</p>
 		</CenteredCard>
 	);
 }

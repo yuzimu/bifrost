@@ -7,11 +7,9 @@ import { ChevronDown } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { hasNoToolArguments, isResponsesToolCallItem } from "../sheets/logDetailView.utils";
-
 // One item of a Responses conversation, rendered on the timeline the log sheet draws: a reasoning
 // item, a tool call and its result, an assistant message. The live session panel renders a
 // delegation's items with the same rows.
-
 export type MessageRole = "system" | "user" | "assistant" | "reasoning" | "tool";
 export const messageToneClass: Record<MessageRole, string> = {
 	system: "bg-zinc-50 border-zinc-200 dark:bg-zinc-900/40 dark:border-zinc-800",
@@ -34,7 +32,6 @@ export const messageRoleLabel: Record<MessageRole, string> = {
 	reasoning: "Reasoning",
 	tool: "Tool Result",
 };
-
 export const extractResponsesText = (msg: ResponsesMessage, mapping?: Record<string, string>): string => {
 	let text: string;
 	if (msg.type === "reasoning") {
@@ -71,15 +68,18 @@ export const extractResponsesText = (msg: ResponsesMessage, mapping?: Record<str
 	}
 	return text;
 };
-
 export type ReasoningParts = {
 	summaries: string[];
 	encrypted?: string;
 	signatures: string[];
 	contentText?: string;
 };
-
-export const collectReasoningFromBlocks = (blocks: any[]): { text: string; signatures: string[] } => {
+export const collectReasoningFromBlocks = (
+	blocks: any[],
+): {
+	text: string;
+	signatures: string[];
+} => {
 	const texts: string[] = [];
 	const signatures: string[] = [];
 	for (const b of blocks) {
@@ -95,7 +95,6 @@ export const collectReasoningFromBlocks = (blocks: any[]): { text: string; signa
 	}
 	return { text: texts.join("\n"), signatures };
 };
-
 export const extractReasoningParts = (msg: ResponsesMessage, mapping?: Record<string, string>): ReasoningParts => {
 	let summaries = (msg.summary ?? []).map((s) => (s?.text ?? "").trim()).filter(Boolean);
 	const encryptedRaw = (msg as any).encrypted_content?.trim?.();
@@ -153,7 +152,6 @@ export const extractReasoningParts = (msg: ResponsesMessage, mapping?: Record<st
 		contentText: contentText || undefined,
 	};
 };
-
 export const getResponsesRole = (msg: ResponsesMessage): MessageRole => {
 	if (msg.type === "reasoning") return "reasoning";
 	if (
@@ -174,7 +172,6 @@ export const getResponsesRole = (msg: ResponsesMessage): MessageRole => {
 	if (r === "system" || r === "developer") return "system";
 	return "assistant";
 };
-
 // Expands namespace tool declarations into their callable children
 // (`namespace.tool` names), leaving plain declarations untouched.
 export const flattenDeclaredTools = (tools: any[]): any[] =>
@@ -183,7 +180,6 @@ export const flattenDeclaredTools = (tools: any[]): any[] =>
 			? (tool.tools as any[]).map((nested) => ({ ...nested, name: `${tool.name ?? "namespace"}.${nested?.name ?? ""}` }))
 			: [tool],
 	);
-
 // 按需展开密文，折叠时显示本地化字符数量。
 export function EncryptedReveal({ text, label }: { text: string; label: string }) {
 	const { t } = useTranslation("observability");
@@ -198,14 +194,15 @@ export function EncryptedReveal({ text, label }: { text: string; label: string }
 				<ChevronDown className={cn("h-3 w-3 transition-transform", open ? "rotate-180" : "-rotate-90")} />
 				{label}
 				{!open ? (
-					<span className="text-muted-foreground/70 ml-1 font-mono text-[10px] tracking-normal normal-case">{t("logs.detail.chars", { count: text.length })}</span>
+					<span className="text-muted-foreground/70 ml-1 font-mono text-[10px] tracking-normal normal-case">
+						{t("logs.detail.chars", { count: text.length })}
+					</span>
 				) : null}
 			</button>
 			{open ? <pre className="font-mono text-[12.5px] leading-[1.6] break-all whitespace-pre-wrap">{text}</pre> : null}
 		</div>
 	);
 }
-
 // 保留预览折叠行为，并按当前语言显示行数及展开操作。
 export function CollapsibleCode({
 	text,
@@ -244,19 +241,18 @@ export function CollapsibleCode({
 						<ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
 					</button>
 					<span className="text-muted-foreground font-mono text-[10.5px]">
-						{t("logs.detail.lines", { count: lines.length })}{lang ? ` · ${lang}` : ""}
+						{t("logs.detail.lines", { count: lines.length })}
+						{lang ? ` · ${lang}` : ""}
 					</span>
 				</div>
 			)}
 		</>
 	);
 }
-
 // Generated tool identifiers (e.g. Codex-style names with embedded signatures)
 // can run to hundreds of characters; truncate the middle and keep the full name
 // one hover away.
 export const TOOL_NAME_MAX = 48;
-
 export function ToolNameLabel({ name }: { name: string }) {
 	if (name.length <= TOOL_NAME_MAX) return <>{name}</>;
 	const truncated = `${name.slice(0, 32)}…${name.slice(-12)}`;
@@ -271,7 +267,6 @@ export function ToolNameLabel({ name }: { name: string }) {
 		</Tooltip>
 	);
 }
-
 // 渲染消息时间线，角色标签随语言切换更新。
 export function MessageRow({
 	role,
@@ -303,7 +298,6 @@ export function MessageRow({
 		</div>
 	);
 }
-
 // 展示 Responses 项目，保留工具调用、脱敏还原与无参数状态。
 export function ResponsesItemRow({
 	msg,
@@ -347,7 +341,9 @@ export function ResponsesItemRow({
 			!reasoningParts.contentText;
 		meta = totalApprox
 			? `~${t("logs.detail.tokens", { count: totalApprox })}${hasOpaqueOnly ? ` · ${t("logs.detail.encrypted")}` : ""}`
-			: hasOpaqueOnly ? t("logs.detail.encrypted") : undefined;
+			: hasOpaqueOnly
+				? t("logs.detail.encrypted")
+				: undefined;
 	} else {
 		meta = text ? (
 			role === "system" || role === "tool" ? (
@@ -365,7 +361,8 @@ export function ResponsesItemRow({
 		) : noArguments ? (
 			<>
 				{msg.name ? <ToolNameLabel name={msg.name} /> : null}
-				{msg.name ? " · " : ""}{t("logs.detail.noArguments")}
+				{msg.name ? " · " : ""}
+				{t("logs.detail.noArguments")}
 			</>
 		) : msg.name ? (
 			<ToolNameLabel name={msg.name} />
@@ -388,13 +385,15 @@ export function ResponsesItemRow({
 			{role === "reasoning" ? (
 				reasoningHasAny && reasoningParts ? (
 					<div className="space-y-3">
-						{reasoningParts.contentText ? <CollapsibleCode text={reasoningParts.contentText} preview={3} mono={false} /> : null}
+						{reasoningParts.contentText ? <CollapsibleCode text={reasoningParts.contentText} preview={3} mono /> : null}
 						{reasoningParts.summaries.map((s, i) => (
 							<div key={`s-${i}`} className="space-y-1">
 								{reasoningParts.summaries.length > 1 ? (
-									<div className="text-muted-foreground text-[10.5px] font-semibold tracking-wider uppercase">{t("logs.detail.summary")} {i + 1}</div>
+									<div className="text-muted-foreground text-[10.5px] font-semibold tracking-wider uppercase">
+										{t("logs.detail.summary")} {i + 1}
+									</div>
 								) : null}
-								<CollapsibleCode text={s} preview={3} mono={false} />
+								<CollapsibleCode text={s} preview={3} mono />
 							</div>
 						))}
 						{reasoningParts.encrypted ? (
@@ -416,7 +415,7 @@ export function ResponsesItemRow({
 				<div className="text-muted-foreground text-[12px] italic">{t("logs.detail.noArguments")}</div>
 			) : text ? (
 				usePlainText ? (
-					<CollapsibleCode text={text} preview={3} mono={false} />
+					<CollapsibleCode text={text} preview={3} mono />
 				) : (
 					<CollapsibleCode text={text} preview={3} lang={role === "system" ? "xml" : undefined} />
 				)
@@ -441,7 +440,14 @@ export function ResponsesItemRow({
 			{Array.isArray(msg.content) &&
 				msg.content
 					.filter((b) => b?.type === "input_image" && b.image_url)
-					.map((b, i) => <img key={`${i}-${b.image_url}`} src={b.image_url} alt={t("logs.detail.attachedImage")} className="mt-2 max-w-full rounded border" />)}
+					.map((b, i) => (
+						<img
+							key={`${i}-${b.image_url}`}
+							src={b.image_url}
+							alt={t("logs.detail.attachedImage")}
+							className="mt-2 max-w-full rounded border"
+						/>
+					))}
 			{children}
 		</MessageRow>
 	);

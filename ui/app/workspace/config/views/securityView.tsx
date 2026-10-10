@@ -7,10 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SecretVarInput } from "@/components/ui/secretVarInput";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import { getErrorMessage, useGetCoreConfigQuery, useIsAuthEnabledQuery, useUpdateCoreConfigMutation } from "@/lib/store";
 import { AuthConfig, CoreConfig, DefaultCoreConfig } from "@/lib/types/config";
 import { authProofOfControlSchema, SecretVar } from "@/lib/types/schemas";
@@ -18,30 +16,22 @@ import { parseArrayFromText } from "@/lib/utils/array";
 import { formatCooldown } from "@/lib/utils/duration";
 import { getApiBaseUrl } from "@/lib/utils/port";
 import { getPasswordPolicyFailures, validateOrigins } from "@/lib/utils/validation";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import { useGetAuthTypeQuery } from "@enterprise/lib/store/apis/scimApi";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 // Go duration string: one or more <number><unit> segments, e.g. "5m", "1h30m".
 const COOLDOWN_PATTERN = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/;
-
 /** 管理首次 setup 授权、控制权证明和独立推理鉴权设置。 */
 export default function SecurityView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
-	const { data: authType, isLoading: authTypeLoading, error: authTypeError } = useGetAuthTypeQuery(undefined, { skip: !IS_ENTERPRISE });
 	const config = bifrostConfig?.client_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [localConfig, setLocalConfig] = useState<CoreConfig>(DefaultCoreConfig);
-	const showPasswordSection = !IS_ENTERPRISE || (!authTypeLoading && !authTypeError && authType?.type !== "sso");
 	const passwordInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 	const passwordUnchangedRef = useRef(true);
 	const inferenceAuthTouchedRef = useRef(false);
-
 	const [localValues, setLocalValues] = useState<{
 		allowed_origins: string;
 		allowed_headers: string;
@@ -55,7 +45,6 @@ export default function SecurityView() {
 		whitelisted_routes: "",
 		vk_rotation_cooldown: "",
 	});
-
 	const [authConfig, setAuthConfig] = useState<AuthConfig>({
 		admin_username: { value: "", ref: "" },
 		admin_password: { value: "", ref: "" },
@@ -77,8 +66,8 @@ export default function SecurityView() {
 	// the HttpOnly setup session cookie from the login setup view. Every request (the
 	// save below included) carries it, and the server accepts it as first-admin proof,
 	// so the token is never asked for again here.
-	const { data: authState } = useIsAuthEnabledQuery(undefined, { skip: IS_ENTERPRISE });
-	const authorizedBySetupToken = isFirstTimeSetup && !IS_ENTERPRISE && !!authState?.setup_required;
+	const { data: authState } = useIsAuthEnabledQuery(undefined, { skip: false });
+	const authorizedBySetupToken = isFirstTimeSetup && !!authState?.setup_required;
 	// The config layout gates this query on loading, not on error, so a failed
 	// GET /api/config?from_db=true still renders this form with no config (the
 	// dashboard shell's own config request can succeed). isFirstTimeSetup then
@@ -93,7 +82,6 @@ export default function SecurityView() {
 	// the operator's setup token. Neither applies while auth is on (the session is signed
 	// in) or before the first admin exists (the setup token flow above covers that).
 	const isAuthDisabledWithStoredAccount = !isFirstTimeSetup && bifrostConfig?.auth_config?.is_enabled === false;
-
 	useEffect(() => {
 		if (bifrostConfig && config) {
 			inferenceAuthTouchedRef.current = false;
@@ -111,7 +99,6 @@ export default function SecurityView() {
 			setAuthConfig(bifrostConfig.auth_config);
 		}
 	}, [config, bifrostConfig]);
-
 	const credentialsChanged = useMemo(() => {
 		const usernameChanged =
 			authConfig.admin_username?.value !== bifrostConfig?.auth_config?.admin_username?.value ||
@@ -123,36 +110,27 @@ export default function SecurityView() {
 			authConfig.admin_password?.type !== bifrostConfig?.auth_config?.admin_password?.type;
 		return usernameChanged || passwordChanged;
 	}, [authConfig, bifrostConfig]);
-
 	const hasChanges = useMemo(() => {
 		if (!config) return false;
 		const localOrigins = localConfig.allowed_origins?.slice().sort().join(",");
 		const serverOrigins = config.allowed_origins?.slice().sort().join(",");
 		const originsChanged = localOrigins !== serverOrigins;
-
 		const localHeaders = localConfig.allowed_headers?.slice().sort().join(",");
 		const serverHeaders = config.allowed_headers?.slice().sort().join(",");
 		const headersChanged = localHeaders !== serverHeaders;
-
-		const authChanged = showPasswordSection
-			? authConfig.is_enabled !== bifrostConfig?.auth_config?.is_enabled || credentialsChanged
-			: false;
-
+		const authChanged = authConfig.is_enabled !== bifrostConfig?.auth_config?.is_enabled || credentialsChanged;
 		const localRequired = localConfig.required_headers?.slice().sort().join(",");
 		const serverRequired = config.required_headers?.slice().sort().join(",");
 		const requiredChanged = localRequired !== serverRequired;
-
 		const localWhitelistedRoutes = localConfig.whitelisted_routes?.slice().sort().join(",");
 		const serverWhitelistedRoutes = config.whitelisted_routes?.slice().sort().join(",");
 		const whitelistedRoutesChanged = localWhitelistedRoutes !== serverWhitelistedRoutes;
-
 		const enforceAuthOnInferenceChanged = localConfig.enforce_auth_on_inference !== config.enforce_auth_on_inference;
 		const allowDirectKeysChanged = localConfig.allow_direct_keys !== config.allow_direct_keys;
 		const deleteExpiredVirtualKeysChanged = localConfig.delete_expired_virtual_keys !== config.delete_expired_virtual_keys;
 		const dualCredentialConflictBehaviorChanged =
 			(localConfig.dual_credential_conflict_behavior || "prefer_idp") !== (config.dual_credential_conflict_behavior || "prefer_idp");
 		const vkRotationCooldownChanged = formatCooldown(localConfig.vk_rotation_cooldown) !== formatCooldown(config.vk_rotation_cooldown);
-
 		return (
 			originsChanged ||
 			headersChanged ||
@@ -165,78 +143,67 @@ export default function SecurityView() {
 			dualCredentialConflictBehaviorChanged ||
 			vkRotationCooldownChanged
 		);
-	}, [config, localConfig, authConfig, bifrostConfig, showPasswordSection, credentialsChanged]);
-
+	}, [config, localConfig, authConfig, bifrostConfig, credentialsChanged]);
 	const requiresProofOfControl = isAuthDisabledWithStoredAccount && (authConfig.is_enabled || credentialsChanged);
-
 	const needsRestart = useMemo(() => {
 		if (!config) return false;
-
 		const localOrigins = localConfig.allowed_origins?.slice().sort().join(",");
 		const serverOrigins = config.allowed_origins?.slice().sort().join(",");
 		const originsChanged = localOrigins !== serverOrigins;
-
 		const localHeaders = localConfig.allowed_headers?.slice().sort().join(",");
 		const serverHeaders = config.allowed_headers?.slice().sort().join(",");
 		const headersChanged = localHeaders !== serverHeaders;
-
-		const enforceAuthOnInferenceChanged = localConfig.enforce_auth_on_inference !== config.enforce_auth_on_inference && IS_ENTERPRISE;
-
-		return originsChanged || headersChanged || enforceAuthOnInferenceChanged;
+		return originsChanged || headersChanged;
 	}, [config, localConfig]);
-
 	const handleAllowedOriginsChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, allowed_origins: value }));
 		setLocalConfig((prev) => ({ ...prev, allowed_origins: parseArrayFromText(value) }));
 	}, []);
-
 	const handleAllowedHeadersChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, allowed_headers: value }));
 		setLocalConfig((prev) => ({ ...prev, allowed_headers: parseArrayFromText(value) }));
 	}, []);
-
 	const handleRequiredHeadersChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, required_headers: value }));
 		setLocalConfig((prev) => ({ ...prev, required_headers: parseArrayFromText(value) }));
 	}, []);
-
 	const handleWhitelistedRoutesChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, whitelisted_routes: value }));
 		setLocalConfig((prev) => ({ ...prev, whitelisted_routes: parseArrayFromText(value) }));
 	}, []);
-
 	const handleConfigChange = useCallback((field: keyof CoreConfig, value: boolean) => {
 		if (field === "enforce_auth_on_inference") inferenceAuthTouchedRef.current = true;
 		setLocalConfig((prev) => ({ ...prev, [field]: value }));
 	}, []);
-
 	const handleVkRotationCooldownChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, vk_rotation_cooldown: value }));
 		// The backend accepts Go duration strings; empty input means 0 (disabled).
-		setLocalConfig((prev) => ({ ...prev, vk_rotation_cooldown: value.trim() === "" ? 0 : value.trim() }));
+		setLocalConfig((prev) => ({
+			...prev,
+			vk_rotation_cooldown: value.trim() === "" ? 0 : value.trim(),
+		}));
 	}, []);
-
 	const handleAuthToggle = useCallback(
 		(checked: boolean) => {
 			setAuthConfig((prev) => ({ ...prev, is_enabled: checked }));
 			setProofError("");
 			if (!isFirstTimeSetup || inferenceAuthTouchedRef.current) return;
 			// Untouched preselection follows the dashboard toggle both ways, so canceling setup restores the stored value.
-			setLocalConfig((prev) => ({ ...prev, enforce_auth_on_inference: checked || (config?.enforce_auth_on_inference ?? false) }));
+			setLocalConfig((prev) => ({
+				...prev,
+				enforce_auth_on_inference: checked || (config?.enforce_auth_on_inference ?? false),
+			}));
 		},
 		[isFirstTimeSetup, config?.enforce_auth_on_inference],
 	);
-
 	const handleCurrentPasswordChange = useCallback((value: string) => {
 		setCurrentPassword(value);
 		setProofError("");
 	}, []);
-
 	const handleSetupTokenChange = useCallback((value: string) => {
 		setSetupToken(value);
 		setProofError("");
 	}, []);
-
 	/** 将密码策略失败项转换为当前语言的提示。 */
 	const formatPasswordPolicyError = useCallback(
 		(failures: string[]) => {
@@ -247,7 +214,6 @@ export default function SecurityView() {
 		},
 		[t],
 	);
-
 	const handleAuthFieldChange = useCallback(
 		(field: "admin_username" | "admin_password", value: SecretVar) => {
 			if (field === "admin_password") {
@@ -259,12 +225,10 @@ export default function SecurityView() {
 		},
 		[formatPasswordPolicyError],
 	);
-
 	/** 校验配置与控制权证明，首次设管理员后清理 setup 会话。 */
 	const handleSave = useCallback(async () => {
 		try {
 			const validation = validateOrigins(localConfig.allowed_origins);
-
 			if (!validation.isValid && localConfig.allowed_origins.length > 0) {
 				toast.error(t("security.toastInvalidOrigins", { origins: validation.invalidOrigins.join(", ") }));
 				return;
@@ -277,10 +241,9 @@ export default function SecurityView() {
 			const hasUsername = authConfig.admin_username?.value || authConfig.admin_username?.ref;
 			const hasPassword = authConfig.admin_password?.value || authConfig.admin_password?.ref;
 			const passwordPolicyFailures =
-				showPasswordSection && authConfig.is_enabled && !authConfig.admin_password?.ref && authConfig.admin_password?.value
+				authConfig.is_enabled && !authConfig.admin_password?.ref && authConfig.admin_password?.value
 					? getPasswordPolicyFailures(authConfig.admin_password.value, passwordUnchangedRef.current)
 					: [];
-
 			if (passwordPolicyFailures.length > 0) {
 				setPasswordError(formatPasswordPolicyError(passwordPolicyFailures));
 				passwordInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -292,7 +255,10 @@ export default function SecurityView() {
 				return;
 			}
 			const proof = requiresProofOfControl
-				? authProofOfControlSchema.safeParse({ current_password: currentPassword, setup_token: setupToken })
+				? authProofOfControlSchema.safeParse({
+						current_password: currentPassword,
+						setup_token: setupToken,
+					})
 				: null;
 			if (proof && !proof.success) {
 				setProofError(t("security.proofRequired"));
@@ -302,20 +268,17 @@ export default function SecurityView() {
 			}
 			setPasswordError("");
 			setProofError("");
-
 			await updateCoreConfig({
 				...bifrostConfig!,
 				client_config: localConfig,
-				...(showPasswordSection
-					? {
-							auth_config: {
-								...(authConfig.is_enabled && hasUsername && hasPassword ? authConfig : { ...authConfig, is_enabled: false }),
-								...(isFirstTimeSetup && !authorizedBySetupToken ? { setup_token: setupToken.trim() } : {}),
-								...(proof?.success && proof.data.current_password ? { current_password: proof.data.current_password } : {}),
-								...(proof?.success && proof.data.setup_token ? { setup_token: proof.data.setup_token } : {}),
-							},
-						}
-					: {}),
+				...{
+					auth_config: {
+						...(authConfig.is_enabled && hasUsername && hasPassword ? authConfig : { ...authConfig, is_enabled: false }),
+						...(isFirstTimeSetup && !authorizedBySetupToken ? { setup_token: setupToken.trim() } : {}),
+						...(proof?.success && proof.data.current_password ? { current_password: proof.data.current_password } : {}),
+						...(proof?.success && proof.data.setup_token ? { setup_token: proof.data.setup_token } : {}),
+					},
+				},
 			}).unwrap();
 			setSetupToken("");
 			setCurrentPassword("");
@@ -323,13 +286,23 @@ export default function SecurityView() {
 			toast.success(t("security.toastSaved"));
 			// Dashboard auth is now on, so the OSS setup lock is lifted. Expire the setup
 			// session cookie (logout clears it) and sign in with the new admin account.
-			if (showPasswordSection && authConfig.is_enabled && hasUsername && hasPassword && authorizedBySetupToken) {
-				await fetch(`${getApiBaseUrl()}/session/logout`, { method: "POST", credentials: "include" }).catch(() => undefined);
+			if (authConfig.is_enabled && hasUsername && hasPassword && authorizedBySetupToken) {
+				await fetch(`${getApiBaseUrl()}/session/logout`, {
+					method: "POST",
+					credentials: "include",
+				}).catch(() => undefined);
 				window.location.href = "/login";
 			}
 		} catch (error) {
 			const message = getErrorMessage(error);
-			const status = typeof error === "object" && error !== null && "status" in error ? (error as { status?: unknown }).status : undefined;
+			const status =
+				typeof error === "object" && error !== null && "status" in error
+					? (
+							error as {
+								status?: unknown;
+							}
+						).status
+					: undefined;
 			if (requiresProofOfControl && status === 403) {
 				// The server rejected the proof itself (wrong password or token), so the
 				// answer belongs on the confirmation field rather than in a toast.
@@ -346,7 +319,6 @@ export default function SecurityView() {
 		localConfig,
 		localValues.vk_rotation_cooldown,
 		authConfig,
-		showPasswordSection,
 		updateCoreConfig,
 		isFirstTimeSetup,
 		setupToken,
@@ -356,28 +328,14 @@ export default function SecurityView() {
 		t,
 		formatPasswordPolicyError,
 	]);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-4">
 			<PageTitle title={t("security.title")}>{t("security.description")}</PageTitle>
 
 			<div className="space-y-4">
 				{/* Password Protect the Dashboard */}
-				{IS_ENTERPRISE && authTypeLoading ? (
-					<div className="flex items-center justify-center rounded-sm border p-8" data-testid="security-auth-type-loading">
-						<Loader2 className="text-muted-foreground h-5 w-5 animate-spin" aria-hidden />
-						<span className="sr-only">{t("security.loadingAuth")}</span>
-					</div>
-				) : null}
-				{IS_ENTERPRISE && !authTypeLoading && authTypeError ? (
-					<Alert variant="destructive" data-testid="security-auth-type-error">
-						<AlertTriangle className="h-4 w-4" />
-						<AlertDescription>
-							{t("security.authTypeUnavailable")} {getErrorMessage(authTypeError)}
-						</AlertDescription>
-					</Alert>
-				) : null}
-				{showPasswordSection && (
+
+				{
 					<div>
 						<div className="space-y-4 rounded-sm border p-4">
 							<div className="flex items-center justify-between">
@@ -510,15 +468,15 @@ export default function SecurityView() {
 							</div>
 						</div>
 					</div>
-				)}
+				}
 				{/* Enable Auth on Inference */}
 				<div className="flex items-center justify-between space-x-2 rounded-sm border p-4">
 					<div className="space-y-0.5">
 						<label htmlFor="enforce-auth-on-inference" className="text-sm font-medium">
-							{IS_ENTERPRISE ? t("security.enableAuthOnInference") : t("security.enforceVirtualKeys")}
+							{t("security.enforceVirtualKeys")}
 						</label>
 						<p className="text-muted-foreground text-sm">
-							{IS_ENTERPRISE ? t("security.enableAuthHelp") : t("security.enforceVkHelp")} {t("security.see")}{" "}
+							{t("security.enforceVkHelp")} {t("security.see")}{" "}
 							<a
 								href="https://docs.getbifrost.ai/features/governance/virtual-keys"
 								target="_blank"
@@ -539,47 +497,14 @@ export default function SecurityView() {
 						onCheckedChange={(checked) => handleConfigChange("enforce_auth_on_inference", checked)}
 					/>
 				</div>
-				{(authConfig.is_enabled || authType?.type === "sso") && !config?.enforce_auth_on_inference && (
+				{authConfig.is_enabled && !config?.enforce_auth_on_inference && (
 					<Alert variant="destructive" data-testid="inference-auth-off-warning">
 						<AlertTriangle className="h-4 w-4" />
 						<AlertDescription>{t("security.inferenceAuthOffWarning")}</AlertDescription>
 					</Alert>
 				)}
 				{/* Dual Credential Conflict Behavior */}
-				{IS_ENTERPRISE && (
-					<div className="flex items-center justify-between space-x-2 rounded-sm border p-4">
-						<div className="space-y-0.5">
-							<label htmlFor="dual-credential-conflict-behavior" className="text-sm font-medium">
-								{t("security.dualCredential")}
-							</label>
-							<p className="text-muted-foreground text-sm">
-								<Trans t={t} i18nKey="security.dualCredentialHelp" components={{ b0: <b />, b1: <b />, b2: <b />, b3: <b />, b4: <b /> }} />
-							</p>
-						</div>
-						<Select
-							value={localConfig.dual_credential_conflict_behavior || "prefer_idp"}
-							onValueChange={(value) =>
-								setLocalConfig((prev) => ({
-									...prev,
-									dual_credential_conflict_behavior: value as CoreConfig["dual_credential_conflict_behavior"],
-								}))
-							}
-						>
-							<SelectTrigger
-								id="dual-credential-conflict-behavior"
-								data-testid="dual-credential-conflict-behavior-select"
-								className="w-full sm:w-[180px]"
-							>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="prefer_idp">{t("security.preferIdp")}</SelectItem>
-								<SelectItem value="prefer_vk">{t("security.preferVk")}</SelectItem>
-								<SelectItem value="error">{t("security.rejectRequest")}</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-				)}
+
 				<div className="flex items-center justify-between space-x-2 rounded-sm border p-4">
 					<div className="space-y-0.5">
 						<label htmlFor="allow-direct-keys" className="text-sm font-medium">
@@ -706,7 +631,7 @@ export default function SecurityView() {
 				</div>
 			</div>
 			<div className="bg-card sticky bottom-0 flex justify-end py-2">
-				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess}>
+				<Button onClick={handleSave} disabled={!hasChanges || isLoading}>
 					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>
@@ -731,7 +656,6 @@ export default function SecurityView() {
 		</div>
 	);
 }
-
 const RestartWarning = () => {
 	const { t } = useTranslation("config");
 	return (

@@ -18,7 +18,7 @@ interface RateLimitDisplayProps {
 	rateLimits: RateLimitShape | null | undefined;
 	/** Compact mode for narrow cells — still renders bars, just tighter */
 	compact?: boolean;
-	/** Render limit + reset period only (no usage bar). Use for template entities like access profiles. */
+
 	limitOnly?: boolean;
 	/** When true, alignable durations (day/week/month/year) get a "(calendar)" suffix to
 	 * mirror the budget cell. Sourced from the owning VK's calendar_aligned flag. */

@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -10,11 +9,9 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 interface PromptFormData {
 	name: string;
 }
-
 interface PromptSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -22,17 +19,13 @@ interface PromptSheetProps {
 	folderId?: string;
 	onSaved: (promptId?: string) => void;
 }
-
 export function PromptSheet({ open, onOpenChange, prompt, folderId, onSaved }: PromptSheetProps) {
 	const { t } = useTranslation("config");
 	const { t: tc } = useTranslation("common");
 	const [createPrompt, { isLoading: isCreating }] = useCreatePromptMutation();
 	const [updatePrompt, { isLoading: isUpdating }] = useUpdatePromptMutation();
-
 	const isLoading = isCreating || isUpdating;
 	const isEditing = !!prompt;
-	const canSave = useRbac(RbacResource.PromptRepository, isEditing ? RbacOperation.Update : RbacOperation.Create);
-
 	const {
 		register,
 		trigger,
@@ -43,13 +36,11 @@ export function PromptSheet({ open, onOpenChange, prompt, folderId, onSaved }: P
 		defaultValues: { name: "" },
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	useEffect(() => {
 		if (open) {
 			reset({ name: prompt?.name ?? "" });
 		}
 	}, [open, prompt, reset]);
-
 	async function onSubmit(data: PromptFormData) {
 		try {
 			if (isEditing) {
@@ -69,12 +60,16 @@ export function PromptSheet({ open, onOpenChange, prompt, folderId, onSaved }: P
 			}
 			onOpenChange(false);
 		} catch (err) {
-			toast.error(t("promptRepo.toastPromptFailed", { action: isEditing ? t("promptRepo.updateAction") : t("promptRepo.createAction") }), {
-				description: getErrorMessage(err),
-			});
+			toast.error(
+				t("promptRepo.toastPromptFailed", {
+					action: isEditing ? t("promptRepo.updateAction") : t("promptRepo.createAction"),
+				}),
+				{
+					description: getErrorMessage(err),
+				},
+			);
 		}
 	}
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
@@ -118,12 +113,7 @@ export function PromptSheet({ open, onOpenChange, prompt, folderId, onSaved }: P
 							<Button type="button" variant="outline" data-testid="prompt-cancel" onClick={() => onOpenChange(false)}>
 								{tc("cancel")}
 							</Button>
-							<Button
-								type="submit"
-								data-testid="prompt-submit"
-								disabled={isLoading || !canSave}
-								title={canSave ? undefined : t("promptRepo.noChangePermission")}
-							>
+							<Button type="submit" data-testid="prompt-submit" disabled={isLoading} title={undefined}>
 								{isLoading ? t("promptRepo.savingDots") : isEditing ? t("promptRepo.update") : tc("create")}
 							</Button>
 						</SheetFooter>

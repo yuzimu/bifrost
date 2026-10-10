@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,29 +10,23 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 interface FolderFormData {
 	name: string;
 	description: string;
 }
-
 interface FolderSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	folder?: Folder;
 	onSaved: () => void;
 }
-
 export function FolderSheet({ open, onOpenChange, folder, onSaved }: FolderSheetProps) {
 	const { t } = useTranslation("config");
 	const { t: tc } = useTranslation("common");
 	const [createFolder, { isLoading: isCreating }] = useCreateFolderMutation();
 	const [updateFolder, { isLoading: isUpdating }] = useUpdateFolderMutation();
-	const canSave = useRbac(RbacResource.PromptRepository, folder ? RbacOperation.Update : RbacOperation.Create);
-
 	const isLoading = isCreating || isUpdating;
 	const isEditing = !!folder;
-
 	const {
 		register,
 		trigger,
@@ -44,7 +37,6 @@ export function FolderSheet({ open, onOpenChange, folder, onSaved }: FolderSheet
 		defaultValues: { name: "", description: "" },
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	useEffect(() => {
 		if (open) {
 			reset({
@@ -53,7 +45,6 @@ export function FolderSheet({ open, onOpenChange, folder, onSaved }: FolderSheet
 			});
 		}
 	}, [open, folder, reset]);
-
 	async function onSubmit(data: FolderFormData) {
 		try {
 			if (isEditing) {
@@ -72,12 +63,16 @@ export function FolderSheet({ open, onOpenChange, folder, onSaved }: FolderSheet
 			onSaved();
 			onOpenChange(false);
 		} catch (err) {
-			toast.error(t("promptRepo.toastFolderFailed", { action: isEditing ? t("promptRepo.updateAction") : t("promptRepo.createAction") }), {
-				description: getErrorMessage(err),
-			});
+			toast.error(
+				t("promptRepo.toastFolderFailed", {
+					action: isEditing ? t("promptRepo.updateAction") : t("promptRepo.createAction"),
+				}),
+				{
+					description: getErrorMessage(err),
+				},
+			);
 		}
 	}
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
@@ -90,9 +85,7 @@ export function FolderSheet({ open, onOpenChange, folder, onSaved }: FolderSheet
 				<form onSubmit={handleSubmit(onSubmit)}>
 					<SheetHeader className="flex flex-col items-start">
 						<SheetTitle>{isEditing ? t("promptRepo.editFolder") : t("promptRepo.createFolder")}</SheetTitle>
-						<SheetDescription>
-							{isEditing ? t("promptRepo.updateFolderDesc") : t("promptRepo.createFolderDesc")}
-						</SheetDescription>
+						<SheetDescription>{isEditing ? t("promptRepo.updateFolderDesc") : t("promptRepo.createFolderDesc")}</SheetDescription>
 					</SheetHeader>
 
 					<div className="mt-6 space-y-4">
@@ -127,12 +120,7 @@ export function FolderSheet({ open, onOpenChange, folder, onSaved }: FolderSheet
 						<Button type="button" variant="outline" data-testid="folder-cancel" onClick={() => onOpenChange(false)}>
 							{tc("cancel")}
 						</Button>
-						<Button
-							type="submit"
-							data-testid="folder-submit"
-							disabled={isLoading || !canSave}
-							title={canSave ? undefined : t("promptRepo.noChangeFolderPermission")}
-						>
+						<Button type="submit" data-testid="folder-submit" disabled={isLoading} title={undefined}>
 							{isLoading ? t("promptRepo.savingDots") : isEditing ? t("promptRepo.update") : tc("create")}
 						</Button>
 					</SheetFooter>

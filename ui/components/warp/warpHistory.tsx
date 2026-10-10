@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scrollArea";
 import { useDeleteWarpConversationMutation, useListWarpConversationsQuery } from "@/lib/store/apis/warpApi";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import type { WarpConversation } from "@/lib/types/warp";
 import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 import { useTranslation } from "react-i18next";
@@ -21,23 +20,19 @@ import { formatDistanceToNow } from "date-fns";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
 interface WarpHistoryProps {
 	activeConversationId?: string;
 	onOpen: (conversation: WarpConversation) => Promise<void> | void;
 	/** Lets the panel drop a deleted transcript, or the next message recreates the thread. */
 	onDeleted?: (id: string) => void;
 }
-
 /** 挂载时刷新会话，并随界面语言格式化历史记录。 */
 export default function WarpHistory({ activeConversationId, onOpen, onDeleted }: WarpHistoryProps) {
 	const { t, i18n } = useTranslation("shell");
 	const { data: conversations, isLoading, isError } = useListWarpConversationsQuery({ limit: 50 }, { refetchOnMountOrArgChange: true });
 	const [deleteConversation] = useDeleteWarpConversationMutation();
-	const canDelete = useRbac(RbacResource.WarpSession, RbacOperation.Delete);
 	const [openingId, setOpeningId] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
-
 	const open = async (conversation: WarpConversation) => {
 		setOpeningId(conversation.id);
 		try {
@@ -48,10 +43,8 @@ export default function WarpHistory({ activeConversationId, onOpen, onDeleted }:
 			setOpeningId(null);
 		}
 	};
-
 	// Delete is permanent (no restore endpoint), so it goes through a confirm step.
 	const [pendingDelete, setPendingDelete] = useState<WarpConversation | null>(null);
-
 	const remove = async (conversation: WarpConversation) => {
 		setDeletingId(conversation.id);
 		try {
@@ -63,7 +56,6 @@ export default function WarpHistory({ activeConversationId, onOpen, onDeleted }:
 			setDeletingId(null);
 		}
 	};
-
 	if (isLoading) {
 		return (
 			<div className="text-muted-foreground flex items-center justify-center gap-2 p-6 text-xs" data-testid="warp-history-loading">
@@ -85,7 +77,6 @@ export default function WarpHistory({ activeConversationId, onOpen, onDeleted }:
 			</p>
 		);
 	}
-
 	return (
 		// no-table lets long titles truncate instead of widening the list past the panel.
 		<ScrollArea className="h-full" viewportClassName="no-table">
@@ -130,7 +121,7 @@ export default function WarpHistory({ activeConversationId, onOpen, onDeleted }:
 									{openingId === conversation.id && <Loader2 className="ml-1 size-3 animate-spin" />}
 								</p>
 							</button>
-							{canDelete && (
+							{
 								<Button
 									type="button"
 									variant="ghost"
@@ -144,7 +135,7 @@ export default function WarpHistory({ activeConversationId, onOpen, onDeleted }:
 								>
 									{deletingId === conversation.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
 								</Button>
-							)}
+							}
 						</li>
 					);
 				})}

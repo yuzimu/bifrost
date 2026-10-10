@@ -8,10 +8,8 @@ import {
 } from "@/lib/types/schemas";
 import { isValidAliases, isValidVertexAuthCredentials } from "@/lib/utils/validation";
 import { z } from "zod";
-
 // Base schemas for reusable types
 const ProxyTypeSchema = z.enum(["none", "http", "socks5", "environment"]);
-
 const ProxyConfigSchema = z
 	.object({
 		type: ProxyTypeSchema,
@@ -34,7 +32,6 @@ const ProxyConfigSchema = z
 			});
 		}
 	});
-
 const NetworkConfigSchema = z
 	.object({
 		base_url: z.string().optional(),
@@ -57,7 +54,6 @@ const NetworkConfigSchema = z
 		error: () => schemaMessage("backoffOrder", "Initial backoff must be <= max backoff"),
 		path: ["retry_backoff_initial"],
 	});
-
 const ConcurrencyAndBufferSizeSchema = z
 	.object({
 		concurrency: z.number().min(1, { error: () => schemaMessage("concurrencyPositive", "Concurrency must be greater than 0") }),
@@ -67,7 +63,6 @@ const ConcurrencyAndBufferSizeSchema = z
 		error: () => schemaMessage("concurrencyBuffer", "Concurrency must be less than or equal to buffer size"),
 		path: ["concurrency"],
 	});
-
 const AllowedRequestsSchema = z.object({
 	text_completion: z.boolean(),
 	chat_completion: z.boolean(),
@@ -80,7 +75,6 @@ const AllowedRequestsSchema = z.object({
 	transcription: z.boolean(),
 	transcription_stream: z.boolean(),
 });
-
 // Key configuration schemas
 const AzureKeyConfigSchema = z.object({
 	endpoint: z.string().min(1, { error: () => schemaMessage("azureEndpoint", "Endpoint is required for Azure keys") }),
@@ -88,7 +82,6 @@ const AzureKeyConfigSchema = z.object({
 	client_secret: z.string().optional(),
 	tenant_id: z.string().optional(),
 });
-
 // AWS → GCP Workload Identity Federation block; see VertexAWSWorkloadIdentityConfig.
 const VertexAWSWorkloadIdentitySchema = z.object({
 	audience: z.string().min(1, { error: () => schemaMessage("workloadAudience", "Workload Identity Pool provider audience is required") }),
@@ -97,7 +90,6 @@ const VertexAWSWorkloadIdentitySchema = z.object({
 	aws_region: z.string().optional(),
 	aws_role_arn: z.string().optional(),
 });
-
 const VertexKeyConfigSchema = z.object({
 	project_id: z.string().min(1, { error: () => schemaMessage("vertexProject", "Project ID is required for Vertex AI keys") }),
 	project_number: z.string().optional(),
@@ -111,18 +103,15 @@ const VertexKeyConfigSchema = z.object({
 	force_single_region: z.boolean().optional(),
 	aws_workload_identity: VertexAWSWorkloadIdentitySchema.optional(),
 });
-
 // S3 bucket configuration for Bedrock batch operations
 const S3BucketConfigSchema = z.object({
 	bucket_name: z.string().min(1, { error: () => schemaMessage("bucketRequired", "Bucket name is required") }),
 	prefix: z.string().optional(),
 	is_default: z.boolean().optional(),
 });
-
 const BatchS3ConfigSchema = z.object({
 	buckets: z.array(S3BucketConfigSchema).optional(),
 });
-
 // A VPC endpoint value must be a DNS name, so it always contains a dot. The check exists to
 // catch a pasted endpoint ID, which resolves to nothing: AWS appends a random string to the ID
 // that the DNS name carries and the ID does not.
@@ -132,7 +121,6 @@ const VPCEndpointHostSchema = z
 		error: () => schemaMessage("endpointDns", "Enter the endpoint's DNS name from the VPC console, not its ID"),
 	})
 	.optional();
-
 const BedrockEndpointsSchema = z.object({
 	runtime: VPCEndpointHostSchema,
 	control_plane: VPCEndpointHostSchema,
@@ -140,9 +128,9 @@ const BedrockEndpointsSchema = z.object({
 	agent_runtime: VPCEndpointHostSchema,
 	s3: VPCEndpointHostSchema,
 });
-
 const BedrockKeyConfigSchema = z
 	.object({
+		project_id: z.string().optional(),
 		access_key: z.string(),
 		secret_key: z.string(),
 		session_token: z.string().optional(),
@@ -152,7 +140,6 @@ const BedrockKeyConfigSchema = z
 		session_name: z.string().optional(),
 		batch_role_arn: z.string().optional(),
 		arn: z.string().optional(),
-		project_id: z.string().optional(),
 		batch_s3_config: BatchS3ConfigSchema.optional(),
 		endpoints: BedrockEndpointsSchema.optional(),
 	})
@@ -162,18 +149,15 @@ const BedrockKeyConfigSchema = z
 			const secretKey = data.secret_key?.trim() || "";
 			const bothEmpty = accessKey === "" && secretKey === "";
 			const bothProvided = accessKey !== "" && secretKey !== "";
-
 			// Either both empty (IAM role auth) or both provided (explicit credentials)
 			if (!bothEmpty && !bothProvided) {
 				return false;
 			}
-
 			// Check for session token when using IAM role path (both keys empty)
 			const sessionToken = data.session_token?.trim() || "";
 			if (bothEmpty && sessionToken !== "") {
 				return false;
 			}
-
 			return true;
 		},
 		{
@@ -185,9 +169,9 @@ const BedrockKeyConfigSchema = z
 			path: ["access_key"],
 		},
 	);
-
 const BedrockMantleKeyConfigSchema = z
 	.object({
+		project_id: z.string().optional(),
 		access_key: z.string(),
 		secret_key: z.string(),
 		session_token: z.string().optional(),
@@ -195,7 +179,6 @@ const BedrockMantleKeyConfigSchema = z
 		role_arn: z.string().optional(),
 		external_id: z.string().optional(),
 		session_name: z.string().optional(),
-		project_id: z.string().optional(),
 		endpoints: BedrockEndpointsSchema.optional(),
 	})
 	.refine(
@@ -221,13 +204,11 @@ const BedrockMantleKeyConfigSchema = z
 			path: ["access_key"],
 		},
 	);
-
 // Optional for the same reason as replicateKeyConfigSchema in lib/types/schemas.ts:
 // the registered-but-untouched switch leaves an empty object behind.
 const ReplicateKeyConfigSchema = z.object({
 	use_deployments_endpoint: z.boolean().optional(),
 });
-
 const KeySchema = z.object({
 	id: z.string(),
 	name: z.string().min(1, { error: () => schemaMessage("keyName", "Name is required for the key") }),
@@ -251,7 +232,6 @@ const KeySchema = z.object({
 	github_copilot_key_config: githubCopilotKeyConfigSchema.optional(),
 	use_for_batch_api: z.boolean().optional(),
 });
-
 // Main provider form schema
 export const ProviderFormSchema = z
 	.object({
@@ -273,7 +253,6 @@ export const ProviderFormSchema = z
 			!!data.customProviderName ||
 			!!data.baseProviderType ||
 			!KnownProvidersNames.includes(data.selectedProvider as (typeof KnownProvidersNames)[number]);
-
 		if (isCustomProvider) {
 			if (!data.customProviderName?.trim()) {
 				ctx.addIssue({
@@ -282,7 +261,6 @@ export const ProviderFormSchema = z
 					path: ["customProviderName"],
 				});
 			}
-
 			if (!/^[a-z0-9_-]+$/.test(data.customProviderName?.trim() || "")) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -293,7 +271,6 @@ export const ProviderFormSchema = z
 					path: ["customProviderName"],
 				});
 			}
-
 			if (!data.baseProviderType) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -301,7 +278,6 @@ export const ProviderFormSchema = z
 					path: ["baseProviderType"],
 				});
 			}
-
 			if (KnownProvidersNames.includes(data.customProviderName?.trim() as (typeof KnownProvidersNames)[number])) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -310,7 +286,6 @@ export const ProviderFormSchema = z
 				});
 			}
 		}
-
 		// Base URL validation for specific providers
 		const baseURLRequired = isCustomProvider;
 		if (baseURLRequired) {
@@ -321,7 +296,6 @@ export const ProviderFormSchema = z
 					path: ["networkConfig", "base_url"],
 				});
 			}
-
 			if (data.networkConfig?.base_url && !/^https?:\/\/.+/.test(data.networkConfig.base_url)) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -330,7 +304,6 @@ export const ProviderFormSchema = z
 				});
 			}
 		}
-
 		// Keys validation
 		const keysRequired = data.selectedProvider === "custom" || !["ollama", "sgl"].includes(data.selectedProvider);
 		if (keysRequired) {
@@ -341,7 +314,6 @@ export const ProviderFormSchema = z
 					path: ["keys"],
 				});
 			}
-
 			// Validate individual key values based on provider type
 			const effectiveProviderType = data.baseProviderType || data.selectedProvider;
 			data.keys.forEach((key, index) => {
@@ -366,5 +338,4 @@ export const ProviderFormSchema = z
 			});
 		}
 	});
-
 export type ProviderFormData = z.infer<typeof ProviderFormSchema>;

@@ -25,7 +25,7 @@ export interface OAuth2GrantsQueryParams {
 	bf_mode?: string[];
 	// Exact-match on bf_sub, scoped server-side to vk-mode / user-mode rows
 	// respectively (bf_sub is a single generic subject column with no
-	// dedicated identity column to filter on). user_id is enterprise only —
+
 	// see the Users sidebar section.
 	virtual_key_id?: string[];
 	user_id?: string[];

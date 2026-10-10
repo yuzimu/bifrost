@@ -7,9 +7,7 @@ import { useTranslation } from "react-i18next";
 import VirtualMCPSheet, { VirtualMCPSheetTarget } from "./views/virtualMcpSheet";
 import VirtualMCPWizard from "./views/virtualMcpWizard";
 import VirtualMCPsTable from "./views/virtualMcpsTable";
-
 const PAGE_SIZE = 25;
-
 export default function VirtualMCPsPage() {
 	const { t } = useTranslation("mcp");
 	const [urlState, setUrlState] = useQueryStates(
@@ -19,27 +17,21 @@ export default function VirtualMCPsPage() {
 		},
 		{ history: "push" },
 	);
-
 	const [sheetTarget, setSheetTarget] = useState<VirtualMCPSheetTarget | null>(null);
 	const [creating, setCreating] = useState(false);
-
 	const debouncedSearch = useDebouncedValue(urlState.q, 300);
-
 	const { data, isLoading, isFetching, isError, error } = useGetVirtualMCPsQuery({
 		search: debouncedSearch || undefined,
 		limit: PAGE_SIZE,
 		offset: urlState.offset,
 	});
-
 	const totalCount = data?.total_count ?? 0;
-
 	// Snap offset back if the total shrinks past the current page (e.g. a delete
 	// removed the last row on the last page). Same logic as the sessions/VK lists.
 	useEffect(() => {
 		if (!data || urlState.offset < totalCount) return;
 		setUrlState({ offset: totalCount === 0 ? 0 : Math.floor((totalCount - 1) / PAGE_SIZE) * PAGE_SIZE });
 	}, [totalCount, urlState.offset, data, setUrlState]);
-
 	// Full-page creation wizard, swapped in over the list. Fills the content height so the
 	// footer stays pinned to the bottom.
 	if (creating) {
@@ -49,9 +41,7 @@ export default function VirtualMCPsPage() {
 			</div>
 		);
 	}
-
 	if (isLoading) return <FullPageLoader />;
-
 	if (isError) {
 		return (
 			<div className="no-padding-parent mx-auto w-full px-4 md:px-0">
@@ -61,7 +51,6 @@ export default function VirtualMCPsPage() {
 			</div>
 		);
 	}
-
 	// Row-to-row navigation within the current page, mirroring the MCP catalog sheet.
 	const editList = data?.virtual_mcps ?? [];
 	const editIndex = sheetTarget?.mode === "edit" ? editList.findIndex((v) => v.id === sheetTarget.id) : -1;
@@ -70,7 +59,6 @@ export default function VirtualMCPsPage() {
 		const next = editList[direction === "prev" ? editIndex - 1 : editIndex + 1];
 		if (next) setSheetTarget({ mode: "edit", id: next.id });
 	};
-
 	return (
 		<div className="no-padding-parent mx-auto w-full p-4">
 			<VirtualMCPsTable
@@ -78,7 +66,7 @@ export default function VirtualMCPsPage() {
 				totalCount={totalCount}
 				isFetching={isFetching}
 				search={urlState.q}
-				onSearchChange={(value) => setUrlState({ q: value || null, offset: 0 })}
+				onSearchChange={(value) => setUrlState({ q: value, offset: 0 })}
 				hasActiveSearch={!!urlState.q}
 				offset={urlState.offset}
 				limit={PAGE_SIZE}

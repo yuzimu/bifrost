@@ -1,5 +1,5 @@
 // Shared shell behind every async entity selector (virtual keys, users,
-// teams, customers, business units).
+
 //
 // Owns everything that is identical across entities: the three selection
 // modes, the label cache that keeps an already-selected id from rendering as
@@ -8,7 +8,7 @@
 // Two presentations, picked by mode:
 //   - single / add -> SearchSelect (a popover behind a button trigger)
 //   - multi        -> AsyncMultiSelect, the react-select control already used
-//                     for association fields, so chips render inline in the
+
 //                     control rather than in a separate row below it.
 // Fetching, debouncing and label resolution are identical either way.
 //
@@ -17,13 +17,11 @@
 // and which field is the label — aren't worth abstracting over. A wrapper
 // owns its query and its debounce and hands the results down here.
 //
-// Lives in OSS so the enterprise-only selectors can build on it too.
 
 import { CheckIcon, ChevronDownIcon, PlusIcon } from "lucide-react";
 import { type ComponentType, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { components } from "react-select";
-
 const ENTITY_NOUN_KEYS: Record<string, string> = {
 	team: "entities.team",
 	teams: "entities.teams",
@@ -36,28 +34,22 @@ const ENTITY_NOUN_KEYS: Record<string, string> = {
 	"Virtual MCP": "entities.virtualMcp",
 	"Virtual MCPs": "entities.virtualMcps",
 };
-
 import { AsyncMultiSelect } from "@/components/ui/asyncMultiselect";
 import { Button } from "@/components/ui/button";
 import type { Option } from "@/components/ui/multiselectUtils";
 import { SearchSelect } from "@/components/ui/searchSelect";
 import { cn } from "@/lib/utils";
-
 import { EMPTY_ENTITY_PAGES, hasMoreEntities, loadMoreNeedsRefetch, mergeEntityPage, shouldAutoLoadMore } from "./entitySelectorPaging";
-
 export const ENTITY_SEARCH_DEBOUNCE_MS = 300;
 export const ENTITY_SELECTOR_PAGE_SIZE = 20;
-
 export interface EntitySelectorOption {
 	value: string;
 	label: string;
 }
-
 /** One row in the dropdown. `description` renders as a dimmed sub-label. */
 export interface EntitySelectorEntry extends EntitySelectorOption {
 	description?: string;
 }
-
 /**
  * Fetches one entity by id and reports its label, then renders nothing.
  *
@@ -71,12 +63,10 @@ export interface EntityLabelResolverProps {
 	id: string;
 	onResolved: (option: EntitySelectorOption) => void;
 }
-
 /** Carried on each react-select option so the custom option view can read it. */
 interface EntityOptionMeta {
 	description?: string;
 }
-
 /**
  * Props every wrapper re-exposes verbatim, so callers see the same surface
  * whichever entity they are picking.
@@ -125,21 +115,18 @@ export interface EntitySelectorCommonProps {
 	 */
 	footer?: ReactNode;
 }
-
 interface EntitySelectorSingleProps {
 	mode?: undefined;
 	multiple?: false;
 	value: string;
 	onChange: (value: string) => void;
 }
-
 interface EntitySelectorMultiProps {
 	mode?: undefined;
 	multiple: true;
 	value: string[];
 	onChange: (value: string[]) => void;
 }
-
 /**
  * Fire-and-forget "add" mode: the selector holds no value, and each pick is
  * reported once. For surfaces that own their own collection — e.g. the MCP
@@ -154,13 +141,11 @@ interface EntitySelectorAddProps {
 	value?: never;
 	onChange?: never;
 }
-
 /**
  * The selection contract, shared so wrappers can intersect it with their own
  * options rather than restating all three variants.
  */
 export type EntitySelectorModeProps = EntitySelectorSingleProps | EntitySelectorMultiProps | EntitySelectorAddProps;
-
 interface EntitySelectorChromeProps {
 	/** Lowercase noun used to build placeholders and empty/error copy. */
 	entityLabel: string;
@@ -196,9 +181,7 @@ interface EntitySelectorChromeProps {
 	 */
 	LabelResolver?: ComponentType<EntityLabelResolverProps>;
 }
-
 export type EntitySelectorProps = EntitySelectorChromeProps & EntitySelectorCommonProps & EntitySelectorModeProps;
-
 /** 管理服务端分页、名称解析及 single、multi、add 三种选择模式。 */
 export function EntitySelector(props: EntitySelectorProps) {
 	const { t } = useTranslation("common");
@@ -233,19 +216,16 @@ export function EntitySelector(props: EntitySelectorProps) {
 		fullWidth = false,
 		footer,
 	} = props;
-
 	const isAdd = props.mode === "add";
 	const isMulti = props.multiple === true;
 	const selectedIds = useMemo(() => {
 		if (isAdd) return [];
 		return props.multiple === true ? props.value : props.value ? [props.value] : [];
 	}, [isAdd, props.multiple, props.value]);
-
 	// Labels of entities seen so far. Results change as the user types and are
 	// dropped entirely once the popover closes, so selected ids can't rely on
 	// being present in `options` — the cache is what keeps their labels stable.
 	const [labelCache, setLabelCache] = useState<Record<string, string>>({});
-
 	useEffect(() => {
 		if (options.length === 0) return;
 		setLabelCache((prev) => {
@@ -260,37 +240,30 @@ export function EntitySelector(props: EntitySelectorProps) {
 			return changed ? next : prev;
 		});
 	}, [options]);
-
 	const fallbackLabels = useMemo(() => {
 		const entries = [...(fallbackOption ? [fallbackOption] : []), ...(fallbackOptions ?? [])];
 		// A fallback whose label is just the id names nothing — the common shape
 		// when a surface holds only ids. Drop it so the resolver still runs.
 		return Object.fromEntries(entries.filter((o) => o.label && o.label !== o.value).map((o) => [o.value, o.label]));
 	}, [fallbackOption, fallbackOptions]);
-
 	// Falls back to the raw id only when no label is known from any source.
 	const labelFor = (id: string) => labelCache[id] ?? fallbackLabels[id] ?? id;
-
 	const cacheLabel = useCallback((option: EntitySelectorOption) => {
 		setLabelCache((prev) => (prev[option.value] === option.label ? prev : { ...prev, [option.value]: option.label }));
 	}, []);
-
 	// Each resolver unmounts as soon as it reports, since its id leaves this
 	// list; the label it cached is what keeps it from being fetched again.
 	const unresolvedIds = useMemo(
 		() => (LabelResolver ? selectedIds.filter((id) => !labelCache[id] && !fallbackLabels[id]) : []),
 		[LabelResolver, selectedIds, labelCache, fallbackLabels],
 	);
-
 	const labelResolvers = LabelResolver ? unresolvedIds.map((id) => <LabelResolver key={id} id={id} onResolved={cacheLabel} />) : null;
-
 	// Array identity has to survive renders, so key off the contents.
 	const excludeKey = excludeIds?.join(" ") ?? "";
 	const visibleOptions = useMemo(
 		() => (excludeKey ? options.filter((option) => !excludeKey.split(" ").includes(option.value)) : options),
 		[options, excludeKey],
 	);
-
 	// Excluded rows still take up slots in each fetched page, so a picker whose
 	// first page is all already-added rows would look empty with more left on
 	// the server. Keep fetching until there is a page's worth to show. A short
@@ -301,12 +274,10 @@ export function EntitySelector(props: EntitySelectorProps) {
 		if (shouldAutoLoadMore({ open, hasMore: !!loadMore, isFetching, isError, visibleCount, pageSize: ENTITY_SELECTOR_PAGE_SIZE }))
 			loadMore?.();
 	}, [open, loadMore, isFetching, isError, visibleOptions.length]);
-
 	// Only reached by the single/add presentation; multi selection is handled
 	// by react-select's own onChange below.
 	const handleSelect = (option: EntitySelectorEntry) => {
 		cacheLabel(option);
-
 		if (props.mode === "add") {
 			props.onSelect(option);
 		} else if (props.multiple !== true) {
@@ -314,7 +285,6 @@ export function EntitySelector(props: EntitySelectorProps) {
 		}
 		onOpenChange(false);
 	};
-
 	const entityKey = ENTITY_NOUN_KEYS[entityLabel];
 	const entitiesKey = ENTITY_NOUN_KEYS[entityLabelPlural];
 	const entity = entityKey ? t(entityKey) : entityLabel;
@@ -325,30 +295,27 @@ export function EntitySelector(props: EntitySelectorProps) {
 	const errorMessage = t("failedToLoadEntities", { entity: entities });
 	// A failed later page keeps the rows already shown and offers a retry under them.
 	const hasRows = visibleOptions.length > 0;
-
 	// ---------------------------------------------------------------------
 	// Multi mode — react-select, so chips live inside the control.
 	// ---------------------------------------------------------------------
-
 	const multiOptions = useMemo<Option<EntityOptionMeta>[]>(
 		() => visibleOptions.map((option) => ({ label: option.label, value: option.value, meta: { description: option.description } })),
 		[visibleOptions],
 	);
-
 	const selectedValues = useMemo<Option<EntityOptionMeta>[]>(
 		() => selectedIds.map((id) => ({ label: labelCache[id] ?? fallbackLabels[id] ?? id, value: id })),
 		[selectedIds, labelCache, fallbackLabels],
 	);
-
 	// react-select asks for options through a callback, but the results arrive
 	// through RTK Query on a later render. Park the callback and settle it once
 	// the debounce has caught up and the request is done.
-	const pendingLoad = useRef<{ query: string; callback: (options: Option<EntityOptionMeta>[]) => void } | null>(null);
-
+	const pendingLoad = useRef<{
+		query: string;
+		callback: (options: Option<EntityOptionMeta>[]) => void;
+	} | null>(null);
 	const handleReload = useCallback((query: string, callback: (loaded: Option<EntityOptionMeta>[]) => void) => {
 		pendingLoad.current = { query, callback };
 	}, []);
-
 	useEffect(() => {
 		const pending = pendingLoad.current;
 		if (!pending) return;
@@ -358,7 +325,6 @@ export function EntitySelector(props: EntitySelectorProps) {
 		pendingLoad.current = null;
 		pending.callback(multiOptions);
 	}, [multiOptions, isFetching, debouncedSearch]);
-
 	if (isMulti) {
 		return (
 			<>
@@ -386,8 +352,8 @@ export function EntitySelector(props: EntitySelectorProps) {
 					onMenuOpen={() => onOpenChange(true)}
 					onMenuClose={() => onOpenChange(false)}
 					isClearable
-					closeMenuOnSelect={false}
-					hideSelectedOptions={false}
+					closeMenuOnSelect
+					hideSelectedOptions
 					noOptionsMessage={() => (isError ? errorMessage : emptyMessage)}
 					views={{
 						option: (optionProps) => {
@@ -418,13 +384,10 @@ export function EntitySelector(props: EntitySelectorProps) {
 			</>
 		);
 	}
-
 	// ---------------------------------------------------------------------
 	// Single / add mode — popover behind a button trigger.
 	// ---------------------------------------------------------------------
-
 	const triggerLabel = selectedIds.length > 0 ? labelFor(selectedIds[0]) : "";
-
 	// Add mode has no value to display, so it defaults to a compact action button rather than the
 	// full-width combobox — unless fullWidth is set, which uses the combobox trigger (showing the
 	// placeholder) for surfaces that want the picker to span the row.
@@ -461,7 +424,6 @@ export function EntitySelector(props: EntitySelectorProps) {
 				<ChevronDownIcon data-slot="entity-selector-chevron" className="ml-2 size-4 shrink-0 opacity-50" />
 			</Button>
 		);
-
 	return (
 		// Single wrapping element, so no vertical spacing utility here — it only
 		// ever holds the trigger and the (invisible) label resolvers.
@@ -520,7 +482,6 @@ export function EntitySelector(props: EntitySelectorProps) {
 		</div>
 	);
 }
-
 /**
  * The open/search/debounce/offset state every wrapper needs, so none of them
  * hand-roll it. `skip` feeds RTK Query — nothing is fetched until the picker
@@ -534,26 +495,22 @@ export function useEntitySelectorSearch() {
 	// The offset belongs to the search it was scrolled under, so a new search
 	// starts from the first page without an effect to reset it.
 	const [page, setPage] = useState({ search: "", offset: 0 });
-
 	// Deployments can hold far more rows than one page, so pickers search
 	// server-side instead of filtering a capped pre-fetched list.
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedSearch(search), ENTITY_SEARCH_DEBOUNCE_MS);
 		return () => clearTimeout(timer);
 	}, [search]);
-
 	const setOpen = useCallback((next: boolean) => {
 		setOpenState(next);
 		// Reopening starts from the first page again.
 		if (!next) setPage((prev) => (prev.offset === 0 ? prev : { search: "", offset: 0 }));
 	}, []);
-
 	const setOffset = useCallback(
 		(offset: number) =>
 			setPage((prev) => (prev.search === debouncedSearch && prev.offset === offset ? prev : { search: debouncedSearch, offset })),
 		[debouncedSearch],
 	);
-
 	return {
 		open,
 		setOpen,
@@ -566,7 +523,6 @@ export function useEntitySelectorSearch() {
 		isDebouncing: search !== debouncedSearch,
 	};
 }
-
 interface EntitySelectorPageResult {
 	/** One page of rows for the current query args; undefined while it is in flight. */
 	entries: EntitySelectorEntry[] | undefined;
@@ -577,7 +533,6 @@ interface EntitySelectorPageResult {
 	/** RTK Query's `refetch`, used to retry a page that failed. */
 	refetch?: () => void;
 }
-
 /**
  * Accumulates the pages a wrapper fetches into one option list and returns
  * the list props to spread onto `EntitySelector`. Wrappers pass RTK Query's
@@ -589,7 +544,6 @@ export function useEntitySelectorPages(
 	{ entries, totalCount, isFetching, isError, refetch }: EntitySelectorPageResult,
 ) {
 	const { open, setOpen, setSearch, debouncedSearch, offset, setOffset, isDebouncing } = search;
-
 	// A ref rather than state: the merged list has to be ready in the same
 	// render the page lands, since multi mode settles react-select's pending
 	// load from it in an effect. The merge is idempotent, so a repeated
@@ -606,7 +560,6 @@ export function useEntitySelectorPages(
 		}
 		return pagesRef.current;
 	}, [entries, totalCount, debouncedSearch, offset]);
-
 	const hasMore = pages.search === debouncedSearch && hasMoreEntities(pages);
 	const nextOffset = pages.nextOffset;
 	const needsRefetch = loadMoreNeedsRefetch(pages, offset, isError);
@@ -615,7 +568,6 @@ export function useEntitySelectorPages(
 		[needsRefetch, refetch, setOffset, nextOffset],
 	);
 	const isLoadingMore = isFetching && offset > 0;
-
 	return {
 		options: pages.entries,
 		isFetching,

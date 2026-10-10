@@ -217,9 +217,6 @@ export interface DashboardData {
 	rankingsData: ModelRankingsResponse | null;
 	teamRankingsData: DimensionRankingsResponse | null;
 	customerRankingsData: DimensionRankingsResponse | null;
-	buRankingsData: DimensionRankingsResponse | null;
-	projectRankingsData: DimensionRankingsResponse | null;
-	userRankingsData: DimensionRankingsResponse | null;
 	virtualKeyRankingsData: DimensionRankingsResponse | null;
 	appRankingsData: DimensionRankingsResponse | null;
 	// MCP
@@ -234,9 +231,6 @@ export type DashboardTab =
 	| "rankings"
 	| "team-rankings"
 	| "customer-rankings"
-	| "bu-rankings"
-	| "project-rankings"
-	| "user-rankings"
 	| "virtual-key-rankings"
 	| "app-rankings"
 	| "mcp";
@@ -255,9 +249,6 @@ const DASHBOARD_EXPORT_TAB_DEFS: { value: DashboardTab; labelKey: string; sectio
 	{ value: "mcp", labelKey: "dashboard.export.mcpUsage", sectionId: "dashboard-section-mcp" },
 	{ value: "team-rankings", labelKey: "dashboard.tabs.teamRankings", sectionId: "dashboard-section-team-rankings" },
 	{ value: "customer-rankings", labelKey: "dashboard.tabs.customerRankings", sectionId: "dashboard-section-customer-rankings" },
-	{ value: "bu-rankings", labelKey: "dashboard.tabs.buRankings", sectionId: "dashboard-section-bu-rankings" },
-	{ value: "project-rankings", labelKey: "dashboard.tabs.projectRankings", sectionId: "dashboard-section-project-rankings" },
-	{ value: "user-rankings", labelKey: "dashboard.tabs.userRankings", sectionId: "dashboard-section-user-rankings" },
 	{ value: "virtual-key-rankings", labelKey: "dashboard.tabs.virtualKeyRankings", sectionId: "dashboard-section-virtual-key-rankings" },
 	{ value: "app-rankings", labelKey: "dashboard.tabs.appRankings", sectionId: "dashboard-section-app-rankings" },
 ];
@@ -305,17 +296,6 @@ export function getCSVSections(data: DashboardData, tab: ExportTab): { name: str
 
 	if (tab === "all" || tab === "customer-rankings") {
 		sections.push({ name: "customer-rankings", csv: dimensionRankingsToCSV(data.customerRankingsData, "Customer") });
-	}
-
-	if (tab === "all" || tab === "bu-rankings") {
-		sections.push({ name: "bu-rankings", csv: dimensionRankingsToCSV(data.buRankingsData, "Business Unit") });
-	}
-	if (tab === "all" || tab === "project-rankings") {
-		sections.push({ name: "project-rankings", csv: dimensionRankingsToCSV(data.projectRankingsData, "Project") });
-	}
-
-	if (tab === "all" || tab === "user-rankings") {
-		sections.push({ name: "user-rankings", csv: dimensionRankingsToCSV(data.userRankingsData, "User") });
 	}
 
 	if (tab === "all" || tab === "virtual-key-rankings") {

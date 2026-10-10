@@ -4,11 +4,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { DottedSeparator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage, useCreateMCPClientMutation } from "@/lib/store";
 import { CreateMCPClientRequest, MCPAuthType, MCPLibraryEntry, SecretVar } from "@/lib/types/mcp";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -25,16 +24,13 @@ import { MCPHeadersAuthorizer } from "../../views/mcpHeadersAuthorizer";
 import { OAuth2Authorizer } from "../../views/oauth2Authorizer";
 import { shouldSeedHeaders } from "./mcpLibraryInstallSheet.utils";
 import { authLabel, MCP_ICON_FALLBACK, transportIcon, transportLabel } from "./mcpLibraryServerCard";
-
 interface MCPLibraryInstallSheetProps {
 	server: MCPLibraryEntry;
 	open: boolean;
 	onClose: () => void;
 	onInstalled: () => void;
 }
-
 const emptySecretVar: SecretVar = { value: "", ref: "" };
-
 /**
  * Sanitize a catalog server name into a valid MCP client name. The backend
  * only allows [a-zA-Z0-9_] and disallows a leading digit, so we slugify by
@@ -49,7 +45,6 @@ export function sanitizeServerName(name: string): string {
 	// Prefix if it ends up empty or starts with a digit (leading-digit is rejected).
 	return /^[0-9]/.test(cleaned) || cleaned === "" ? `mcp_${cleaned}` : cleaned;
 }
-
 /**
  * Seed the create-client form from the library entry. Everything the entry
  * declares is prefilled; everything it can't know (credentials, per-user header
@@ -63,7 +58,6 @@ function buildInitialValues(server: MCPLibraryEntry): CreateMCPClientRequest {
 	const declaredHeaders = server.required_header_keys?.length
 		? Object.fromEntries(server.required_header_keys.map((key) => [key, { ...emptySecretVar }]))
 		: { Authorization: { ...emptySecretVar } };
-
 	return {
 		name: sanitizeServerName(server.name),
 		is_code_mode_client: false,
@@ -79,7 +73,6 @@ function buildInitialValues(server: MCPLibraryEntry): CreateMCPClientRequest {
 		headers: shouldSeedHeaders(authType, isStdio) ? declaredHeaders : undefined,
 	};
 }
-
 function authHelpText(authType: MCPAuthType | string | undefined, t: (key: string) => string): string {
 	switch (authType) {
 		case "headers":
@@ -90,17 +83,13 @@ function authHelpText(authType: MCPAuthType | string | undefined, t: (key: strin
 			return t("library.install.helpPerUserOauth");
 		case "per_user_headers":
 			return t("library.install.helpPerUserHeaders");
-		case "token_exchange":
-			return t("library.install.helpTokenExchange");
 		default:
 			return t("library.install.helpNone");
 	}
 }
-
 export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: MCPLibraryInstallSheetProps) {
 	const { t } = useTranslation("mcp");
 	const { t: tc } = useTranslation("common");
-	const hasCreateMCPClientAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Create);
 	const { toast } = useToast();
 	const [createMCPClient] = useCreateMCPClientMutation();
 	const [isLoading, setIsLoading] = useState(false);
@@ -110,17 +99,16 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 		mcpClientId: string;
 		isPerUserOauth?: boolean;
 	} | null>(null);
-	const [headersFlow, setHeadersFlow] = useState<{ payload: CreateMCPClientRequest } | null>(null);
-
+	const [headersFlow, setHeadersFlow] = useState<{
+		payload: CreateMCPClientRequest;
+	} | null>(null);
 	const defaultValues = useMemo(() => buildInitialValues(server), [server]);
 	const methods = useForm<CreateMCPClientRequest>({ defaultValues });
 	const { control, handleSubmit, reset, watch, setError } = methods;
 	const satellites = useMCPClientFormSatellites();
-
 	const authType = watch("auth_type") || "none";
 	const headers = watch("headers");
 	const headersValidationError = getHeadersValidationError(headers);
-
 	const isStdio = server.connection_type === "stdio";
 	// Only the names the entry declares are editable as values; an entry with no
 	// declared variables falls back to a free-form table.
@@ -128,7 +116,6 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 		() => (isStdio && server.stdio_config?.envs?.length ? server.stdio_config.envs : undefined),
 		[isStdio, server.stdio_config?.envs],
 	);
-
 	const satellitesInit = useMemo(
 		() => ({
 			argsText: (server.stdio_config?.args || []).join(", "),
@@ -138,7 +125,6 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 		}),
 		[server.auth_type, server.required_header_keys, server.stdio_config?.args, stdioEnvKeys],
 	);
-
 	const { reset: resetSatellites } = satellites;
 	useEffect(() => {
 		if (!open) return;
@@ -148,7 +134,6 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 		setHeadersFlow(null);
 		setIsLoading(false);
 	}, [defaultValues, open, reset, resetSatellites, satellitesInit]);
-
 	const onSubmit = async (data: CreateMCPClientRequest) => {
 		// The transport inputs are locked to the library entry, so a listing
 		// published without a target would post an empty URL or command and
@@ -162,7 +147,6 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 			});
 			return;
 		}
-
 		const isValid = validateMCPClientForm({
 			data,
 			satellites,
@@ -177,23 +161,23 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 		// The headers table renders its own inline error, but a caller can still
 		// reach here with it non-empty; a toast keeps the button from looking inert.
 		if (headersValidationError) {
-			toast({ title: t("library.install.headersIncomplete"), description: headersValidationError, variant: "destructive" });
+			toast({
+				title: t("library.install.headersIncomplete"),
+				description: headersValidationError,
+				variant: "destructive",
+			});
 			return;
 		}
-
 		const payload = buildMCPClientPayload(data, satellites);
-
 		// Per-user-headers: stash the payload and open the headers test dialog.
 		if (data.auth_type === "per_user_headers") {
 			setHeadersFlow({ payload });
 			return;
 		}
-
 		try {
 			setIsLoading(true);
 			const response = await createMCPClient(payload).unwrap();
 			setIsLoading(false);
-
 			if (response.status === "pending_oauth" && response.authorize_url) {
 				setOauthFlow({
 					authorizeUrl: response.authorize_url,
@@ -203,8 +187,10 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 				});
 				return;
 			}
-
-			toast({ title: t("library.install.installed"), description: t("library.install.installedDesc", { name: server.name }) });
+			toast({
+				title: t("library.install.installed"),
+				description: t("library.install.installedDesc", { name: server.name }),
+			});
 			onInstalled();
 			onClose();
 		} catch (error) {
@@ -216,12 +202,10 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 			toast({ title: tc("error"), description: getErrorMessage(error), variant: "destructive" });
 		}
 	};
-
 	const iconUrl = server.icon_url || MCP_ICON_FALLBACK;
 	const isOauth = authType === "oauth" || authType === "per_user_oauth";
 	const isPerUserHeaders = authType === "per_user_headers";
 	const installButtonLabel = isOauth || isPerUserHeaders ? t("common.continue") : t("common.install");
-
 	return (
 		<Sheet open={open} onOpenChange={(sheetOpen) => !sheetOpen && !oauthFlow && !headersFlow && onClose()}>
 			<SheetContent className="flex w-full flex-col gap-4 overflow-x-hidden p-0 pt-4">
@@ -286,7 +270,12 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 									<FormItem>
 										<FormLabel>{t("common.name")}</FormLabel>
 										<FormControl>
-											<Input {...field} data-testid="library-mcp-name-input" placeholder={t("registry.form.serverNamePlaceholder")} maxLength={50} />
+											<Input
+												{...field}
+												data-testid="library-mcp-name-input"
+												placeholder={t("registry.form.serverNamePlaceholder")}
+												maxLength={50}
+											/>
 										</FormControl>
 										<p className="text-muted-foreground text-xs">{t("library.install.nameHelp")}</p>
 										<FormMessage />
@@ -322,21 +311,11 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 										<Tooltip>
 											<TooltipTrigger asChild>
 												<span className="inline-block">
-													<Button
-														type="submit"
-														disabled={isLoading || !hasCreateMCPClientAccess}
-														isLoading={isLoading}
-														data-testid="library-install-submit-btn"
-													>
+													<Button type="submit" disabled={isLoading} isLoading={isLoading} data-testid="library-install-submit-btn">
 														{installButtonLabel}
 													</Button>
 												</span>
 											</TooltipTrigger>
-											{!hasCreateMCPClientAccess && (
-												<TooltipContent>
-													<p>{t("common.noPermissionApos")}</p>
-												</TooltipContent>
-											)}
 										</Tooltip>
 									</TooltipProvider>
 								</div>
@@ -351,13 +330,20 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 					open={!!oauthFlow}
 					onClose={() => setOauthFlow(null)}
 					onSuccess={() => {
-						toast({ title: t("library.install.installed"), description: t("library.install.connectedOauth", { name: server.name }) });
+						toast({
+							title: t("library.install.installed"),
+							description: t("library.install.connectedOauth", { name: server.name }),
+						});
 						setOauthFlow(null);
 						onInstalled();
 						onClose();
 					}}
 					onError={(error) => {
-						toast({ title: t("registry.form.oauthError"), description: error, variant: "destructive" });
+						toast({
+							title: t("registry.form.oauthError"),
+							description: error,
+							variant: "destructive",
+						});
 					}}
 					onConflict={(error) => {
 						setOauthFlow(null);
@@ -376,7 +362,10 @@ export function MCPLibraryInstallSheet({ server, open, onClose, onInstalled }: M
 					onClose={() => setHeadersFlow(null)}
 					onSuccess={() => {
 						setHeadersFlow(null);
-						toast({ title: t("library.install.installed"), description: t("library.install.connectedHeaders", { name: server.name }) });
+						toast({
+							title: t("library.install.installed"),
+							description: t("library.install.connectedHeaders", { name: server.name }),
+						});
 						onInstalled();
 						onClose();
 					}}

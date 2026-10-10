@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { setSelectedPlugin, useAppDispatch, useAppSelector, useGetPluginsQuery } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ArrowLeft, ListOrdered, PlusIcon, Puzzle } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -11,13 +10,10 @@ import AddNewPluginSheet from "./sheets/addNewPluginSheet";
 import PluginSequenceSheet from "./sheets/pluginSequenceSheet";
 import { PluginsEmptyState } from "./views/pluginsEmptyState";
 import PluginsView from "./views/pluginsView";
-
 export default function PluginsPage() {
 	const { t } = useTranslation("governance");
 	const isMobile = useIsMobile();
 	const dispatch = useAppDispatch();
-	const hasCreatePluginAccess = useRbac(RbacResource.Plugins, RbacOperation.Create);
-	const hasUpdatePluginAccess = useRbac(RbacResource.Plugins, RbacOperation.Update);
 	const { data: plugins, isLoading } = useGetPluginsQuery();
 	const selectedPlugin = useAppSelector((state) => state.plugin.selectedPlugin);
 	const [selectedPluginId, setSelectedPluginId] = useQueryState("plugin");
@@ -25,15 +21,12 @@ export default function PluginsPage() {
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
 	const [isSequenceSheetOpen, setIsSequenceSheetOpen] = useState(false);
 	const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-
 	const handleAddNew = () => {
 		setIsSheetOpen(true);
 	};
-
 	const handleCloseSheet = () => {
 		setIsSheetOpen(false);
 	};
-
 	useEffect(() => {
 		if (!selectedPluginId) return;
 		const plugin = customPlugins?.find((plugin) => plugin.name === selectedPluginId);
@@ -41,7 +34,6 @@ export default function PluginsPage() {
 			dispatch(setSelectedPlugin(plugin));
 		}
 	}, [selectedPluginId, customPlugins]);
-
 	useEffect(() => {
 		if (selectedPluginId) return;
 		if (!selectedPlugin) {
@@ -50,11 +42,10 @@ export default function PluginsPage() {
 		}
 		setSelectedPluginId(selectedPlugin?.name ?? "");
 	}, [customPlugins]);
-
 	if (customPlugins?.length === 0 && !isLoading) {
 		return (
 			<div className="mx-auto w-full max-w-7xl">
-				<PluginsEmptyState onCreateClick={handleAddNew} canCreate={hasCreatePluginAccess} />
+				<PluginsEmptyState onCreateClick={handleAddNew} canCreate={true} />
 				<AddNewPluginSheet
 					open={isSheetOpen}
 					onClose={handleCloseSheet}
@@ -65,7 +56,6 @@ export default function PluginsPage() {
 			</div>
 		);
 	}
-
 	return (
 		<div className="mx-auto w-full max-w-7xl">
 			<div className="flex min-w-0 flex-col gap-4 md:flex-row">
@@ -107,7 +97,6 @@ export default function PluginsPage() {
 									data-testid="plugins-create-button"
 									size="sm"
 									className="w-full justify-start"
-									disabled={!hasCreatePluginAccess}
 									onClick={(e) => {
 										e.preventDefault();
 										e.stopPropagation();
@@ -122,7 +111,6 @@ export default function PluginsPage() {
 										variant="outline"
 										size="sm"
 										className="w-full justify-start"
-										disabled={!hasUpdatePluginAccess}
 										onClick={() => setIsSequenceSheetOpen(true)}
 										data-testid="plugins-sequence-button"
 									>

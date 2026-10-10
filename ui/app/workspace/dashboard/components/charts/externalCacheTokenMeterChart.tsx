@@ -8,17 +8,13 @@ import { ChartErrorBoundary } from "./chartErrorBoundary";
 import { GaugeNeedle, getGaugeGeometry, useGaugeSize } from "./gaugeUtils";
 import { NoChartData } from "./noChartData";
 import { useTranslation } from "react-i18next";
-
 interface ExternalCacheTokenMeterChartProps {
 	data: TokenHistogramResponse | null;
 }
-
 const METER_COLORS = { cached: "var(--chart-seq-2)", input: "var(--chart-seq-5)" };
-
 function ExternalCacheTokenMeterChartImpl({ data }: ExternalCacheTokenMeterChartProps) {
 	const { t } = useTranslation("observability");
 	const { ref, width, height } = useGaugeSize();
-
 	const { percentage, totalCachedRead, totalPromptTokens } = useMemo(() => {
 		if (!data?.buckets || data.buckets.length === 0) return { percentage: 0, totalCachedRead: 0, totalPromptTokens: 0 };
 		let cachedRead = 0;
@@ -34,14 +30,12 @@ function ExternalCacheTokenMeterChartImpl({ data }: ExternalCacheTokenMeterChart
 			totalPromptTokens: promptTokens,
 		};
 	}, [data]);
-
 	const gaugeGeometry = useMemo(() => getGaugeGeometry(width, height), [width, height]);
 	const hasData = !!data?.buckets && data.buckets.length > 0 && totalPromptTokens > 0;
 	const valueData = [
 		{ name: "cached", value: percentage },
 		{ name: "remaining", value: 100 - percentage },
 	];
-
 	return (
 		<ChartErrorBoundary resetKey={`${data?.buckets?.length ?? 0}-${totalCachedRead}-${totalPromptTokens}`}>
 			<div className="grid h-full grid-rows-[104px_auto] items-start overflow-hidden pt-8">
@@ -61,7 +55,7 @@ function ExternalCacheTokenMeterChartImpl({ data }: ExternalCacheTokenMeterChart
 										outerRadius={gaugeGeometry.outerRadius}
 										dataKey="value"
 										stroke="none"
-										isAnimationActive={false}
+										isAnimationActive
 									>
 										<Cell fill={METER_COLORS.cached} />
 										<Cell fill={METER_COLORS.input} opacity={0.22} />
@@ -120,5 +114,4 @@ function ExternalCacheTokenMeterChartImpl({ data }: ExternalCacheTokenMeterChart
 		</ChartErrorBoundary>
 	);
 }
-
 export default memo(ExternalCacheTokenMeterChartImpl);

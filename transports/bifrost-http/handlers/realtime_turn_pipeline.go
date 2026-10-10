@@ -11,8 +11,23 @@ import (
 	bifrost "github.com/maximhq/bifrost/core"
 	openaiProvider "github.com/maximhq/bifrost/core/providers/openai"
 	"github.com/maximhq/bifrost/core/schemas"
+	"github.com/maximhq/bifrost/transports/bifrost-http/lib"
 	bfws "github.com/maximhq/bifrost/transports/bifrost-http/websocket"
 )
+
+// validateRealtimeOutput 重读已发布插件，在任何上游工作或事件转发前执行输出能力门禁。
+func validateRealtimeOutput(config *lib.Config, ctx *schemas.BifrostContext, req *schemas.BifrostRequest) *schemas.BifrostError {
+	for _, plugin := range config.GetLoadedLLMPlugins() {
+		if gate, ok := plugin.(interface {
+			ValidateRealtimeOutput(*schemas.BifrostContext, *schemas.BifrostRequest) *schemas.BifrostError
+		}); ok {
+			if err := gate.ValidateRealtimeOutput(ctx, req); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
 func newRealtimeTurnContext(
 	baseCtx *schemas.BifrostContext,
@@ -203,6 +218,7 @@ func updateRealtimeSessionFromEvent(session *bfws.Session, event *schemas.Bifros
 // realtimeResponseCreateParams contains response-level content that must be visible
 // to turn pre-hooks before a response.create event reaches the provider.
 type realtimeResponseCreateParams struct {
+	Model        *string                    `json:"model,omitempty"`
 	Instructions *string                    `json:"instructions,omitempty"`
 	Input        []schemas.ResponsesMessage `json:"input,omitempty"`
 	Tools        *[]schemas.ResponsesTool   `json:"tools,omitempty"`
@@ -278,6 +294,19 @@ func buildRealtimeTurnPreRequest(provider schemas.ModelProvider, model string, t
 			Params:   params,
 		},
 	}
+}
+
+// buildRealtimeOutputGateRequest 额外核对事件声明目标，不改写输入 hooks 使用的实际会话身份。
+func buildRealtimeOutputGateRequest(provider schemas.ModelProvider, model string, sessionTools json.RawMessage, event *schemas.BifrostRealtimeEvent) *schemas.BifrostRequest {
+	req := buildRealtimeTurnPreRequest(provider, model, nil, sessionTools, event)
+	if event != nil && event.Session != nil && strings.TrimSpace(event.Session.Model) != "" {
+		_, req.ResponsesRequest.Model = schemas.ParseModelString(event.Session.Model, provider)
+	}
+	params := realtimeResponseCreateParamsFromEvent(event)
+	if params.Model != nil && strings.TrimSpace(*params.Model) != "" {
+		_, req.ResponsesRequest.Model = schemas.ParseModelString(*params.Model, provider)
+	}
+	return req
 }
 
 func buildRealtimeTurnPostResponse(
@@ -561,6 +590,9 @@ func mapRealtimeWireErrorFields(bifrostErr *schemas.BifrostError) (string, strin
 
 	if bifrostErr == nil {
 		return errorType, errorCode, errorMessage, errorParam
+	}
+	if bifrostErr.Error != nil && bifrostErr.Error.Code != nil && *bifrostErr.Error.Code == "realtime_output_guardrails_unsupported" {
+		return "invalid_request_error", *bifrostErr.Error.Code, bifrostErr.Error.Message, ""
 	}
 
 	var values []string

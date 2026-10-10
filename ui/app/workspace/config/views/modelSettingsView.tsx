@@ -10,12 +10,10 @@ import {
 	LIVE_MODELS_SYNC_DISABLED,
 	MIN_LIVE_MODELS_SYNC_INTERVAL,
 } from "@/lib/types/config";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 interface ModelSettingsFormData {
 	pricing_datasheet_url: string;
 	pricing_sync_interval_hours: number;
@@ -28,26 +26,21 @@ interface ModelSettingsFormData {
 	 */
 	live_models_sync_interval_minutes: number;
 }
-
 const SECONDS_PER_MINUTE = 60;
-
 /** Server seconds to form minutes, falling back to the default when unset. */
 function toSyncMinutes(intervalSeconds: number | undefined): number {
 	if (intervalSeconds === LIVE_MODELS_SYNC_DISABLED) return 0;
 	const effective = intervalSeconds ?? DEFAULT_LIVE_MODELS_SYNC_INTERVAL;
 	return Math.round(effective / SECONDS_PER_MINUTE);
 }
-
 /** 编辑模型同步配置，限制界面 URL 为 HTTP 或 HTTPS。 */
 export default function ModelSettingsView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const frameworkConfig = bifrostConfig?.framework_config;
 	const clientConfig = bifrostConfig?.client_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [forcePricingSync, { isLoading: isForceSyncing }] = useForcePricingSyncMutation();
-
 	const {
 		register,
 		trigger,
@@ -65,9 +58,7 @@ export default function ModelSettingsView() {
 		},
 	});
 	useFormErrorLanguageSync(errors, trigger);
-
 	const formValues = watch();
-
 	useEffect(() => {
 		if (!bifrostConfig || isDirty) return;
 		reset({
@@ -86,7 +77,6 @@ export default function ModelSettingsView() {
 		isDirty,
 		reset,
 	]);
-
 	const hasChanges = useMemo(() => {
 		if (!bifrostConfig || !isDirty) return false;
 		const serverUrl = frameworkConfig?.pricing_url || "";
@@ -102,7 +92,6 @@ export default function ModelSettingsView() {
 			formValues.live_models_sync_interval_minutes !== serverLiveModelsMinutes
 		);
 	}, [bifrostConfig, frameworkConfig, clientConfig, formValues, isDirty]);
-
 	const onSubmit = async (data: ModelSettingsFormData) => {
 		try {
 			await updateCoreConfig({
@@ -126,7 +115,6 @@ export default function ModelSettingsView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const handleForceSync = async () => {
 		try {
 			await forcePricingSync().unwrap();
@@ -135,7 +123,6 @@ export default function ModelSettingsView() {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-4" data-testid="model-settings-view">
 			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -156,11 +143,7 @@ export default function ModelSettingsView() {
 								validate: {
 									checkIfValidUrl: (value) => {
 										if (!value) return true;
-										return (
-											value.startsWith("http://") ||
-											value.startsWith("https://") ||
-											t("modelSettings.httpUrlScheme")
-										);
+										return value.startsWith("http://") || value.startsWith("https://") || t("modelSettings.httpUrlScheme");
 									},
 								},
 							})}
@@ -183,11 +166,7 @@ export default function ModelSettingsView() {
 								validate: {
 									checkIfValidUrl: (value) => {
 										if (!value) return true;
-										return (
-											value.startsWith("http://") ||
-											value.startsWith("https://") ||
-											t("modelSettings.httpUrlScheme")
-										);
+										return value.startsWith("http://") || value.startsWith("https://") || t("modelSettings.httpUrlScheme");
 									},
 								},
 							})}
@@ -233,7 +212,9 @@ export default function ModelSettingsView() {
 								validate: (value) => {
 									if (value === 0) return true;
 									if (value < MIN_LIVE_MODELS_SYNC_INTERVAL / SECONDS_PER_MINUTE) {
-										return t("modelSettings.discoveryMin", { min: MIN_LIVE_MODELS_SYNC_INTERVAL / SECONDS_PER_MINUTE });
+										return t("modelSettings.discoveryMin", {
+											min: MIN_LIVE_MODELS_SYNC_INTERVAL / SECONDS_PER_MINUTE,
+										});
 									}
 									if (value > 1440) return t("modelSettings.discoveryMax");
 									return true;
@@ -275,12 +256,12 @@ export default function ModelSettingsView() {
 						variant="outline"
 						type="button"
 						onClick={handleForceSync}
-						disabled={isForceSyncing || isLoading || hasChanges || !hasSettingsUpdateAccess}
+						disabled={isForceSyncing || isLoading || hasChanges}
 						data-testid="pricing-force-sync-btn"
 					>
 						{isForceSyncing ? t("modelSettings.syncing") : t("modelSettings.forceSync")}
 					</Button>
-					<Button type="submit" disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess} data-testid="model-settings-save-btn">
+					<Button type="submit" disabled={!hasChanges || isLoading} data-testid="model-settings-save-btn">
 						{isLoading ? t("saving") : t("saveChanges")}
 					</Button>
 				</div>

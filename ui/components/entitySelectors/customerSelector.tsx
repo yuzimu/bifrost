@@ -2,7 +2,7 @@
 // customer (routing rules, model limits, pricing overrides).
 //
 // Lives in OSS because /governance/customers is an OSS endpoint; there is no
-// enterprise customers API.
+
 //
 // Single mode is prop-compatible with the model limit scope picker contract
 // ({ value, onChange, disabled, fallbackOption }).

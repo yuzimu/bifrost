@@ -173,6 +173,11 @@ func (h *WSRealtimeHandler) handleUpgrade(ctx *fasthttp.RequestCtx) {
 		},
 	}
 	h.client.RunPreRequestHooks(preReqCtx, preReq)
+	if gateErr := validateRealtimeOutput(h.config, preReqCtx, preReq); gateErr != nil {
+		preReqCancel()
+		SendBifrostError(ctx, gateErr)
+		return
+	}
 	// Second admission question, now that the pipeline has resolved the request's access: a
 	// presented credential that resolved to nothing (forged or revoked sk-bf-*) is refused with
 	// a plain 401 before the upgrade, before a session slot is allocated, and before an
@@ -230,7 +235,7 @@ func (h *WSRealtimeHandler) handleUpgrade(ctx *fasthttp.RequestCtx) {
 	// fasthttp UserValue slots after HTTPTransportPreHook runs. We snapshot them now
 	// because the fasthttp RequestCtx is recycled after the handler returns — the
 	// WebSocket session outlives it.
-	middlewareContextValues := snapshotRealtimeMiddlewareValues(ctx)
+	middlewareContextValues := snapshotRealtimeMiddlewareValuesWithContext(ctx, preReqCtx)
 
 	upgrader := h.websocketUpgrader(rtProvider.RealtimeWebSocketSubprotocol())
 	err = upgrader.Upgrade(ctx, func(conn *ws.Conn) {
@@ -303,6 +308,11 @@ func (h *WSRealtimeHandler) handleTranscriptionUpgrade(
 			},
 		}
 		h.client.RunPreRequestHooks(preReqCtx, preReq)
+		if gateErr := validateRealtimeOutput(h.config, preReqCtx, preReq); gateErr != nil {
+			clientConn.writeRealtimeError(gateErr)
+			preReqCancel()
+			return
+		}
 		// The transcription model arrives in-band after the upgrade, so the resolution check
 		// necessarily runs post-upgrade here. It still runs before the session slot and the
 		// upstream connection, so an unresolved credential spends nothing beyond the socket.
@@ -484,6 +494,10 @@ func (h *WSRealtimeHandler) runRealtimeSession(
 
 	// Resolve model alias so the provider receives the actual model identifier.
 	model = key.Aliases.Resolve(model)
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, session.RealtimeSessionTools(), nil)); gateErr != nil {
+		clientConn.writeRealtimeError(gateErr)
+		return
+	}
 
 	// Compute raw storage flag from provider config + per-request header overrides.
 	// Normal inference computes this inside bifrost.executeRequest, which is bypassed
@@ -602,6 +616,14 @@ func (h *WSRealtimeHandler) processRealtimeClientMessage(
 	if err != nil {
 		clientConn.writeRealtimeError(newRealtimeWireBifrostError(400, "invalid_request_error", "failed to parse realtime event JSON"))
 		return false, nil
+	}
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, session.RealtimeSessionTools(), nil)); gateErr != nil {
+		clientConn.writeRealtimeError(gateErr)
+		return true, nil
+	}
+	if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeOutputGateRequest(providerKey, model, session.RealtimeSessionTools(), event)); gateErr != nil {
+		clientConn.writeRealtimeError(gateErr)
+		return true, nil
 	}
 	// Extract pending tool/input summaries but defer recording until the event
 	// passes validation — rejected events must not pollute session state.
@@ -797,6 +819,10 @@ func (h *WSRealtimeHandler) relayRealtimeProviderToClient(
 			clientConn.writeRealtimeError(newRealtimeWireBifrostError(502, "server_error", "upstream realtime websocket stream interrupted"))
 			return err
 		}
+		if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeTurnPreRequest(providerKey, model, nil, session.RealtimeSessionTools(), nil)); gateErr != nil {
+			clientConn.writeRealtimeError(gateErr)
+			return nil
+		}
 
 		if messageType == ws.TextMessage {
 			event, err := provider.ToBifrostRealtimeEvent(message)
@@ -816,6 +842,10 @@ func (h *WSRealtimeHandler) relayRealtimeProviderToClient(
 				return err
 			}
 			if event != nil {
+				if gateErr := validateRealtimeOutput(h.config, bifrostCtx, buildRealtimeOutputGateRequest(providerKey, model, session.RealtimeSessionTools(), event)); gateErr != nil {
+					clientConn.writeRealtimeError(gateErr)
+					return nil
+				}
 				if event.Session != nil && event.Session.ID != "" {
 					session.SetProviderSessionID(event.Session.ID)
 				}
@@ -1186,6 +1216,8 @@ var realtimeMiddlewareKeys = []any{
 	schemas.BifrostContextKeyUserName,
 	schemas.BifrostContextKeyAPIKeyID,
 	schemas.BifrostContextKeyAPIKeyName,
+	schemas.BifrostContextKeyRoutingPinnedAPIKeyID,
+	schemas.BifrostContextKeyGuardrailHeaders,
 	schemas.BifrostContextKeySelectedKeyID,
 	schemas.BifrostContextKeySelectedKeyName,
 	// NOTE: BifrostContextKeyTraceID (and its W3C export, BifrostContextKeyExportTraceID)
@@ -1195,6 +1227,8 @@ var realtimeMiddlewareKeys = []any{
 	// the row. Each realtime turn mints its own trace in RunRealtimeTurnPreHooks instead.
 	schemas.BifrostContextKeyTransportPluginLogs,
 }
+
+type realtimeGrantSnapshotKey struct{}
 
 // snapshotRealtimeMiddlewareValues reads governance/routing values from the fasthttp
 // context's UserValue store. TransportInterceptorMiddleware copies them there as
@@ -1209,7 +1243,14 @@ func snapshotRealtimeMiddlewareValuesWithContext(ctx *fasthttp.RequestCtx, bifro
 			ctx.SetUserValue(key, value)
 		}
 	}
-	return snapshotRealtimeMiddlewareValues(ctx)
+	values := snapshotRealtimeMiddlewareValues(ctx)
+	if bifrostCtx != nil && bifrostCtx.Grant() != nil {
+		if values == nil {
+			values = make(map[any]any)
+		}
+		values[realtimeGrantSnapshotKey{}] = bifrostCtx.Grant()
+	}
+	return values
 }
 
 func snapshotRealtimeMiddlewareValues(ctx *fasthttp.RequestCtx) map[any]any {
@@ -1231,6 +1272,12 @@ func applyRealtimeMiddlewareValues(ctx *schemas.BifrostContext, middlewareValues
 	}
 	for key, value := range middlewareValues {
 		if value == nil {
+			continue
+		}
+		if key == (realtimeGrantSnapshotKey{}) {
+			if grant, ok := value.(schemas.Grant); ok {
+				ctx.SetGrant(grant)
+			}
 			continue
 		}
 		// Skip values already set by createBifrostContextFromAuth to avoid overwriting

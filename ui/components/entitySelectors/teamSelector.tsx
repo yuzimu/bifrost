@@ -2,7 +2,7 @@
 // (routing rules, model limits, pricing overrides).
 //
 // Lives in OSS because the governance teams endpoint (/governance/teams) is
-// OSS. It reads the same teams table as the enterprise /teams list — the ids
+
 // are interchangeable — so this is also what the Users & Groups filters pick
 // with; /teams only differs in returning membership and business-unit fields
 // that a picker has no use for.

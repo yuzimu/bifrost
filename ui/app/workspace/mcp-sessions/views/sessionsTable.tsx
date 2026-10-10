@@ -2,7 +2,7 @@
 // header credential rows visible to the caller's identity. VK-keyed rows
 // render directly with their VK ID; user-keyed rows show the preloaded
 // user.name (falling back to email, then raw user_id). The `user` field
-// is populated server-side by the enterprise configstore wrapper; OSS
+
 // leaves it absent and the UI falls back to the raw ID.
 //
 // Status badges:

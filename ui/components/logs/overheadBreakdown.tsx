@@ -189,8 +189,6 @@ const PLUGIN_LABEL_OVERRIDES: Record<string, string> = {
 	"model-catalog-resolver": "Model Catalog Resolver",
 };
 
-// pluginDisplayName turns a plugin's kebab-case id ("enterprise-governance") into a
-// friendly label ("Enterprise Governance"), honouring PLUGIN_LABEL_OVERRIDES first.
 function pluginDisplayName(id: string): string {
 	if (PLUGIN_LABEL_OVERRIDES[id]) return PLUGIN_LABEL_OVERRIDES[id];
 	return id

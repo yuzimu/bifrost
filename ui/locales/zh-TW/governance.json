@@ -5,7 +5,6 @@
 		"bookDemo": "預約演示",
 		"bookDemoAria": "預約演示（在新標籤頁開啟 Calendly）"
 	},
-	"unlockSharedDescription": "此功能屬於 Bifrost 企業版許可證。我們很想了解你的使用場景，以及如何更好地幫助你。",
 	"customers": {
 		"title": "客戶",
 		"description": "管理擁有獨立團隊、預算與存取控制的客戶帳戶。",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "搜尋 webhook…"
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "解鎖告警渠道以主動監控",
-		"channelsUnlockDescription": "此功能屬於 Bifrost 企業版許可證。配置 Slack、PagerDuty、OpsGenie 與 webhook 告警，提前應對預算與效能問題。",
-		"rulesUnlockTitle": "解鎖告警規則以主動監控",
-		"rulesUnlockDescription": "此功能屬於 Bifrost 企業版許可證。定義告警規則，在預算、延遲與降級問題演變成事故前及時發現。",
-		"historyUnlockTitle": "解鎖告警歷史以主動監控",
-		"historyUnlockDescription": "此功能屬於 Bifrost 企業版許可證。在同一處檢視告警投遞結果、失敗與解決事件。"
-	},
 	"guardrails": {
 		"unlockTitle": "解鎖護欄以提升安全"
-	},
-	"auditLogs": {
-		"unlockTitle": "解鎖審計日誌以提升合規"
-	},
-	"rbac": {
-		"unlockTitle": "解鎖角色與許可權以提升安全"
-	},
-	"projects": {
-		"unlockTitle": "解鎖專案以限定存取與支出",
-		"unlockDescription": "此功能屬於 Bifrost 企業版許可證。專案由請求主動選擇：它在呼叫方已有許可權之外再授予存取，並決定花費記入誰的帳本。"
-	},
-	"userRankings": {
-		"unlockTitle": "解鎖使用者排行以獲得更好可見性"
-	},
-	"promptDeployments": {
-		"unlockTitle": "解鎖提示詞部署，以便更好地做提示詞版本管理與 A/B 測試。"
-	},
-	"connectorsUnlock": {
-		"splunk": "解鎖原生 Splunk 資料接入以提升可觀測性",
-		"pubsub": "解鎖 Google Cloud Pub/Sub 追蹤流式傳輸",
-		"datadog": "解鎖原生 Datadog 資料接入以提升可觀測性",
-		"bigquery": "解鎖原生 BigQuery 資料接入以進行分析",
-		"kafka": "解鎖原生 Kafka 日誌流式傳輸以實現即時可觀測性",
-		"kafkaDescription": "此功能屬於 Bifrost 企業版許可證。將已完成的請求追蹤以 JSON 流式傳送到 Kafka topic，用於即時分析、告警與下游處理。"
-	},
-	"accessProfiles": {
-		"unlockTitle": "解鎖存取配置以提升管控",
-		"unlockDescription": "此功能屬於 Bifrost 企業版許可證。建立存取配置以控制對資源的存取。"
-	},
-	"users": {
-		"unlockTitle": "解鎖使用者與使用者治理",
-		"unlockDescription": "管理使用者、設定每使用者預算與速率限制，並以企業級治理控制存取。此功能屬於 Bifrost 企業版許可證。"
-	},
-	"businessUnits": {
-		"unlockTitle": "解鎖業務單元與高階治理",
-		"unlockDescription": "透過企業級治理管理使用者與業務單元。此功能屬於 Bifrost 企業版許可證。"
 	},
 	"sheet": {
 		"saving": "儲存中…",

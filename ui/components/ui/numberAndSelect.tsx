@@ -2,9 +2,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { cleanNumericInput } from "@/lib/utils/strings";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 const NumberAndSelect = ({
 	id,
 	label,
@@ -24,7 +23,10 @@ const NumberAndSelect = ({
 	onChangeNumber: (value: number | undefined) => void;
 	selectValue?: string;
 	onChangeSelect?: (value: string) => void;
-	options?: { label: string; value: string }[];
+	options?: {
+		label: string;
+		value: string;
+	}[];
 	labelClassName?: string;
 	placeholder?: string;
 	dataTestId?: string;
@@ -33,7 +35,6 @@ const NumberAndSelect = ({
 	const { t } = useTranslation("observability");
 	// Internal string state to allow intermediate inputs like "0." or ""
 	const [displayValue, setDisplayValue] = useState(value !== undefined ? String(value) : "");
-
 	// Sync from prop when it changes externally (e.g. loading saved data).
 	// displayValue is intentionally omitted from deps — we only want to update
 	// when the external `value` prop changes, not on every keystroke.
@@ -44,9 +45,7 @@ const NumberAndSelect = ({
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [value]);
-
 	const showSelect = selectValue !== undefined && onChangeSelect && options;
-
 	const numberInput = (
 		<>
 			<Label htmlFor={id} className={labelClassName}>
@@ -90,11 +89,9 @@ const NumberAndSelect = ({
 			/>
 		</>
 	);
-
 	if (!showSelect) {
 		return <div className="space-y-2">{numberInput}</div>;
 	}
-
 	return (
 		<div className="flex w-full items-center justify-between gap-4">
 			<div className="grow space-y-2">{numberInput}</div>
@@ -120,5 +117,4 @@ const NumberAndSelect = ({
 		</div>
 	);
 };
-
 export default NumberAndSelect;

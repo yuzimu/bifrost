@@ -7,7 +7,7 @@ import mcpEn from "@/locales/en/mcp.json";
 import governanceEn from "@/locales/en/governance.json";
 import configEn from "@/locales/en/config.json";
 import agentsEn from "@/locales/en/agents.json";
-import enterpriseEn from "@/locales/en/enterprise.json";
+import forkFeaturesEn from "@/locales/en/forkFeatures.json";
 import commonZhCN from "@/locales/zh-CN/common.json";
 import shellZhCN from "@/locales/zh-CN/shell.json";
 import loginZhCN from "@/locales/zh-CN/login.json";
@@ -17,7 +17,7 @@ import mcpZhCN from "@/locales/zh-CN/mcp.json";
 import governanceZhCN from "@/locales/zh-CN/governance.json";
 import configZhCN from "@/locales/zh-CN/config.json";
 import agentsZhCN from "@/locales/zh-CN/agents.json";
-import enterpriseZhCN from "@/locales/zh-CN/enterprise.json";
+import forkFeaturesZhCN from "@/locales/zh-CN/forkFeatures.json";
 import commonZhTW from "@/locales/zh-TW/common.json";
 import shellZhTW from "@/locales/zh-TW/shell.json";
 import loginZhTW from "@/locales/zh-TW/login.json";
@@ -101,7 +101,7 @@ export const NAMESPACES = [
 	"governance",
 	"config",
 	"agents",
-	"enterprise",
+	"forkFeatures",
 ] as const;
 
 export type I18nNamespace = (typeof NAMESPACES)[number];
@@ -117,7 +117,7 @@ export const resources = {
 		governance: governanceEn,
 		config: configEn,
 		agents: agentsEn,
-		enterprise: enterpriseEn,
+		forkFeatures: forkFeaturesEn,
 	},
 	"zh-CN": {
 		common: commonZhCN,
@@ -129,7 +129,7 @@ export const resources = {
 		governance: governanceZhCN,
 		config: configZhCN,
 		agents: agentsZhCN,
-		enterprise: enterpriseZhCN,
+		forkFeatures: forkFeaturesZhCN,
 	},
 	"zh-TW": {
 		common: commonZhTW,

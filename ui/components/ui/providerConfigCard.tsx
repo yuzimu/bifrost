@@ -14,29 +14,27 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { components, MultiValueProps, OptionProps } from "react-select";
 
-// Generic, core-owned shapes so both the Access Profile (enterprise) and Virtual
 // Key (core) forms can drive this card. `"*"` in allowedModels/keyIds means "all".
 export interface ProviderConfigBudgetLine {
 	id?: string;
 	max_limit?: number;
 	reset_duration?: string;
 	/** Fiscal quarter definition; only meaningful when reset_duration is "1Q". */
-	reset_config?: { quarter_start_month?: number };
+	reset_config?: {
+		quarter_start_month?: number;
+	};
 }
-
 export interface ProviderConfigRateLimit {
 	token_max_limit?: number;
 	token_reset_duration?: string;
 	request_max_limit?: number;
 	request_reset_duration?: string;
 }
-
 export interface ProviderConfigModelBudget {
 	model_name: string;
 	budgets: ProviderConfigBudgetLine[];
 	rate_limit?: ProviderConfigRateLimit;
 }
-
 export interface ProviderConfigCardValue {
 	providerName: string;
 	allowedModels: string[];
@@ -48,13 +46,11 @@ export interface ProviderConfigCardValue {
 	/** Only rendered when `showModelBudgets` is set. */
 	modelBudgets?: ProviderConfigModelBudget[];
 }
-
 export interface ProviderKeyInfo {
 	key_id: string;
 	name: string;
 	models?: string[] | null;
 }
-
 interface ProviderConfigCardBaseProps {
 	value: ProviderConfigCardValue;
 	onChange: (next: ProviderConfigCardValue) => void;
@@ -65,28 +61,35 @@ interface ProviderConfigCardBaseProps {
 	providerKeys: ProviderKeyInfo[] | null;
 	/** Renders the per-model budgets tree when `showModelBudgets` is enabled. */
 	showModelBudgets?: boolean;
-	/** Read-only global provider cap shown on the Provider budget row (Access Profile). */
-	globalProviderCap?: { max_limit: number; reset_duration?: string };
+
+	globalProviderCap?: {
+		max_limit: number;
+		reset_duration?: string;
+	};
 	/** Prefix for data-testids, e.g. "ap" or "vk". */
 	testIdPrefix?: string;
 	index: number;
 }
-
 // Controlled and uncontrolled expand state are mutually exclusive: a controlled
 // `open` must ship its change handler, so a controlled header click can never
 // silently no-op. Uncontrolled consumers get `defaultOpen` and internal state.
 type ProviderConfigCardOpenProps =
-	| { open: boolean; onToggleOpen: () => void; defaultOpen?: never }
-	| { open?: never; onToggleOpen?: never; defaultOpen?: boolean };
-
+	| {
+			open: boolean;
+			onToggleOpen: () => void;
+			defaultOpen?: never;
+	  }
+	| {
+			open?: never;
+			onToggleOpen?: never;
+			defaultOpen?: boolean;
+	  };
 type ProviderConfigCardProps = ProviderConfigCardBaseProps & ProviderConfigCardOpenProps;
-
 // Clamp the load-balancer weight to the [0, 1] fraction both backends expect.
 function clampWeight(n: number | undefined): number | undefined {
 	if (n === undefined || Number.isNaN(n)) return undefined;
 	return Math.max(0, Math.min(1, n));
 }
-
 // Wildcard-selection logic for the keys picker: selecting "*" collapses to just
 // ["*"]; adding anything else while "*" is present drops the "*"; any other
 // selection passes through unchanged. The model pickers get the same rule from components/modelAccess.
@@ -97,7 +100,6 @@ function resolveWildcardSelection(current: string[], next: string[]): string[] {
 	if (hadStar && hasStar && next.length > 1) return next.filter((v) => v !== "*");
 	return next;
 }
-
 // Weight input with an internal string buffer so intermediate values like "0."
 // survive keystrokes (a bare controlled number input collapses them). Mirrors
 // the display-value pattern in NumberAndSelect; clamps to [0, 1] on commit.
@@ -146,7 +148,6 @@ function WeightInput({
 		/>
 	);
 }
-
 /** 编辑 provider 授权与预算，汇总允许和阻止两侧的模型范围。 */
 export function ProviderConfigCard({
 	value,
@@ -167,7 +168,6 @@ export function ProviderConfigCard({
 	const [internalOpen, setInternalOpen] = useState(defaultOpen);
 	const open = controlledOpen ?? internalOpen;
 	const toggleOpen = () => (onToggleOpen ? onToggleOpen() : setInternalOpen((o) => !o));
-
 	// Inner collapsibles are always card-local UI state.
 	const [budgetOpen, setBudgetOpen] = useState(false);
 	const [modelsOpen, setModelsOpen] = useState(false);
@@ -175,10 +175,8 @@ export function ProviderConfigCard({
 	// deleting an earlier row can't leave the editor pointing at the wrong model.
 	const [openModelEditor, setOpenModelEditor] = useState<string | null>(null);
 	const [accessOpen, setAccessOpen] = useState(false);
-
 	const tid = testIdPrefix;
 	const update = (patch: Partial<ProviderConfigCardValue>) => onChange({ ...value, ...patch });
-
 	const modelBudgets = value.modelBudgets || [];
 	const capLabel = budgetLinesLabel(value.budgets, t("providerConfigs.noBudget"), t);
 	// Header summary: the provider cap and/or a model-budget count, falling back to
@@ -190,14 +188,12 @@ export function ProviderConfigCard({
 			.filter(Boolean)
 			.join(" · ") || t("providerConfigs.noBudget");
 	const ws = globalProviderCap;
-
 	// Key scope handed to ModelSelector so model suggestions match the keys
 	// actually granted on this provider config.
 	const keys = providerKeys ?? [];
 	const modelKeyScope = value.keyIds.includes("*")
 		? keys.map((k) => k.key_id)
 		: keys.filter((k) => value.keyIds.includes(k.key_id)).map((k) => k.key_id);
-
 	// Collapsed access summary.
 	const keysSummary = value.keyIds.includes("*")
 		? t("providerConfigs.allKeys")
@@ -207,7 +203,6 @@ export function ProviderConfigCard({
 	const modelsSummary = summarizeGrantModelAccess(value.allowedModels, value.blacklistedModels);
 	const hasRl = value.rateLimit?.token_max_limit != null || value.rateLimit?.request_max_limit != null;
 	const rlSummary = hasRl ? t("providerConfigs.rateLimitsSet") : t("providerConfigs.noRateLimits");
-
 	return (
 		<div className="bg-card overflow-hidden rounded-md border">
 			{/* Provider header — summary (name, cap); click expands the card */}
@@ -368,7 +363,9 @@ export function ProviderConfigCard({
 														update({ modelBudgets: modelBudgets.filter((_, i) => i !== mbIndex) });
 														setOpenModelEditor((prev) => (prev === mb.model_name ? null : prev));
 													}}
-													aria-label={t("providerConfigs.removeModelBudgetAria", { name: mb.model_name || "" })}
+													aria-label={t("providerConfigs.removeModelBudgetAria", {
+														name: mb.model_name || "",
+													})}
 													className="text-muted-foreground shrink-0 cursor-pointer rounded-sm p-1 hover:text-red-400"
 												>
 													<Trash2 className="h-3 w-3" />
@@ -436,7 +433,15 @@ export function ProviderConfigCard({
 														onChangeSelect={(v) => {
 															update({
 																modelBudgets: modelBudgets.map((m, i) =>
-																	i === mbIndex ? { ...m, rate_limit: { ...(m.rate_limit || {}), token_reset_duration: v } } : m,
+																	i === mbIndex
+																		? {
+																				...m,
+																				rate_limit: {
+																					...(m.rate_limit || {}),
+																					token_reset_duration: v,
+																				},
+																			}
+																		: m,
 																),
 															});
 														}}
@@ -469,7 +474,15 @@ export function ProviderConfigCard({
 														onChangeSelect={(v) => {
 															update({
 																modelBudgets: modelBudgets.map((m, i) =>
-																	i === mbIndex ? { ...m, rate_limit: { ...(m.rate_limit || {}), request_reset_duration: v } } : m,
+																	i === mbIndex
+																		? {
+																				...m,
+																				rate_limit: {
+																					...(m.rate_limit || {}),
+																					request_reset_duration: v,
+																				},
+																			}
+																		: m,
 																),
 															});
 														}}
@@ -532,14 +545,22 @@ export function ProviderConfigCard({
 							<div className="flex items-start gap-3.5">
 								{/* Provider key restriction */}
 								{(() => {
-									type KeyOption = { label: string; value: string; description: string };
+									type KeyOption = {
+										label: string;
+										value: string;
+										description: string;
+									};
 									// providerKeys === null while loading/errored — keep the section
 									// visible. Only hide when keys have loaded and there are none.
 									if (providerKeys !== null && keys.length === 0) return null;
 									const configKeyIds = value.keyIds;
 									const hasWildcard = configKeyIds.includes("*");
 									const allKeyOptions: KeyOption[] = [
-										{ label: t("providerConfigs.allowAllKeys"), value: "*", description: t("providerConfigs.allowAllKeysDescription") },
+										{
+											label: t("providerConfigs.allowAllKeys"),
+											value: "*",
+											description: t("providerConfigs.allowAllKeysDescription"),
+										},
 										...keys.map((key) => ({
 											label: key.name,
 											value: key.key_id,
@@ -570,7 +591,7 @@ export function ProviderConfigCard({
 												hideSelectedOptions
 												hideSearchIcon
 												isNonAsync
-												closeMenuOnSelect={false}
+												closeMenuOnSelect
 												menuPlacement="auto"
 												defaultOptions={allKeyOptions}
 												value={selectedProviderKeys}
@@ -591,7 +612,9 @@ export function ProviderConfigCard({
 															{multiValueProps.data.label}
 															<button
 																type="button"
-																aria-label={t("providerConfigs.removeAria", { name: multiValueProps.data.label })}
+																aria-label={t("providerConfigs.removeAria", {
+																	name: multiValueProps.data.label,
+																})}
 																className="hover:text-foreground text-muted-foreground flex cursor-pointer items-center"
 																onClick={(e) => {
 																	e.stopPropagation();
@@ -685,7 +708,13 @@ export function ProviderConfigCard({
 								selectValue={value.rateLimit?.token_reset_duration || "1h"}
 								onChangeNumber={(v) => {
 									const current = value.rateLimit || {};
-									update({ rateLimit: { ...current, token_max_limit: v, token_reset_duration: current.token_reset_duration || "1h" } });
+									update({
+										rateLimit: {
+											...current,
+											token_max_limit: v,
+											token_reset_duration: current.token_reset_duration || "1h",
+										},
+									});
 								}}
 								onChangeSelect={(v) => {
 									const current = value.rateLimit || {};
@@ -704,7 +733,11 @@ export function ProviderConfigCard({
 								onChangeNumber={(v) => {
 									const current = value.rateLimit || {};
 									update({
-										rateLimit: { ...current, request_max_limit: v, request_reset_duration: current.request_reset_duration || "1h" },
+										rateLimit: {
+											...current,
+											request_max_limit: v,
+											request_reset_duration: current.request_reset_duration || "1h",
+										},
 									});
 								}}
 								onChangeSelect={(v) => {

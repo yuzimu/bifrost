@@ -5,13 +5,11 @@ import { Switch } from "@/components/ui/switch";
 import { RequestHeadersTextarea } from "@/components/ui/requestHeadersTextarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { maximFormSchema, type MaximFormSchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { Trans, useTranslation } from "react-i18next";
-
 interface MaximFormFragmentProps {
 	initialConfig?: {
 		enabled?: boolean;
@@ -24,15 +22,12 @@ interface MaximFormFragmentProps {
 	isDeleting?: boolean;
 	isLoading?: boolean;
 }
-
 /** 本地化连接器表单文案，保留凭据、请求头及权限控制。 */
 export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting = false, isLoading = false }: MaximFormFragmentProps) {
 	const { t } = useTranslation("observability");
 	const { t: tMcp } = useTranslation("mcp");
-	const hasMaximAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
 	const [showApiKey, setShowApiKey] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
-
 	const form = useForm<MaximFormSchema, any, MaximFormSchema>({
 		resolver: zodResolver(maximFormSchema) as Resolver<MaximFormSchema, any, MaximFormSchema>,
 		mode: "onChange",
@@ -46,12 +41,10 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 			},
 		},
 	});
-
 	const onSubmit = (data: MaximFormSchema) => {
 		setIsSaving(true);
 		onSave(data).finally(() => setIsSaving(false));
 	};
-
 	useEffect(() => {
 		// Reset form with new initial config when it changes
 		form.reset({
@@ -63,7 +56,6 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 			},
 		});
 	}, [form, initialConfig]);
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -80,7 +72,6 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 											<Input
 												type={showApiKey ? "text" : "password"}
 												placeholder={t("connectors.enterMaximApiKey")}
-												disabled={!hasMaximAccess}
 												{...field}
 												className="pr-10"
 											/>
@@ -90,7 +81,6 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 												size="sm"
 												className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
 												onClick={() => setShowApiKey(!showApiKey)}
-												disabled={!hasMaximAccess}
 											>
 												{showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 											</Button>
@@ -108,7 +98,7 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 								<FormItem>
 									<FormLabel>{tMcp("connectorForm.logRepositoryId")}</FormLabel>
 									<FormControl>
-										<Input placeholder={t("connectors.enterLogRepositoryId")} disabled={!hasMaximAccess} {...field} value={field.value ?? ""} />
+										<Input placeholder={t("connectors.enterLogRepositoryId")} {...field} value={field.value ?? ""} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -121,20 +111,24 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>
-										{t("connectors.otel.requestHeaders")} <span className="text-muted-foreground font-normal">{t("connectors.otel.optional")}</span>
+										{t("connectors.otel.requestHeaders")}{" "}
+										<span className="text-muted-foreground font-normal">{t("connectors.otel.optional")}</span>
 									</FormLabel>
 									<FormDescription>
 										<Trans
 											ns="mcp"
 											i18nKey="connectorForm.requestHeadersHelp"
-											components={{ prefix: <code className="text-xs" />, wildcard: <code className="text-xs" />, sensitive: <code className="text-xs" /> }}
+											components={{
+												prefix: <code className="text-xs" />,
+												wildcard: <code className="text-xs" />,
+												sensitive: <code className="text-xs" />,
+											}}
 										/>
 									</FormDescription>
 									<FormControl>
 										<RequestHeadersTextarea
 											className="h-24"
 											placeholder="X-Tenant-ID, X-Request-Source, x-custom-*"
-											disabled={!hasMaximAccess}
 											value={field.value ?? []}
 											onChange={field.onChange}
 											data-testid="request-headers-textarea"
@@ -156,12 +150,7 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 							<FormItem className="flex items-center gap-2 py-2">
 								<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
 								<FormControl>
-									<Switch
-										checked={field.value}
-										onCheckedChange={field.onChange}
-										disabled={!hasMaximAccess}
-										data-testid="maxim-connector-enable-toggle"
-									/>
+									<Switch checked={field.value} onCheckedChange={field.onChange} data-testid="maxim-connector-enable-toggle" />
 								</FormControl>
 							</FormItem>
 						)}
@@ -192,14 +181,14 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 									},
 								});
 							}}
-							disabled={!hasMaximAccess || isLoading || !form.formState.isDirty}
+							disabled={isLoading || !form.formState.isDirty}
 						>
 							{t("connectors.reset")}
 						</Button>
 						<TooltipProvider>
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<Button type="submit" disabled={!hasMaximAccess || !form.formState.isDirty} isLoading={isSaving}>
+									<Button type="submit" disabled={!form.formState.isDirty} isLoading={isSaving}>
 										{t("connectors.saveMaxim")}
 									</Button>
 								</TooltipTrigger>

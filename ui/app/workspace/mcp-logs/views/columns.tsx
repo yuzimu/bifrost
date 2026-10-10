@@ -11,7 +11,6 @@ import { ArrowUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 import type { TFunction } from "i18next";
 import i18n from "@/lib/i18n";
 import { dateFnsLocale } from "@/lib/i18n/dateLocale";
-
 // Helper function to validate status and return a safe Status value
 const getValidatedStatus = (status: string): Status => {
 	// Check if status is a valid Status by checking against Statuses array
@@ -22,7 +21,6 @@ const getValidatedStatus = (status: string): Status => {
 	// Fallback to "processing" for unknown statuses
 	return "processing";
 };
-
 export const createMCPColumns = (
 	handleDelete: (log: MCPToolLogEntry) => Promise<void>,
 	hasDeleteAccess: boolean,
@@ -183,12 +181,6 @@ export const createMCPColumns = (
 		},
 	},
 	{
-		id: "user",
-		header: t("labels.user"),
-		size: 150,
-		cell: ({ row }) => <AttributionCell name={row.original.user_name} id={row.original.user_id} />,
-	},
-	{
 		id: "team",
 		header: t("labels.team"),
 		size: 150,
@@ -213,31 +205,6 @@ export const createMCPColumns = (
 				id={row.original.customer_id}
 			/>
 		),
-	},
-	{
-		id: "business_unit",
-		header: t("labels.businessUnit"),
-		size: 150,
-		cell: ({ row }) => (
-			<AttributionCell
-				names={row.original.business_unit_names}
-				name={row.original.business_unit_name}
-				ids={row.original.business_unit_ids}
-				id={row.original.business_unit_id}
-			/>
-		),
-	},
-	{
-		id: "project",
-		header: t("labels.project"),
-		size: 150,
-		cell: ({ row }) => <AttributionCell name={row.original.project_name} id={row.original.project_id} />,
-	},
-	{
-		id: "device",
-		header: t("labels.device"),
-		size: 150,
-		cell: ({ row }) => <AttributionCell name={undefined} id={row.original.device_id} />,
 	},
 	...(hasDeleteAccess
 		? [

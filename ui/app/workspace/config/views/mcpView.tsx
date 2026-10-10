@@ -6,38 +6,24 @@ import { Input } from "@/components/ui/input";
 import { SecretVarInput } from "@/components/ui/secretVarInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import { getErrorMessage, useGetCoreConfigQuery, useUpdateCoreConfigMutation } from "@/lib/store";
 import { CoreConfig, DefaultCoreConfig, MCPCodeModeLimits } from "@/lib/types/config";
 import { SecretVar } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import { useGetSCIMProvidersQuery } from "@enterprise/lib/store/apis/scimApi";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { codeModeLimitsEqual, validateCodeModeLimits } from "./codeModeLimits.utils";
 import { CodeModeLimitsSection } from "./codeModeLimitsSection";
-
 const secretVarEquals = (a?: SecretVar, b?: SecretVar) =>
 	(a?.value ?? "") === (b?.value ?? "") && (a?.ref ?? "") === (b?.ref ?? "") && (a?.type ?? "plain_text") === (b?.type ?? "plain_text");
-
 /** 编辑 MCP 与 OAuth 配置，同时校验指令上限和代码沙箱限制。 */
 export default function MCPView() {
 	const { t } = useTranslation("config");
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.client_config;
-
-	// The "require identity-provider login" toggle is enterprise-only and only
-	// meaningful when an identity provider is configured — the backend ignores
-	// disable_vk_identity otherwise, so surfacing it would be a no-op. The SCIM
-	// query is skipped (and stubbed to []) in OSS builds.
-	const { data: scimProviders } = useGetSCIMProvidersQuery(undefined, { skip: !IS_ENTERPRISE });
-	const idpConfigured = !!scimProviders?.some((p) => (p as { enabled?: boolean }).enabled);
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [localConfig, setLocalConfig] = useState<CoreConfig>(DefaultCoreConfig);
-
 	const [localValues, setLocalValues] = useState<{
 		mcp_agent_depth: string;
 		mcp_tool_execution_timeout: string;
@@ -57,7 +43,6 @@ export default function MCPView() {
 		oauth2_auth_code_ttl: "300",
 		oauth2_access_token_ttl: "600",
 	});
-
 	useEffect(() => {
 		if (bifrostConfig && config) {
 			setLocalConfig(config);
@@ -75,7 +60,6 @@ export default function MCPView() {
 			});
 		}
 	}, [config, bifrostConfig]);
-
 	const hasChanges = useMemo(() => {
 		if (!config) return false;
 		const clientURLChanged = !secretVarEquals(localConfig.mcp_external_client_url, config.mcp_external_client_url);
@@ -94,11 +78,9 @@ export default function MCPView() {
 			(localConfig.mcp_server_auth_mode ?? "headers") !== (config.mcp_server_auth_mode ?? "headers") ||
 			issuerURLChanged ||
 			(localConfig.oauth2_server_config?.auth_code_ttl ?? 300) !== (config.oauth2_server_config?.auth_code_ttl ?? 300) ||
-			(localConfig.oauth2_server_config?.access_token_ttl ?? 600) !== (config.oauth2_server_config?.access_token_ttl ?? 600) ||
-			(localConfig.oauth2_server_config?.disable_vk_identity ?? false) !== (config.oauth2_server_config?.disable_vk_identity ?? false)
+			(localConfig.oauth2_server_config?.access_token_ttl ?? 600) !== (config.oauth2_server_config?.access_token_ttl ?? 600)
 		);
 	}, [config, localConfig]);
-
 	const handleAgentDepthChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, mcp_agent_depth: value }));
 		const numValue = Number.parseInt(value);
@@ -106,7 +88,6 @@ export default function MCPView() {
 			setLocalConfig((prev) => ({ ...prev, mcp_agent_depth: numValue }));
 		}
 	}, []);
-
 	const handleToolExecutionTimeoutChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, mcp_tool_execution_timeout: value }));
 		const numValue = Number.parseInt(value);
@@ -117,7 +98,6 @@ export default function MCPView() {
 			}));
 		}
 	}, []);
-
 	const handleCodeModeBindingLevelChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, mcp_code_mode_binding_level: value }));
 		if (value === "server" || value === "tool") {
@@ -127,7 +107,6 @@ export default function MCPView() {
 			}));
 		}
 	}, []);
-
 	const handleToolSyncIntervalChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, mcp_tool_sync_interval: value }));
 		const numValue = Number.parseInt(value);
@@ -135,7 +114,6 @@ export default function MCPView() {
 			setLocalConfig((prev) => ({ ...prev, mcp_tool_sync_interval: numValue }));
 		}
 	}, []);
-
 	const handleMaxInstructionsPerClientChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, mcp_max_instructions_per_client: value }));
 		const numValue = Number.parseInt(value);
@@ -143,7 +121,6 @@ export default function MCPView() {
 			setLocalConfig((prev) => ({ ...prev, mcp_max_instructions_per_client: numValue }));
 		}
 	}, []);
-
 	const handleMaxInstructionsTotalChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, mcp_max_instructions_total: value }));
 		const numValue = Number.parseInt(value);
@@ -151,49 +128,38 @@ export default function MCPView() {
 			setLocalConfig((prev) => ({ ...prev, mcp_max_instructions_total: numValue }));
 		}
 	}, []);
-
 	const handleCodeModeLimitsChange = useCallback((limits: MCPCodeModeLimits) => {
 		setLocalConfig((prev) => ({ ...prev, mcp_code_mode_limits: limits }));
 	}, []);
-
 	const handleDisableAutoToolInjectChange = useCallback((checked: boolean) => {
 		setLocalConfig((prev) => ({
 			...prev,
 			mcp_disable_auto_tool_inject: checked,
 		}));
 	}, []);
-
 	const handleTempTokenAuthChange = useCallback((checked: boolean) => {
 		setLocalConfig((prev) => ({
 			...prev,
 			mcp_enable_temp_token_auth: checked,
 		}));
 	}, []);
-
 	const handleClientURLChange = useCallback((value: SecretVar) => {
 		setLocalConfig((prev) => ({ ...prev, mcp_external_client_url: value }));
 	}, []);
-
 	const handleAuthModeChange = useCallback((value: string) => {
 		if (value === "headers" || value === "both" || value === "oauth") {
 			setLocalConfig((prev) => ({
 				...prev,
 				mcp_server_auth_mode: value,
-				// disable_vk_identity is oauth-only and its toggle is hidden outside oauth
-				// mode; clear it on the way out so a hidden-stale value can't be saved and
-				// rejected by the backend (400) on the next save.
-				oauth2_server_config: value === "oauth" ? prev.oauth2_server_config : { ...prev.oauth2_server_config, disable_vk_identity: false },
 			}));
 		}
 	}, []);
-
 	const handleIssuerURLChange = useCallback((value: SecretVar) => {
 		setLocalConfig((prev) => ({
 			...prev,
 			oauth2_server_config: { ...prev.oauth2_server_config, issuer_url: value },
 		}));
 	}, []);
-
 	const handleAuthCodeTTLChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, oauth2_auth_code_ttl: value }));
 		const num = Number.parseInt(value);
@@ -204,7 +170,6 @@ export default function MCPView() {
 			}));
 		}
 	}, []);
-
 	const handleAccessTokenTTLChange = useCallback((value: string) => {
 		setLocalValues((prev) => ({ ...prev, oauth2_access_token_ttl: value }));
 		const num = Number.parseInt(value);
@@ -215,80 +180,59 @@ export default function MCPView() {
 			}));
 		}
 	}, []);
-
-	const handleDisableVKIdentityChange = useCallback((checked: boolean) => {
-		setLocalConfig((prev) => ({
-			...prev,
-			oauth2_server_config: { ...prev.oauth2_server_config, disable_vk_identity: checked },
-		}));
-	}, []);
-
 	const handleSave = useCallback(async () => {
 		try {
 			const agentDepth = Number.parseInt(localValues.mcp_agent_depth);
 			const toolTimeout = Number.parseInt(localValues.mcp_tool_execution_timeout);
-
 			if (isNaN(agentDepth) || agentDepth <= 0) {
 				toast.error(t("mcpSettings.toastDepthPositive"));
 				return;
 			}
-
 			if (isNaN(toolTimeout) || toolTimeout <= 0) {
 				toast.error(t("mcpSettings.toastTimeoutPositive"));
 				return;
 			}
-
 			// These three write through to localConfig only on a valid parse, so a cleared
 			// field leaves the previous value staged and would save silently.
 			const syncInterval = Number.parseInt(localValues.mcp_tool_sync_interval);
 			const perClientCap = Number.parseInt(localValues.mcp_max_instructions_per_client);
 			const totalCap = Number.parseInt(localValues.mcp_max_instructions_total);
-
 			if (isNaN(syncInterval) || syncInterval < 0) {
 				toast.error(t("mcpSettings.syncIntervalInvalid"));
 				return;
 			}
-
 			if (isNaN(perClientCap) || perClientCap < 0) {
 				toast.error(t("mcpSettings.instructionsPerServerInvalid"));
 				return;
 			}
-
 			if (isNaN(totalCap) || totalCap < 0) {
 				toast.error(t("mcpSettings.instructionsTotalInvalid"));
 				return;
 			}
-
 			const limitsError = validateCodeModeLimits(localConfig.mcp_code_mode_limits);
 			if (limitsError) {
 				toast.error(limitsError);
 				return;
 			}
-
 			// The TTL fields are only shown (and only relevant) in OAuth modes; the
 			// backend likewise validates oauth2_server_config only then. Guard the
 			// checks so a stale value can't dead-end the save after switching back to
 			// headers mode, where the fields are hidden and unfixable.
 			const oauthModeActive = localConfig.mcp_server_auth_mode === "both" || localConfig.mcp_server_auth_mode === "oauth";
-
 			const authCodeTTL = Number.parseInt(localValues.oauth2_auth_code_ttl);
 			const accessTokenTTL = Number.parseInt(localValues.oauth2_access_token_ttl);
-
 			if (oauthModeActive && (isNaN(authCodeTTL) || authCodeTTL < 1 || authCodeTTL > 900)) {
 				toast.error(t("mcpSettings.toastAuthCodeTtl"));
 				return;
 			}
-
 			if (oauthModeActive && (isNaN(accessTokenTTL) || accessTokenTTL < 60)) {
 				toast.error(t("mcpSettings.toastAccessTokenTtl"));
 				return;
 			}
-
 			if (!bifrostConfig) {
 				toast.error(t("configNotLoadedRefresh"));
 				return;
 			}
-
 			// The TTLs live in localValues (the text inputs) and only sync into
 			// localConfig when the field is edited, so a setup that never touches them
 			// (e.g. only toggling a switch or setting the issuer URL) would serialize
@@ -305,7 +249,6 @@ export default function MCPView() {
 						},
 					}
 				: localConfig;
-
 			await updateCoreConfig({
 				...bifrostConfig,
 				client_config: clientConfigToSave,
@@ -315,7 +258,6 @@ export default function MCPView() {
 			toast.error(getErrorMessage(error));
 		}
 	}, [bifrostConfig, localConfig, localValues, updateCoreConfig, t]);
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-4" data-testid="mcp-settings-view">
 			<PageTitle title={t("mcpSettings.title")}>{t("mcpSettings.description")}</PageTitle>
@@ -391,7 +333,6 @@ export default function MCPView() {
 						id="mcp-disable-auto-tool-inject"
 						checked={localConfig.mcp_disable_auto_tool_inject ?? false}
 						onCheckedChange={handleDisableAutoToolInjectChange}
-						disabled={!hasSettingsUpdateAccess}
 						data-testid="mcp-disable-auto-tool-inject-switch"
 					/>
 				</div>
@@ -408,7 +349,6 @@ export default function MCPView() {
 						id="mcp-enable-temp-token-auth"
 						checked={localConfig.mcp_enable_temp_token_auth ?? false}
 						onCheckedChange={handleTempTokenAuthChange}
-						disabled={!hasSettingsUpdateAccess}
 						data-testid="mcp-enable-temp-token-auth-switch"
 					/>
 				</div>
@@ -429,7 +369,6 @@ export default function MCPView() {
 						value={localValues.mcp_max_instructions_per_client}
 						onChange={(e) => handleMaxInstructionsPerClientChange(e.target.value)}
 						min="0"
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -450,7 +389,6 @@ export default function MCPView() {
 						value={localValues.mcp_max_instructions_total}
 						onChange={(e) => handleMaxInstructionsTotalChange(e.target.value)}
 						min="0"
-						disabled={!hasSettingsUpdateAccess}
 					/>
 				</div>
 
@@ -505,13 +443,9 @@ export default function MCPView() {
 					</div>
 				</div>
 
-				<CodeModeLimitsSection
-					value={localConfig.mcp_code_mode_limits}
-					onChange={handleCodeModeLimitsChange}
-					disabled={!hasSettingsUpdateAccess}
-				/>
+				<CodeModeLimitsSection value={localConfig.mcp_code_mode_limits} onChange={handleCodeModeLimitsChange} />
 				{/* Advanced Settings — collapsed by default so people don't accidentally
-				    edit the redirect_uri, which would break already-authorized MCP clients. */}
+            edit the redirect_uri, which would break already-authorized MCP clients. */}
 				<Accordion type="single" collapsible className="rounded-sm border px-4">
 					<AccordionItem value="advanced-settings" className="border-b-0">
 						<AccordionTrigger data-testid="mcp-settings-advanced-trigger">
@@ -541,7 +475,6 @@ export default function MCPView() {
 								placeholder={t("mcpSettings.externalClientUrlPlaceholder")}
 								value={localConfig.mcp_external_client_url}
 								onChange={handleClientURLChange}
-								disabled={!hasSettingsUpdateAccess}
 							/>
 							<Alert variant="warning">
 								<AlertTriangle className="size-4" />
@@ -565,14 +498,15 @@ export default function MCPView() {
 									<Trans
 										t={t}
 										i18nKey="mcpSettings.authModeHelp"
-										components={{ code0: <code className="text-xs" />, b1: <b />, b2: <b />, b3: <b /> }}
+										components={{
+											code0: <code className="text-xs" />,
+											b1: <b />,
+											b2: <b />,
+											b3: <b />,
+										}}
 									/>
 								</p>
-								<Select
-									value={localConfig.mcp_server_auth_mode ?? "headers"}
-									onValueChange={handleAuthModeChange}
-									disabled={!hasSettingsUpdateAccess}
-								>
+								<Select value={localConfig.mcp_server_auth_mode ?? "headers"} onValueChange={handleAuthModeChange}>
 									<SelectTrigger id="mcp-server-auth-mode" data-testid="mcp-server-auth-mode-select" className="w-40">
 										<SelectValue />
 									</SelectTrigger>
@@ -636,7 +570,6 @@ export default function MCPView() {
 											placeholder={t("mcpSettings.issuerUrlPlaceholder")}
 											value={localConfig.oauth2_server_config?.issuer_url}
 											onChange={handleIssuerURLChange}
-											disabled={!hasSettingsUpdateAccess}
 										/>
 									</div>
 
@@ -656,7 +589,6 @@ export default function MCPView() {
 												max="900"
 												value={localValues.oauth2_auth_code_ttl}
 												onChange={(e) => handleAuthCodeTTLChange(e.target.value)}
-												disabled={!hasSettingsUpdateAccess}
 											/>
 										</div>
 										<div className="space-y-1.5">
@@ -672,42 +604,9 @@ export default function MCPView() {
 												min="60"
 												value={localValues.oauth2_access_token_ttl}
 												onChange={(e) => handleAccessTokenTTLChange(e.target.value)}
-												disabled={!hasSettingsUpdateAccess}
 											/>
 										</div>
 									</div>
-
-									{/* Require identity-provider login. Enterprise-only and only
-                      meaningful in oauth mode with an IdP configured. Stays visible
-                      when the setting is already enabled so it is never silently lost. */}
-									{localConfig.mcp_server_auth_mode === "oauth" &&
-										(idpConfigured || localConfig.oauth2_server_config?.disable_vk_identity) && (
-											<div className="mt-4 space-y-2 border-t pt-4">
-												<div className="flex items-center justify-between space-x-2">
-													<div className="space-y-0.5">
-														<label htmlFor="oauth2-disable-vk-identity" className="text-sm font-medium">
-															{t("mcpSettings.requireIdpLogin")}
-														</label>
-														<p className="text-muted-foreground text-sm">{t("mcpSettings.requireIdpLoginHelp")}</p>
-													</div>
-													<Switch
-														id="oauth2-disable-vk-identity"
-														data-testid="oauth2-disable-vk-identity-switch"
-														size="md"
-														checked={localConfig.oauth2_server_config?.disable_vk_identity ?? false}
-														onCheckedChange={handleDisableVKIdentityChange}
-														disabled={!hasSettingsUpdateAccess}
-													/>
-												</div>
-												{localConfig.oauth2_server_config?.disable_vk_identity && (
-													<Alert variant="warning">
-														<AlertTriangle className="size-4" />
-														<AlertTitle>{t("mcpSettings.virtualKeyOauthDisabled")}</AlertTitle>
-														<AlertDescription>{t("mcpSettings.virtualKeyOauthDisabledHelp")}</AlertDescription>
-													</Alert>
-												)}
-											</div>
-										)}
 								</div>
 							)}
 						</AccordionContent>
@@ -715,7 +614,7 @@ export default function MCPView() {
 				</Accordion>
 			</div>
 			<div className="bg-card sticky bottom-0 flex justify-end py-2">
-				<Button onClick={handleSave} disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess} data-testid="mcp-settings-save-btn">
+				<Button onClick={handleSave} disabled={!hasChanges || isLoading} data-testid="mcp-settings-save-btn">
 					{isLoading ? t("saving") : t("saveChanges")}
 				</Button>
 			</div>

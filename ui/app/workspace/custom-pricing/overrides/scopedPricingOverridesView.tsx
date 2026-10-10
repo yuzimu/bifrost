@@ -23,7 +23,6 @@ import { getProviderLabel } from "@/lib/constants/logs";
 import { getErrorMessage, useDeletePricingOverrideMutation, useGetPricingOverridesQuery, useGetProvidersQuery } from "@/lib/store";
 import { useGetAllKeysQuery } from "@/lib/store/apis/providersApi";
 import { PricingOverride, PricingOverrideScopeKind } from "@/lib/types/governance";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { useLocation } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Edit, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -32,7 +31,6 @@ import PricingOverrideSheet from "./pricingOverrideSheet";
 import { PricingOverridesEmptyState } from "./pricingOverridesEmptyState";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-
 /** 本地化定价覆盖操作菜单，操作可见性仍由调用方权限控制。 */
 function PricingOverrideActionsMenu({
 	row,
@@ -48,11 +46,9 @@ function PricingOverrideActionsMenu({
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const [isOpen, setIsOpen] = useState(false);
-
 	if (!onEdit && !onDelete) {
 		return null;
 	}
-
 	return (
 		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
@@ -100,9 +96,7 @@ function PricingOverrideActionsMenu({
 		</DropdownMenu>
 	);
 }
-
 type ScopeFilter = "all" | PricingOverrideScopeKind;
-
 function parseScopeKind(value: string | null): ScopeFilter {
 	if (
 		value === "global" ||
@@ -119,7 +113,6 @@ function parseScopeKind(value: string | null): ScopeFilter {
 	}
 	return "all";
 }
-
 /** 翻译顶层作用域标签，保留作用域协议值。 */
 function scopeLabel(override: PricingOverride, t: TFunction): string {
 	const scopeKind = resolveScopeKind(override);
@@ -131,7 +124,6 @@ function scopeLabel(override: PricingOverride, t: TFunction): string {
 	}
 	return t("customPricing.global");
 }
-
 /** 翻译全部密钥标签，具体密钥名称与标识保持原样。 */
 function keyLabel(override: PricingOverride, keyLabelMap: Map<string, string>, t: TFunction): string {
 	if (!override.provider_key_id) {
@@ -140,7 +132,6 @@ function keyLabel(override: PricingOverride, keyLabelMap: Map<string, string>, t
 	}
 	return keyLabelMap.get(override.provider_key_id) || override.provider_key_id;
 }
-
 // Returns the provider label for the override, or "-" if not applicable.
 function providerLabel(override: PricingOverride, providerMap: Map<string, string>, keyProviderMap: Map<string, string>): string {
 	const scopeKind = resolveScopeKind(override);
@@ -159,7 +150,6 @@ function providerLabel(override: PricingOverride, providerMap: Map<string, strin
 			return "-";
 	}
 }
-
 function resolveScopeKind(override: PricingOverride): PricingOverrideScopeKind {
 	if (
 		override.scope_kind === "global" ||
@@ -188,26 +178,21 @@ function resolveScopeKind(override: PricingOverride): PricingOverrideScopeKind {
 	if (override.provider_id) return "provider";
 	return "global";
 }
-
 const PAGE_SIZE = 25;
-
 /** 本地化定价覆盖表格及操作提示，保留作用域筛选与访问权限。 */
 export default function ScopedPricingOverridesView() {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
 	const location = useLocation();
 	const searchParams = useMemo(() => new URLSearchParams(location.searchStr), [location.searchStr]);
-
 	const [scopeKind, setScopeKind] = useState<ScopeFilter>(() => parseScopeKind(searchParams.get("scope_kind")));
 	const [userID, setUserID] = useState(() => (searchParams.get("user_id") || "").trim());
 	const [virtualKeyID, setVirtualKeyID] = useState(() => (searchParams.get("virtual_key_id") || "").trim());
 	const [providerID, setProviderID] = useState(() => (searchParams.get("provider_id") || "").trim());
 	const [providerKeyID, setProviderKeyID] = useState(() => (searchParams.get("provider_key_id") || "").trim());
-
 	const [search, setSearch] = useState("");
 	const [offset, setOffset] = useState(0);
 	const debouncedSearch = useDebouncedValue(search, 300);
-
 	useEffect(() => {
 		setScopeKind(parseScopeKind(searchParams.get("scope_kind")));
 		setUserID((searchParams.get("user_id") || "").trim());
@@ -215,12 +200,10 @@ export default function ScopedPricingOverridesView() {
 		setProviderID((searchParams.get("provider_id") || "").trim());
 		setProviderKeyID((searchParams.get("provider_key_id") || "").trim());
 	}, [searchParams]);
-
 	// Reset to first page when filters or search change
 	useEffect(() => {
 		setOffset(0);
 	}, [scopeKind, userID, virtualKeyID, providerID, providerKeyID, debouncedSearch]);
-
 	const queryArgs = useMemo(
 		() => ({
 			scopeKind: scopeKind === "all" ? undefined : scopeKind,
@@ -234,11 +217,9 @@ export default function ScopedPricingOverridesView() {
 		}),
 		[scopeKind, userID, virtualKeyID, providerID, providerKeyID, offset, debouncedSearch],
 	);
-
 	const { data, isLoading, error } = useGetPricingOverridesQuery(queryArgs);
 	const hasLoadedOnceRef = useRef(false);
 	if (data || error) hasLoadedOnceRef.current = true;
-
 	// Snap offset back when total shrinks past current page
 	const totalCount = data?.total_count ?? 0;
 	useEffect(() => {
@@ -248,25 +229,16 @@ export default function ScopedPricingOverridesView() {
 	const { data: providersData } = useGetProvidersQuery();
 	const { data: allKeysData = [] } = useGetAllKeysQuery();
 	const [deleteOverride, { isLoading: isDeleting }] = useDeletePricingOverrideMutation();
-	// Pricing overrides are part of settings, so a role that may only read settings
-	// sees the table and nothing that changes it.
-	const hasCreateAccess = useRbac(RbacResource.Settings, RbacOperation.Create);
-	const hasUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
-	const hasDeleteAccess = useRbac(RbacResource.Settings, RbacOperation.Delete);
-
 	useEffect(() => {
 		if (error) {
 			toast.error(t("customPricing.failedLoad"), { description: getErrorMessage(error) });
 		}
 	}, [error]);
-
 	const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 	const [editingOverride, setEditingOverride] = useState<PricingOverride | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<PricingOverride | null>(null);
-
 	const rows = data?.pricing_overrides ?? [];
 	const providers = useMemo(() => providersData ?? [], [providersData]);
-
 	const providerMap = useMemo(() => new Map<string, string>(providers.map((provider) => [provider.name, provider.name])), [providers]);
 	const providerKeyOptions = useMemo(
 		() =>
@@ -285,7 +257,6 @@ export default function ScopedPricingOverridesView() {
 		() => new Map<string, string>(providerKeyOptions.map((key) => [key.id, key.label])),
 		[providerKeyOptions],
 	);
-
 	const createScopeLock = useMemo(() => {
 		if (scopeKind === "all") return undefined;
 		return {
@@ -297,17 +268,14 @@ export default function ScopedPricingOverridesView() {
 			label: `${scopeKind}${userID || virtualKeyID || providerID || providerKeyID ? " (filtered)" : ""}`,
 		};
 	}, [scopeKind, userID, virtualKeyID, providerID, providerKeyID]);
-
 	const openCreateDrawer = () => {
 		setEditingOverride(null);
 		setIsDrawerOpen(true);
 	};
-
 	const openEditDrawer = (override: PricingOverride) => {
 		setEditingOverride(override);
 		setIsDrawerOpen(true);
 	};
-
 	const handleDeleteConfirm = async () => {
 		if (!deleteTarget) return;
 		try {
@@ -318,14 +286,11 @@ export default function ScopedPricingOverridesView() {
 			toast.error(t("customPricing.failedDelete"), { description: getErrorMessage(deleteError) });
 		}
 	};
-
 	const hasActiveFilters = debouncedSearch || scopeKind !== "all" || userID || virtualKeyID || providerID || providerKeyID;
-
 	// Rendered on every branch below, not just the populated one: PageTitle draws
 	// nothing inline, and without it the topbar drops to the route-derived
 	// fallback, which for this route reads "Overrides".
 	const pageTitle = <PageTitle title={t("customPricing.title")}>{t("customPricing.titleDescription")}</PageTitle>;
-
 	// Without this the table chrome paints first, then swaps to the full-page empty
 	// state once the first response resolves to zero rows. Hold a plain loader until
 	// then; later filter/page fetches keep the table so the chrome doesn't jump.
@@ -337,12 +302,11 @@ export default function ScopedPricingOverridesView() {
 			</>
 		);
 	}
-
 	if (!isLoading && !error && totalCount === 0 && !hasActiveFilters) {
 		return (
 			<>
 				{pageTitle}
-				<PricingOverridesEmptyState onCreateClick={hasCreateAccess ? openCreateDrawer : undefined} />
+				<PricingOverridesEmptyState onCreateClick={openCreateDrawer} />
 				<PricingOverrideSheet
 					open={isDrawerOpen}
 					onOpenChange={setIsDrawerOpen}
@@ -352,7 +316,6 @@ export default function ScopedPricingOverridesView() {
 			</>
 		);
 	}
-
 	return (
 		<div className="flex flex-col overflow-y-auto">
 			{/* Search, filters and actions */}
@@ -378,7 +341,7 @@ export default function ScopedPricingOverridesView() {
 						triggerClassName="h-9"
 						// A page, not a sheet — portalling keeps the popover out of the
 						// scrolling table container.
-						noPortal={false}
+						noPortal
 					/>
 				</div>
 
@@ -394,8 +357,8 @@ export default function ScopedPricingOverridesView() {
 				)}
 
 				{/* The label is hidden below sm, leaving an icon with no accessible
-				    name, so the name is carried on the button itself. */}
-				{hasCreateAccess && (
+            name, so the name is carried on the button itself. */}
+				{
 					<Button
 						data-testid="pricing-override-create-btn"
 						onClick={openCreateDrawer}
@@ -405,7 +368,7 @@ export default function ScopedPricingOverridesView() {
 						<Plus className="h-4 w-4" />
 						<span className="hidden sm:inline">{t("customPricing.newOverride")}</span>
 					</Button>
-				)}
+				}
 			</div>
 
 			<div className="mb-2 overflow-hidden rounded-sm border">
@@ -460,11 +423,7 @@ export default function ScopedPricingOverridesView() {
 											onClick={(e) => e.stopPropagation()}
 										>
 											<div className="flex items-center justify-center">
-												<PricingOverrideActionsMenu
-													row={row}
-													onEdit={hasUpdateAccess ? openEditDrawer : undefined}
-													onDelete={hasDeleteAccess ? setDeleteTarget : undefined}
-												/>
+												<PricingOverrideActionsMenu row={row} onEdit={openEditDrawer} onDelete={setDeleteTarget} />
 											</div>
 										</TableCell>
 									</TableRow>

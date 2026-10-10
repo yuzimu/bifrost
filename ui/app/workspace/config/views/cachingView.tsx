@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ModelSelector } from "@/components/ui/modelSelector";
 import { ProviderSelector } from "@/components/ui/providerSelector";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmbeddingSupportedProviders } from "@/lib/constants/logs";
 import {
@@ -20,18 +20,15 @@ import {
 import { CacheConfig, EditorCacheConfig, ModelProvider, ModelProviderName } from "@/lib/types/config";
 import { SEMANTIC_CACHE_PLUGIN } from "@/lib/types/plugins";
 import { cn } from "@/lib/utils";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 // The local cache plugin runs in one of two modes. Direct-only is purely
 // hash-based, no embedding provider needed; perfect for exact-replay
 // caching. Semantic adds vector similarity on top, requiring an
 // embedding-capable provider and the model's real dimension.
 type CacheMode = "direct" | "semantic";
-
 // Embedding-capable providers gate the semantic mode. Built-in providers
 // are listed in EmbeddingSupportedProviders; custom providers expose
 // support via custom_provider_config.allowed_requests.embedding.
@@ -41,7 +38,6 @@ const supportsEmbedding = (provider: ModelProvider): boolean => {
 	}
 	return (EmbeddingSupportedProviders as readonly string[]).includes(provider.name);
 };
-
 const defaultDirectConfig: EditorCacheConfig = {
 	ttl: 300,
 	threshold: 0.8,
@@ -51,7 +47,6 @@ const defaultDirectConfig: EditorCacheConfig = {
 	cache_by_model: true,
 	cache_by_provider: true,
 };
-
 // Configs we treat as "the user has nothing saved": both API responses
 // where every field is the type's zero value and the literal undefined
 // look like this.
@@ -62,19 +57,16 @@ const isEmptyConfig = (config: Partial<EditorCacheConfig> | undefined): boolean 
 	const isZero = (v: unknown) => v === undefined || v === null || v === 0 || v === "";
 	return Object.values(config).every(isZero);
 };
-
 const toEditorCacheConfig = (config?: Partial<EditorCacheConfig>): EditorCacheConfig => {
 	if (!config || isEmptyConfig(config)) {
 		return { ...defaultDirectConfig };
 	}
 	return { ...defaultDirectConfig, ...config };
 };
-
 const inferMode = (config: EditorCacheConfig): CacheMode => {
 	if (config.dimension && config.dimension > 1 && config.provider) return "semantic";
 	return "direct";
 };
-
 // Strip semantic-only fields when persisting a direct-only payload so the
 // server validator doesn't reject a stale provider choice.
 const buildPayload = (config: EditorCacheConfig, mode: CacheMode): CacheConfig => {
@@ -98,7 +90,6 @@ const buildPayload = (config: EditorCacheConfig, mode: CacheMode): CacheConfig =
 		dimension: config.dimension ?? 0,
 	} as CacheConfig;
 };
-
 const validateForSave = (config: EditorCacheConfig, mode: CacheMode, t: TFunction<"config">): string | null => {
 	if (mode === "semantic") {
 		if (!config.provider) return t("caching.validation.provider");
@@ -119,33 +110,26 @@ const validateForSave = (config: EditorCacheConfig, mode: CacheMode, t: TFunctio
 	}
 	return null;
 };
-
 /** 管理直接与语义缓存配置，并保留权限及可访问性约束。 */
 export default function CachingView() {
 	const { t } = useTranslation("config");
 	const { data: bifrostConfig, isLoading: configLoading, error: configError } = useGetCoreConfigQuery({ fromDB: true });
 	const isVectorStoreEnabled = bifrostConfig?.is_cache_connected ?? false;
-
 	// Local cache state lives on the plugin row keyed by SEMANTIC_CACHE_PLUGIN.
 	// No dedicated /local-cache-config endpoint exists — the plugins API is
 	// the source of truth for both the enabled flag and the config blob.
 	const { data: plugins, isLoading: pluginsLoading } = useGetPluginsQuery();
 	const semanticCachePlugin = useMemo(() => plugins?.find((p) => p.name === SEMANTIC_CACHE_PLUGIN), [plugins]);
 	const enabledOnServer = Boolean(semanticCachePlugin?.enabled);
-
 	const { data: providersData, error: providersError, isLoading: providersLoading } = useGetProvidersQuery();
 	const providers = useMemo(() => providersData || [], [providersData]);
 	const embeddingProviders = useMemo(() => providers.filter(supportsEmbedding), [providers]);
-
 	const [updatePlugin, { isLoading: isUpdating }] = useUpdatePluginMutation();
-	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const [createPlugin, { isLoading: isCreating }] = useCreatePluginMutation();
 	const isSaving = isUpdating || isCreating;
-
 	const [cacheConfig, setCacheConfig] = useState<EditorCacheConfig>(defaultDirectConfig);
 	const [serverCacheConfig, setServerCacheConfig] = useState<EditorCacheConfig>(defaultDirectConfig);
 	const [mode, setMode] = useState<CacheMode>("direct");
-
 	// Hydrate from the plugin row once it lands. If the plugin doesn't exist
 	// yet (first-time setup), keep the default direct-only seed so the user
 	// can start typing before any save.
@@ -157,16 +141,13 @@ export default function CachingView() {
 		setServerCacheConfig(editorConfig);
 		setMode(inferMode(editorConfig));
 	}, [plugins, semanticCachePlugin]);
-
 	useEffect(() => {
 		if (providersError) {
 			toast.error(t("caching.providersLoadFailed", { error: getErrorMessage(providersError) }));
 		}
 	}, [providersError, t]);
-
 	// Surface validation problems inline rather than only on Save click.
 	const validationError = useMemo(() => validateForSave(cacheConfig, mode, t), [cacheConfig, mode, t]);
-
 	// Only show the dimension/namespace heads-up when the user has actually
 	// touched a structural field. Showing it permanently in semantic mode
 	// trains users to ignore it; showing it on diff makes it land.
@@ -177,7 +158,6 @@ export default function CachingView() {
 			cacheConfig.dimension !== serverCacheConfig.dimension
 		);
 	}, [cacheConfig, serverCacheConfig]);
-
 	const hasUnsavedConfigChanges = useMemo(() => {
 		const fields: (keyof EditorCacheConfig)[] = [
 			"provider",
@@ -196,11 +176,9 @@ export default function CachingView() {
 		const modeChanged = inferMode(serverCacheConfig) !== mode;
 		return changed || modeChanged;
 	}, [cacheConfig, serverCacheConfig, mode]);
-
 	const updateLocal = (updates: Partial<EditorCacheConfig>) => {
 		setCacheConfig((prev) => ({ ...prev, ...updates }));
 	};
-
 	// Toggle handler. Updates the semantic_cache plugin's enabled flag while
 	// keeping the last-saved config so the backend can ReloadPlugin/RemovePlugin
 	// based on the new flag. When toggling on for the first time and no plugin
@@ -234,11 +212,13 @@ export default function CachingView() {
 			toast.success(checked ? t("caching.toastEnabled") : t("caching.toastDisabled"));
 		} catch (error) {
 			toast.error(
-				t("caching.toastToggleFailed", { action: checked ? t("caching.enable") : t("caching.disable"), error: getErrorMessage(error) }),
+				t("caching.toastToggleFailed", {
+					action: checked ? t("caching.enable") : t("caching.disable"),
+					error: getErrorMessage(error),
+				}),
 			);
 		}
 	};
-
 	const handleSave = async () => {
 		const err = validateForSave(cacheConfig, mode, t);
 		if (err) {
@@ -267,10 +247,8 @@ export default function CachingView() {
 			toast.error(t("caching.toastUpdateFailed", { error: getErrorMessage(error) }));
 		}
 	};
-
 	const cachingActive = enabledOnServer && isVectorStoreEnabled;
 	const isLoading = configLoading || pluginsLoading;
-
 	return (
 		<div className="mx-auto w-full max-w-4xl space-y-6">
 			<PageTitle title={t("caching.title")}>{t("caching.description")}</PageTitle>
@@ -291,8 +269,8 @@ export default function CachingView() {
 			{!isLoading && !configError && (
 				<div className="space-y-4">
 					{/* Enable toggle flips plugin.enabled on the semantic_cache
-					    plugin row. The plugins API handles ReloadPlugin /
-					    RemovePlugin transparently on update. */}
+                    plugin row. The plugins API handles ReloadPlugin /
+                    RemovePlugin transparently on update. */}
 					<div className="flex items-center justify-between space-x-2">
 						<div className="space-y-0.5">
 							<label htmlFor="enable-caching" className="text-sm font-medium">
@@ -302,18 +280,17 @@ export default function CachingView() {
 						</div>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<span tabIndex={!hasSettingsUpdateAccess ? 0 : undefined}>
+								<span tabIndex={undefined}>
 									<Switch
 										id="enable-caching"
 										data-testid="caching-enable-switch"
 										size="md"
 										checked={cachingActive}
-										disabled={!isVectorStoreEnabled || isSaving || !hasSettingsUpdateAccess}
+										disabled={!isVectorStoreEnabled || isSaving}
 										onCheckedChange={handleToggle}
 									/>
 								</span>
 							</TooltipTrigger>
-							{!hasSettingsUpdateAccess && <TooltipContent>{t("caching.noUpdatePermission")}</TooltipContent>}
 						</Tooltip>
 					</div>
 
@@ -361,7 +338,15 @@ export default function CachingView() {
 												<Trans
 													t={t}
 													i18nKey="caching.structuralChangeHelp"
-													components={{ b0: <b />, em1: <em />, b2: <b />, b3: <b />, b4: <b />, b5: <b />, em6: <em /> }}
+													components={{
+														b0: <b />,
+														em1: <em />,
+														b2: <b />,
+														b3: <b />,
+														b4: <b />,
+														b5: <b />,
+														em6: <em />,
+													}}
 												/>
 											</div>
 										)}
@@ -423,7 +408,13 @@ export default function CachingView() {
 													<Trans
 														t={t}
 														i18nKey="caching.dimensionHelp"
-														components={{ code0: <code />, code1: <code />, code2: <code />, code3: <code />, code4: <code /> }}
+														components={{
+															code0: <code />,
+															code1: <code />,
+															code2: <code />,
+															code3: <code />,
+															code4: <code />,
+														}}
 													/>
 												</p>
 											</div>
@@ -567,7 +558,7 @@ export default function CachingView() {
 											<Switch
 												aria-label={t("caching.excludeSystemPrompt")}
 												data-testid="caching-exclude-system-prompt-switch"
-												checked={cacheConfig.exclude_system_prompt || false}
+												checked={cacheConfig.exclude_system_prompt}
 												onCheckedChange={(checked) => updateLocal({ exclude_system_prompt: checked })}
 												size="md"
 											/>
@@ -633,17 +624,16 @@ export default function CachingView() {
 							<div className="bg-card sticky bottom-0 flex justify-end py-2">
 								<Tooltip>
 									<TooltipTrigger asChild>
-										<span tabIndex={!hasSettingsUpdateAccess ? 0 : undefined}>
+										<span tabIndex={undefined}>
 											<Button
 												data-testid="caching-save-button"
 												onClick={handleSave}
-												disabled={!hasUnsavedConfigChanges || isSaving || Boolean(validationError) || !hasSettingsUpdateAccess}
+												disabled={!hasUnsavedConfigChanges || isSaving || Boolean(validationError)}
 											>
 												{isSaving ? t("saving") : t("saveChanges")}
 											</Button>
 										</span>
 									</TooltipTrigger>
-									{!hasSettingsUpdateAccess && <TooltipContent>{t("proxy.noPermission")}</TooltipContent>}
 								</Tooltip>
 							</div>
 						</>

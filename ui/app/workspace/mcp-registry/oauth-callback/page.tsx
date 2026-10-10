@@ -1,5 +1,5 @@
 // Landing route for the upstream OAuth callback (admin-test OAuth flow path).
-// Backend's /api/oauth/callback performs the actual token exchange, then
+
 // 302s here with ?status=success or ?status=failed&error=... The popup
 // opened by the MCP registry's OAuth2Authorizer expects a postMessage on
 // its opener window; this page sends it and closes itself.
@@ -45,7 +45,9 @@ export default function MCPRegistryOAuthCallbackPage() {
 			<div className="bg-card w-full rounded-lg border p-8 text-center shadow-sm">
 				<h1 className="text-xl font-semibold">{status === "success" ? t("registry.callback.complete") : t("registry.callback.failed")}</h1>
 				{error && <p className="text-destructive mt-2 text-sm">{error}</p>}
-				<p className="text-muted-foreground mt-4 text-sm">{closeAttempted ? t("registry.callback.closeTab") : t("registry.callback.closeWindow")}</p>
+				<p className="text-muted-foreground mt-4 text-sm">
+					{closeAttempted ? t("registry.callback.closeTab") : t("registry.callback.closeWindow")}
+				</p>
 				<div className="mt-6">
 					<Button asChild variant="outline" data-testid="mcp-callback-back-button">
 						<Link to="/workspace/mcp-registry">{t("registry.callback.back")}</Link>

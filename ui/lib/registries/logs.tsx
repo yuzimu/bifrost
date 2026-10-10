@@ -3,8 +3,6 @@
 // OSS registers nothing: the log sheet's Routing tab shows its attempt trail and routing logs, the
 // Metadata grid every caller key, and the filter sidebar its own sections. A downstream build can
 // register a panel for the top of the Routing tab, labelled filter groups over metadata keys it
-// writes, and the prefixes of those keys, by importing its registration module via the @enterprise
-// alias; see ui/app/_fallbacks/enterprise/lib/registrations/logs.ts for the OSS-build fallback.
 
 import type { LogEntry } from "@/lib/types/logs";
 import type { ComponentType } from "react";

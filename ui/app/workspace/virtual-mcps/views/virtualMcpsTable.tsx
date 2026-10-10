@@ -29,23 +29,9 @@ import {
 	useUpdateVirtualMCPMutation,
 } from "@/lib/store";
 import { VirtualMCP } from "@/lib/types/virtualMcps";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
-import {
-	Check,
-	ChevronLeft,
-	ChevronRight,
-	Copy,
-	Loader2,
-	MoreHorizontal,
-	Pencil,
-	Plus,
-	Search,
-	Server,
-	Trash2,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Loader2, MoreHorizontal, Pencil, Plus, Search, Server, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-
 interface VirtualMCPsTableProps {
 	virtualMcps: VirtualMCP[];
 	totalCount: number;
@@ -59,7 +45,6 @@ interface VirtualMCPsTableProps {
 	onCreate: () => void;
 	onEdit: (id: number) => void;
 }
-
 export default function VirtualMCPsTable({
 	virtualMcps,
 	totalCount,
@@ -78,31 +63,23 @@ export default function VirtualMCPsTable({
 	const { toast } = useToast();
 	const [deleteVirtualMCP, { isLoading: deleting }] = useDeleteVirtualMCPMutation();
 	const [updateVirtualMCP] = useUpdateVirtualMCPMutation();
-	const canUpdate = useRbac(RbacResource.VirtualMCPs, RbacOperation.Update);
-	const canDelete = useRbac(RbacResource.VirtualMCPs, RbacOperation.Delete);
-
 	// Live clients, so "all tools" servers count their real tools.
 	const { data: mcpClientsData, isLoading: clientsLoading, isError: clientsError } = useGetMCPClientsQuery({ limit: 1000 });
 	const clientById = useMemo(() => new Map((mcpClientsData?.clients ?? []).map((c) => [c.config.client_id, c])), [mcpClientsData]);
-
 	// Resolve assigned virtual-key ids -> names for the "Assigned to" column.
 	const { data: vksData, isLoading: vksLoading } = useGetVirtualKeysQuery({ limit: 1000 });
 	const vkNameById = useMemo(() => new Map((vksData?.virtual_keys ?? []).map((v) => [v.id, v.name])), [vksData]);
-
 	// Externally reachable base URL, so the endpoint cell copies the full URL callers use.
 	const { data: coreConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const baseUrl = getExternalBaseUrl(coreConfig?.client_config);
-
 	const includedToolCount = (row: VirtualMCP) =>
 		(row.tools ?? []).reduce((sum, spec) => {
 			const isAll = spec.tool_names.length === 1 && spec.tool_names[0] === "*";
 			return sum + (isAll ? (clientById.get(spec.mcp_client_id)?.tools?.length ?? 0) : spec.tool_names.length);
 		}, 0);
-
 	const [pendingDelete, setPendingDelete] = useState<VirtualMCP | null>(null);
 	const [pendingId, setPendingId] = useState<number | null>(null);
 	const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
-
 	// PATCH-style update: send only `enabled`, so the toggle never touches the tools or name.
 	const toggleEnabled = async (row: VirtualMCP, enabled: boolean) => {
 		setTogglingIds((prev) => new Set(prev).add(row.id));
@@ -110,7 +87,11 @@ export default function VirtualMCPsTable({
 			await updateVirtualMCP({ id: row.id, data: { enabled } }).unwrap();
 			toast({ title: enabled ? t("virtualMcps.enabledToast") : t("virtualMcps.disabledToast") });
 		} catch (err) {
-			toast({ title: t("virtualMcps.updateFailed"), description: getErrorMessage(err), variant: "destructive" });
+			toast({
+				title: t("virtualMcps.updateFailed"),
+				description: getErrorMessage(err),
+				variant: "destructive",
+			});
 		} finally {
 			setTogglingIds((prev) => {
 				const next = new Set(prev);
@@ -119,7 +100,6 @@ export default function VirtualMCPsTable({
 			});
 		}
 	};
-
 	const confirmDelete = async () => {
 		if (!pendingDelete) return;
 		const row = pendingDelete;
@@ -133,12 +113,15 @@ export default function VirtualMCPsTable({
 			}
 			toast({ title: t("virtualMcps.deleted") });
 		} catch (err) {
-			toast({ title: t("virtualMcps.deleteFailed"), description: getErrorMessage(err), variant: "destructive" });
+			toast({
+				title: t("virtualMcps.deleteFailed"),
+				description: getErrorMessage(err),
+				variant: "destructive",
+			});
 		} finally {
 			setPendingId(null);
 		}
 	};
-
 	return (
 		<div className="flex grow flex-col overflow-auto">
 			<AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
@@ -163,9 +146,7 @@ export default function VirtualMCPsTable({
 				</AlertDialogContent>
 			</AlertDialog>
 
-			<PageTitle title={t("virtualMcps.title")}>
-				{t("virtualMcps.description")}
-			</PageTitle>
+			<PageTitle title={t("virtualMcps.title")}>{t("virtualMcps.description")}</PageTitle>
 
 			<div className="mb-4 flex items-center justify-between gap-3">
 				<div className="relative max-w-sm min-w-[200px] flex-1">
@@ -211,9 +192,7 @@ export default function VirtualMCPsTable({
 										) : (
 											<div className="flex flex-col items-center gap-3 py-6">
 												<Server className="text-muted-foreground h-10 w-10" strokeWidth={1} />
-												<span className="text-muted-foreground text-sm">
-													{t("virtualMcps.empty")}
-												</span>
+												<span className="text-muted-foreground text-sm">{t("virtualMcps.empty")}</span>
 												<Button size="sm" onClick={onCreate}>
 													<Plus className="h-4 w-4" />
 													{t("virtualMcps.add")}
@@ -233,7 +212,9 @@ export default function VirtualMCPsTable({
 										<TableCell className="text-muted-foreground text-sm">
 											{clientsLoading ? "…" : clientsError ? "—" : includedToolCount(row)}
 										</TableCell>
-										<TableCell className="text-muted-foreground text-sm">{formatDate(row.created_at, i18n.resolvedLanguage || i18n.language)}</TableCell>
+										<TableCell className="text-muted-foreground text-sm">
+											{formatDate(row.created_at, i18n.resolvedLanguage || i18n.language)}
+										</TableCell>
 										<TableCell>
 											<AssignedToCell vkIds={row.virtual_key_ids ?? []} vkNameById={vkNameById} loading={vksLoading} />
 										</TableCell>
@@ -241,7 +222,7 @@ export default function VirtualMCPsTable({
 											<Switch
 												size="md"
 												checked={row.enabled}
-												disabled={!canUpdate || togglingIds.has(row.id)}
+												disabled={togglingIds.has(row.id)}
 												onAsyncCheckedChange={(checked) => toggleEnabled(row, checked)}
 												aria-label={row.enabled ? t("virtualMcps.disableAria") : t("virtualMcps.enableAria")}
 												data-testid={`virtual-mcp-enabled-switch-${row.id}`}
@@ -253,8 +234,8 @@ export default function VirtualMCPsTable({
 										>
 											<RowActions
 												busy={deleting && pendingId === row.id}
-												canUpdate={canUpdate}
-												canDelete={canDelete}
+												canUpdate={true}
+												canDelete={true}
 												onEdit={() => onEdit(row.id)}
 												onDelete={() => setPendingDelete(row)}
 											/>
@@ -311,7 +292,6 @@ export default function VirtualMCPsTable({
 		</div>
 	);
 }
-
 function EndpointCell({ slug, baseUrl }: { slug: string; baseUrl: string }) {
 	const { t } = useTranslation("mcp");
 	const fullUrl = `${baseUrl}/mcp/${slug}`;
@@ -331,7 +311,6 @@ function EndpointCell({ slug, baseUrl }: { slug: string; baseUrl: string }) {
 		</button>
 	);
 }
-
 function AssignedToCell({ vkIds, vkNameById, loading }: { vkIds: string[]; vkNameById: Map<string, string>; loading: boolean }) {
 	const { t } = useTranslation("mcp");
 	if (vkIds.length === 0) return <span className="text-muted-foreground text-sm">-</span>;
@@ -354,13 +333,14 @@ function AssignedToCell({ vkIds, vkNameById, loading }: { vkIds: string[]; vkNam
 							+{overflow.length}
 						</Badge>
 					</TooltipTrigger>
-					<TooltipContent className="max-w-xs">{overflow.map((id) => t("virtualMcps.keyNamed", { name: vkNameById.get(id) ?? id })).join(", ")}</TooltipContent>
+					<TooltipContent className="max-w-xs">
+						{overflow.map((id) => t("virtualMcps.keyNamed", { name: vkNameById.get(id) ?? id })).join(", ")}
+					</TooltipContent>
 				</Tooltip>
 			)}
 		</div>
 	);
 }
-
 function RowActions({
 	busy,
 	canUpdate,
@@ -415,13 +395,16 @@ function RowActions({
 		</DropdownMenu>
 	);
 }
-
 /** 按界面语言显示创建日期，无法解析时保留服务端原值。 */
 function formatDate(iso: string, language: string): string {
 	try {
 		const t = new Date(iso).getTime();
 		if (Number.isNaN(t)) return iso;
-		return new Date(t).toLocaleDateString(language, { year: "numeric", month: "short", day: "numeric" });
+		return new Date(t).toLocaleDateString(language, {
+			year: "numeric",
+			month: "short",
+			day: "numeric",
+		});
 	} catch {
 		return iso;
 	}

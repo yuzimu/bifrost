@@ -11,10 +11,7 @@ interface ModelAccessBadgesProps {
 	/** The list: model names, "*" alone, or `regex:` entries. */
 	value: readonly string[] | undefined | null;
 	mode: ModelAccessMode;
-	/**
-	 * Treat the list as "all models" even without a "*" entry. Access profiles and
-	 * projects carry that as a separate all_models_allowed flag.
-	 */
+
 	allModels?: boolean;
 	/**
 	 * For a block list, whether the allow side beside it permits every model. An empty block list

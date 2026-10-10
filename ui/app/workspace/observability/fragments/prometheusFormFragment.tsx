@@ -10,13 +10,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { prometheusFormSchema, type SecretVar, type PrometheusFormSchema } from "@/lib/types/schemas";
 import { emptySecretVar, toSecretVarFormValue } from "@/lib/utils/secretVarForm";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, Copy, Info, Plus, Trash, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-
 interface PrometheusFormFragmentProps {
 	currentConfig?: {
 		metrics_enabled?: boolean;
@@ -38,10 +36,8 @@ interface PrometheusFormFragmentProps {
 	isLoading?: boolean;
 	metricsEndpoint?: string;
 }
-
 const hasAuth = (v?: string | SecretVar): boolean =>
 	typeof v === "string" ? !!v.trim() : !!(v?.value?.trim() || ((v?.type === "env" || v?.type === "vault") && !!v?.ref?.trim()));
-
 const buildDefaults = (initialConfig?: PrometheusFormFragmentProps["currentConfig"]): PrometheusFormSchema => ({
 	metrics_enabled: initialConfig?.metrics_enabled ?? true,
 	overhead_breakdown_enabled: initialConfig?.overhead_breakdown_enabled ?? false,
@@ -56,7 +52,6 @@ const buildDefaults = (initialConfig?: PrometheusFormFragmentProps["currentConfi
 		basic_auth_password: toSecretVarFormValue(initialConfig?.basic_auth?.password),
 	},
 });
-
 export function PrometheusFormFragment({
 	currentConfig: initialConfig,
 	onSave,
@@ -66,21 +61,18 @@ export function PrometheusFormFragment({
 	metricsEndpoint,
 }: PrometheusFormFragmentProps) {
 	const { t } = useTranslation("observability");
-	const hasPrometheusAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
 	const [isSaving, setIsSaving] = useState(false);
 	const { copy, copied } = useCopyToClipboard();
 	const [showBasicAuth, setShowBasicAuth] = useState(
 		hasAuth(initialConfig?.basic_auth?.username) || hasAuth(initialConfig?.basic_auth?.password),
 	);
 	const [activeTab, setActiveTab] = useState<"pull" | "push">("pull");
-
 	const form = useForm<PrometheusFormSchema, any, PrometheusFormSchema>({
 		resolver: zodResolver(prometheusFormSchema) as Resolver<PrometheusFormSchema, any, PrometheusFormSchema>,
 		mode: "onChange",
 		reValidateMode: "onChange",
 		defaultValues: buildDefaults(initialConfig),
 	});
-
 	const onSubmit = async (data: PrometheusFormSchema) => {
 		setIsSaving(true);
 		try {
@@ -89,18 +81,15 @@ export function PrometheusFormFragment({
 			setIsSaving(false);
 		}
 	};
-
 	useEffect(() => {
 		form.reset(buildDefaults(initialConfig));
 		setShowBasicAuth(hasAuth(initialConfig?.basic_auth?.username) || hasAuth(initialConfig?.basic_auth?.password));
 	}, [form, initialConfig]);
-
 	const handleCopyEndpoint = () => {
 		if (metricsEndpoint) {
 			copy(metricsEndpoint);
 		}
 	};
-
 	const handleRemoveBasicAuth = () => {
 		form.setValue("prometheus_config.basic_auth_username", emptySecretVar(), {
 			shouldDirty: true,
@@ -112,10 +101,8 @@ export function PrometheusFormFragment({
 		});
 		setShowBasicAuth(false);
 	};
-
 	// 保存与重置覆盖完整配置，两个标签页共享脏状态和校验结果。
 	const formDirty = form.formState.isDirty;
-
 	// Whole-form validity. Save is a single API call covering both tabs, so an
 	// invalid field on the *other* tab silently blocks handleSubmit. We disable
 	// Save when invalid and surface where the error lives so the user isn't
@@ -124,8 +111,7 @@ export function PrometheusFormFragment({
 	const errors = form.formState.errors as Record<string, any>;
 	const hasPullErrors = !!errors.metrics_enabled || !!errors.overhead_breakdown_enabled;
 	const hasPushErrors = !!errors.push_gateway_enabled || !!errors.prometheus_config;
-
-	const saveDisabled = !hasPrometheusAccess || !formDirty || formIsInvalid;
+	const saveDisabled = !formDirty || formIsInvalid;
 	let tooltipMsg = "";
 	if (!formDirty) {
 		tooltipMsg = t("connectors.noChanges");
@@ -133,7 +119,6 @@ export function PrometheusFormFragment({
 		const where = hasPullErrors ? t("connectors.prometheus.pullBased") : hasPushErrors ? t("connectors.prometheus.pushBased") : "";
 		tooltipMsg = where ? t("connectors.prometheus.fixBeforeSaveTab", { tab: where }) : t("connectors.fixBeforeSave");
 	}
-
 	// 渲染全表操作，权限与完整表单校验共同控制保存。
 	const renderFormActions = () => (
 		<div className="flex w-full flex-row items-center border-t pt-4">
@@ -143,7 +128,7 @@ export function PrometheusFormFragment({
 						type="button"
 						variant="outline"
 						onClick={onDelete}
-						disabled={isDeleting || !hasPrometheusAccess}
+						disabled={isDeleting}
 						data-testid="prometheus-connector-delete-btn"
 						title={t("connectors.deleteConnector")}
 						aria-label={t("connectors.deleteConnector")}
@@ -158,7 +143,7 @@ export function PrometheusFormFragment({
 						form.reset(buildDefaults(initialConfig));
 						setShowBasicAuth(hasAuth(initialConfig?.basic_auth?.username) || hasAuth(initialConfig?.basic_auth?.password));
 					}}
-					disabled={!hasPrometheusAccess || isLoading || !formDirty}
+					disabled={isLoading || !formDirty}
 					data-testid="prometheus-reset-btn"
 				>
 					{t("connectors.reset")}
@@ -180,57 +165,46 @@ export function PrometheusFormFragment({
 			</div>
 		</div>
 	);
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex flex-col gap-1">
-							<h3 className="text-sm font-medium">{t("connectors.otel.overheadBreakdown")}</h3>
-							<p className="text-muted-foreground text-xs">{t("connectors.otel.overheadBreakdownHelp")}</p>
-						</div>
-						<FormField
-							control={form.control}
-							name="overhead_breakdown_enabled"
-							render={({ field }) => (
-								<FormItem className="flex items-center gap-2">
-									<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
-									<FormControl>
-										<Switch
-											checked={field.value}
-											onCheckedChange={field.onChange}
-											disabled={!hasPrometheusAccess}
-											data-testid="prometheus-overhead-breakdown-toggle"
-										/>
-									</FormControl>
-								</FormItem>
-							)}
-						/>
+				<div className="flex items-center justify-between gap-4">
+					<div className="flex flex-col gap-1">
+						<h3 className="text-sm font-medium">{t("connectors.otel.overheadBreakdown")}</h3>
+						<p className="text-muted-foreground text-xs">{t("connectors.otel.overheadBreakdownHelp")}</p>
 					</div>
+					<FormField
+						control={form.control}
+						name="overhead_breakdown_enabled"
+						render={({ field }) => (
+							<FormItem className="flex items-center gap-2">
+								<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
+								<FormControl>
+									<Switch checked={field.value} onCheckedChange={field.onChange} data-testid="prometheus-overhead-breakdown-toggle" />
+								</FormControl>
+							</FormItem>
+						)}
+					/>
+				</div>
 
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex flex-col gap-1">
-							<h3 className="text-sm font-medium">{t("connectors.prometheus.userLabels")}</h3>
-							<p className="text-muted-foreground text-xs">{t("connectors.prometheus.userLabelsHelp")}</p>
-						</div>
-						<FormField
-							control={form.control}
-							name="user_labels_enabled"
-							render={({ field }) => (
-								<FormItem className="flex items-center gap-2">
-									<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
-									<FormControl>
-										<Switch
-											checked={field.value}
-											onCheckedChange={field.onChange}
-											disabled={!hasPrometheusAccess}
-											data-testid="prometheus-user-labels-toggle"
-										/>
-									</FormControl>
-								</FormItem>
-							)}
-						/>
+				<div className="flex items-center justify-between gap-4">
+					<div className="flex flex-col gap-1">
+						<h3 className="text-sm font-medium">{t("connectors.prometheus.userLabels")}</h3>
+						<p className="text-muted-foreground text-xs">{t("connectors.prometheus.userLabelsHelp")}</p>
 					</div>
+					<FormField
+						control={form.control}
+						name="user_labels_enabled"
+						render={({ field }) => (
+							<FormItem className="flex items-center gap-2">
+								<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
+								<FormControl>
+									<Switch checked={field.value} onCheckedChange={field.onChange} data-testid="prometheus-user-labels-toggle" />
+								</FormControl>
+							</FormItem>
+						)}
+					/>
+				</div>
 
 				<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "pull" | "push")}>
 					<TabsList className="gap-2">
@@ -256,12 +230,7 @@ export function PrometheusFormFragment({
 									<FormItem className="flex items-center gap-2">
 										<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
 										<FormControl>
-											<Switch
-												checked={field.value}
-												onCheckedChange={field.onChange}
-												disabled={!hasPrometheusAccess}
-												data-testid="prometheus-metrics-enable-toggle"
-											/>
+											<Switch checked={field.value} onCheckedChange={field.onChange} data-testid="prometheus-metrics-enable-toggle" />
 										</FormControl>
 									</FormItem>
 								)}
@@ -290,7 +259,6 @@ export function PrometheusFormFragment({
 							</div>
 							<p className="text-muted-foreground mt-2 text-xs">{t("connectors.prometheus.scrapeHelp")}</p>
 						</div>
-
 					</TabsContent>
 
 					{/* Push-based tab: gates the push gateway loop */}
@@ -309,12 +277,7 @@ export function PrometheusFormFragment({
 									<FormItem className="flex items-center gap-2">
 										<FormLabel className="text-muted-foreground text-sm font-medium">{t("connectors.enabled")}</FormLabel>
 										<FormControl>
-											<Switch
-												checked={field.value}
-												onCheckedChange={field.onChange}
-												disabled={!hasPrometheusAccess}
-												data-testid="prometheus-push-enable-toggle"
-											/>
+											<Switch checked={field.value} onCheckedChange={field.onChange} data-testid="prometheus-push-enable-toggle" />
 										</FormControl>
 									</FormItem>
 								)}
@@ -336,7 +299,6 @@ export function PrometheusFormFragment({
 										<FormControl>
 											<SecretVarInput
 												placeholder={t("connectors.prometheus.pushGatewayPlaceholder")}
-												disabled={!hasPrometheusAccess}
 												data-testid="prometheus-push-gateway-url"
 												{...field}
 											/>
@@ -355,7 +317,7 @@ export function PrometheusFormFragment({
 										<FormItem>
 											<FormLabel>{t("connectors.prometheus.jobName")}</FormLabel>
 											<FormControl>
-												<Input placeholder="bifrost" disabled={!hasPrometheusAccess} data-testid="prometheus-job-name" {...field} />
+												<Input placeholder="bifrost" data-testid="prometheus-job-name" {...field} />
 											</FormControl>
 											<FormDescription>{t("connectors.prometheus.jobNameHelp")}</FormDescription>
 											<FormMessage />
@@ -374,7 +336,6 @@ export function PrometheusFormFragment({
 													type="number"
 													min={1}
 													max={300}
-													disabled={!hasPrometheusAccess}
 													data-testid="prometheus-push-interval"
 													{...field}
 													onChange={(e) => field.onChange(parseInt(e.target.value) || 15)}
@@ -408,7 +369,6 @@ export function PrometheusFormFragment({
 										<FormControl>
 											<Input
 												placeholder={t("connectors.autoGeneratedHostname")}
-												disabled={!hasPrometheusAccess}
 												data-testid="prometheus-instance-id"
 												{...field}
 												value={field.value ?? ""}
@@ -426,7 +386,6 @@ export function PrometheusFormFragment({
 										variant="outline"
 										size="sm"
 										onClick={() => setShowBasicAuth(true)}
-										disabled={!hasPrometheusAccess}
 										data-testid="prometheus-add-basic-auth"
 									>
 										<Plus className="mr-2 h-3 w-3" />
@@ -441,7 +400,6 @@ export function PrometheusFormFragment({
 												variant="ghost"
 												size="sm"
 												onClick={handleRemoveBasicAuth}
-												disabled={!hasPrometheusAccess}
 												className="text-muted-foreground hover:text-destructive h-auto p-1"
 												data-testid="prometheus-remove-basic-auth"
 												aria-label={t("connectors.removeBasicAuth")}
@@ -459,7 +417,6 @@ export function PrometheusFormFragment({
 														<FormControl>
 															<SecretVarInput
 																placeholder={t("connectors.prometheus.usernamePlaceholder")}
-																disabled={!hasPrometheusAccess}
 																data-testid="prometheus-basic-auth-username"
 																{...field}
 															/>
@@ -479,7 +436,6 @@ export function PrometheusFormFragment({
 															<SecretVarInput
 																type="password"
 																placeholder={t("connectors.prometheus.passwordPlaceholder")}
-																disabled={!hasPrometheusAccess}
 																hideValueWhenEnv
 																redactNonEnvValue
 																data-testid="prometheus-basic-auth-password"
@@ -495,7 +451,6 @@ export function PrometheusFormFragment({
 								)}
 							</div>
 						</div>
-
 					</TabsContent>
 				</Tabs>
 

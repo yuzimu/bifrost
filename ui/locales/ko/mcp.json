@@ -781,16 +781,6 @@
 			"searchUsers": "이름이나 이메일로 검색"
 		}
 	},
-	"toolGroups": {
-		"title": "MCP 도구 그룹",
-		"description": "도구를 구성하고 관리하려면 MCP 서버용 도구 그룹을 구성하세요.",
-		"unlockTitle": "MCP 도구 그룹 잠금 해제",
-		"unlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. MCP 서버용 도구 그룹을 구성하여 MCP 도구를 구성하고 조직 전체에서 이를 관리하세요."
-	},
-	"authConfig": {
-		"unlockTitle": "MCP 인증 구성 잠금 해제",
-		"unlockDescription": "이 기능은 Bifrost 엔터프라이즈 라이선스에 포함됩니다. MCP 연결을 보호하려면 MCP 서버에 대한 인증을 구성하세요."
-	},
 	"credentials": {
 		"justNow": "지금 막",
 		"minutesAgo": "{{minutes}}분 전",

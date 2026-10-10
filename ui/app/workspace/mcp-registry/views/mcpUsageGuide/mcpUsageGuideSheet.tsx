@@ -4,12 +4,10 @@ import { SearchSelect } from "@/components/ui/searchSelect";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDebouncedValue } from "@/hooks/useDebounce";
-import { IS_ENTERPRISE } from "@/lib/constants/config";
 import { useGetCoreConfigQuery, useGetMCPClientsQuery, useGetVirtualKeysQuery } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { useGetSCIMProvidersQuery } from "@enterprise/lib/store/apis/scimApi";
 import { Link } from "@tanstack/react-router";
-import { Check, Fingerprint, Globe2, KeyRound, Server, ShieldCheck, SquareTerminal } from "lucide-react";
+import { Check, Globe2, KeyRound, Server, ShieldCheck, SquareTerminal } from "lucide-react";
 import { parseAsArrayOf, parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -17,19 +15,15 @@ import { HARNESSES } from "./harnesses";
 import { PlatformSelect } from "./platformSelect";
 import type { AuthMethod, HarnessID, HarnessPlatform, ServerScope, VirtualKeyOption } from "./types";
 import { buildMCPHeaders, isClientAllowedForVirtualKey, maskSecret } from "./utils";
-
 // Literal value sets driving the URL-persisted enums.
 const HARNESS_IDS = HARNESSES.map((h) => h.id);
 const HARNESS_PLATFORMS: HarnessPlatform[] = ["macos", "windows", "linux"];
 const SERVER_SCOPES: ServerScope[] = ["all", "selected"];
-const AUTH_METHODS: AuthMethod[] = ["virtual_key", "oauth", "idp_token"];
-
+const AUTH_METHODS: AuthMethod[] = ["virtual_key", "oauth"];
 const AUTH_METHOD_ICONS: Record<AuthMethod, typeof KeyRound> = {
 	virtual_key: KeyRound,
 	oauth: ShieldCheck,
-	idp_token: Fingerprint,
 };
-
 export function MCPUsageGuideSheet() {
 	const { t } = useTranslation("mcp");
 	// ── URL-persisted settings (survive refresh) ─────────────────────────
@@ -53,40 +47,34 @@ export function MCPUsageGuideSheet() {
 	const harness = urlState.harness;
 	const platform = urlState.platform;
 	const serverScope = urlState.scope;
-
 	// ── Local state ──────────────────────────────────────────────────────
 	const [virtualKeySearch, setVirtualKeySearch] = useState("");
 	const [selectedVirtualKey, setSelectedVirtualKey] = useState<VirtualKeyOption["virtualKey"] | undefined>();
 	const [virtualKeySelectOpen, setVirtualKeySelectOpen] = useState(false);
 	const debouncedVirtualKeySearch = useDebouncedValue(virtualKeySearch, 250);
-
 	// ── Queries ──────────────────────────────────────────────────────────
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true }, { skip: !open });
-	// The identity-provider path is enterprise-only and needs an enabled provider to
-	// authenticate against. The SCIM query is stubbed to [] in OSS builds.
-	const { data: scimProviders } = useGetSCIMProvidersQuery(undefined, { skip: !open || !IS_ENTERPRISE });
 	const { data: virtualKeysData, isFetching: isFetchingVirtualKeys } = useGetVirtualKeysQuery(
 		{ limit: 50, search: debouncedVirtualKeySearch || undefined },
 		{ skip: !open || urlState.auth !== "virtual_key" },
 	);
 	const { data: mcpClientsData, isFetching: isFetchingMCPClients } = useGetMCPClientsQuery(
 		{ limit: 50 },
-		{ skip: !open || urlState.auth !== "virtual_key" || !selectedVirtualKey, refetchOnMountOrArgChange: true },
+		{
+			skip: !open || urlState.auth !== "virtual_key" || !selectedVirtualKey,
+			refetchOnMountOrArgChange: true,
+		},
 	);
-
 	// ── Derived data ─────────────────────────────────────────────────────
 	const activeVirtualKeys = useMemo(() => virtualKeysData?.virtual_keys?.filter((vk) => vk.is_active) ?? [], [virtualKeysData]);
-
 	const virtualKeyOptions = useMemo<VirtualKeyOption[]>(
 		() => activeVirtualKeys.map((vk) => ({ value: vk.id, label: vk.name, virtualKey: vk })),
 		[activeVirtualKeys],
 	);
-
 	const allowedMCPClients = useMemo(() => {
 		if (!selectedVirtualKey) return [];
 		return (mcpClientsData?.clients ?? []).filter((client) => isClientAllowedForVirtualKey(client, selectedVirtualKey));
 	}, [mcpClientsData, selectedVirtualKey]);
-
 	const serverOptions = useMemo<MultiSelectOption[]>(
 		() =>
 			allowedMCPClients.map((client) => ({
@@ -95,40 +83,31 @@ export function MCPUsageGuideSheet() {
 			})),
 		[allowedMCPClients],
 	);
-
 	const selectedServers = useMemo(
 		() => allowedMCPClients.filter((client) => urlState.servers.includes(client.config.client_id)),
 		[allowedMCPClients, urlState.servers],
 	);
-
 	// ── Authentication method ────────────────────────────────────────────
 	// Which credentials /mcp accepts is a server setting, so only the methods the
 	// gateway is actually configured for can produce a working config:
-	//   headers → virtual key and (enterprise) identity-provider token
+
 	//   both    → all three
 	//   oauth   → OAuth only; header credentials are rejected outright
 	const serverAuthMode = bifrostConfig?.client_config?.mcp_server_auth_mode ?? "headers";
-	const idpConfigured = !!scimProviders?.some((provider) => (provider as { enabled?: boolean }).enabled);
-
 	const availableAuthMethods = useMemo<AuthMethod[]>(() => {
 		const methods: AuthMethod[] = [];
 		if (serverAuthMode !== "oauth") methods.push("virtual_key");
 		if (serverAuthMode !== "headers") methods.push("oauth");
-		if (serverAuthMode !== "oauth" && IS_ENTERPRISE && idpConfigured) methods.push("idp_token");
 		return methods;
-	}, [idpConfigured, serverAuthMode]);
-
+	}, [serverAuthMode]);
 	// The identity-provider card stays visible without an enabled provider so the
 	// method is discoverable, just disabled with the reason.
 	const visibleAuthMethods = useMemo<AuthMethod[]>(() => {
 		const methods: AuthMethod[] = ["virtual_key", "oauth"];
-		if (IS_ENTERPRISE) methods.push("idp_token");
 		return methods;
 	}, []);
-
 	const authMethod = availableAuthMethods.includes(urlState.auth) ? urlState.auth : (availableAuthMethods[0] ?? "virtual_key");
 	const usesVirtualKey = authMethod === "virtual_key";
-
 	const headers = useMemo(
 		() =>
 			buildMCPHeaders({
@@ -138,27 +117,28 @@ export function MCPUsageGuideSheet() {
 			}),
 		[authMethod, selectedServers, serverScope, selectedVirtualKey],
 	);
-
-	const authMethodCopy: Record<AuthMethod, { label: string; description: string }> = {
+	const authMethodCopy: Record<
+		AuthMethod,
+		{
+			label: string;
+			description: string;
+		}
+	> = {
 		virtual_key: { label: t("usageGuide.virtualKey"), description: t("usageGuide.virtualKeyDesc") },
 		oauth: { label: "OAuth", description: t("usageGuide.oauthDesc") },
-		idp_token: { label: t("usageGuide.idp"), description: t("usageGuide.idpDesc") },
 	};
-
 	const canGenerateCommand = usesVirtualKey ? !!selectedVirtualKey && (serverScope === "all" || selectedServers.length > 0) : true;
 	const emptyMessage = selectedVirtualKey ? t("usageGuide.selectServersOrRoot") : t("usageGuide.selectVirtualKey");
-
 	// ── Effects ──────────────────────────────────────────────────────────
 	// Keep the URL honest when the stored method is not one the gateway accepts
 	// (config changed, or a shared link from a differently configured instance).
 	// Waits for both sources availability is derived from, so a link carrying a
 	// still-valid method is not rewritten while the config is in flight.
 	useEffect(() => {
-		if (!open || !bifrostConfig || (IS_ENTERPRISE && !scimProviders)) return;
+		if (!open || !bifrostConfig) return;
 		if (availableAuthMethods.length === 0 || availableAuthMethods.includes(urlState.auth)) return;
 		setUrlState({ auth: availableAuthMethods[0] });
-	}, [availableAuthMethods, bifrostConfig, open, scimProviders, setUrlState, urlState.auth]);
-
+	}, [availableAuthMethods, bifrostConfig, open, setUrlState, urlState.auth]);
 	// Resolve the persisted virtual-key id into its full object, otherwise
 	// fall back to auto-selecting the first active key. Auto-selection is kept
 	// transient (not written to the URL) so it re-resolves on every open.
@@ -178,7 +158,6 @@ export function MCPUsageGuideSheet() {
 			setSelectedVirtualKey(activeVirtualKeys[0]);
 		}
 	}, [activeVirtualKeys, debouncedVirtualKeySearch, open, selectedVirtualKey, urlState.vk]);
-
 	// Prune persisted server ids that are no longer allowed for the key. Guarded
 	// on loaded client data so we never wipe persisted ids before they resolve.
 	useEffect(() => {
@@ -188,10 +167,8 @@ export function MCPUsageGuideSheet() {
 			return filtered.length === prev.servers.length ? {} : { servers: filtered };
 		});
 	}, [mcpClientsData, allowedMCPClients, setUrlState]);
-
 	// ── Resolve the active harness definition ────────────────────────────
 	const activeHarness = HARNESSES.find((h) => h.id === harness) ?? HARNESSES[0];
-
 	// ── Render ───────────────────────────────────────────────────────────
 	return (
 		<>
@@ -219,7 +196,7 @@ export function MCPUsageGuideSheet() {
 							</div>
 							<Tabs value={harness} onValueChange={(value) => setUrlState({ harness: value as HarnessID })}>
 								{/* No overflow-x-auto: TabsList now collapses whatever does not fit
-								    into its own trailing dropdown, so the strip never clips. */}
+into its own trailing dropdown, so the strip never clips. */}
 								<TabsList className="flex w-full flex-row justify-start rounded-sm">
 									{HARNESSES.map((h) => (
 										<TabsTrigger key={h.id} value={h.id} className="flex flex-none shrink-0 gap-2">
@@ -276,9 +253,6 @@ export function MCPUsageGuideSheet() {
 										}}
 									/>
 								</p>
-							)}
-							{IS_ENTERPRISE && !idpConfigured && (
-								<p className="text-muted-foreground text-xs">{t("usageGuide.idpNeedsProvider")}</p>
 							)}
 						</section>
 

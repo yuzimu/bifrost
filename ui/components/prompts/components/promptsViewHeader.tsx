@@ -16,7 +16,6 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { usePromptContext } from "../context";
-
 export default function PromptsViewHeader() {
 	const { t, i18n } = useTranslation("config");
 	const {
@@ -33,11 +32,8 @@ export default function PromptsViewHeader() {
 		hasVersionChanges,
 		hasSessionChanges,
 		isStreaming,
-		canUpdate,
 	} = usePromptContext();
-
 	const [sessionsOpen, setSessionsOpen] = useState(false);
-
 	const onSessionSaved = useCallback(
 		(session: PromptSession) => {
 			setCommitSheet({ open: true, session });
@@ -52,25 +48,20 @@ export default function PromptsViewHeader() {
 		},
 		{ history: "replace" },
 	);
-
 	// Fetch versions and sessions for selected prompt
 	const { data: versionsData } = useGetVersionsQuery(selectedPrompt?.id ?? "", { skip: !selectedPrompt?.id });
 	const { data: sessionsData } = useGetSessionsQuery(selectedPrompt?.id ?? "", { skip: !selectedPrompt?.id });
-
 	// Mutations
 	const [createSession, { isLoading: isCreatingSession }] = useCreateSessionMutation();
 	const [renameSession] = useRenameSessionMutation();
-
 	const versions = versionsData?.versions ?? [];
 	const sessions = sessionsData?.sessions ?? [];
-
 	const handleSelectVersion = useCallback(
 		(versionId: number) => {
 			setUrlState({ versionId, sessionId: null });
 		},
 		[setUrlState],
 	);
-
 	// Build model_params with api_key_id for persistence
 	const buildSaveParams = useCallback((): ModelParams => {
 		const params = { ...modelParams };
@@ -79,7 +70,6 @@ export default function PromptsViewHeader() {
 		}
 		return params;
 	}, [modelParams, apiKeyId]);
-
 	const handleSaveSession = useCallback(async () => {
 		if (!selectedPrompt || !hasChanges || isStreaming) return;
 		try {
@@ -99,7 +89,6 @@ export default function PromptsViewHeader() {
 			toast.error(t("promptRepo.toastSaveSessionFailed"), { description: getErrorMessage(err) });
 		}
 	}, [selectedPrompt?.id, messages, buildSaveParams, provider, model, variables, createSession, setUrlState, hasChanges, isStreaming, t]);
-
 	// Cmd+S / Ctrl+S to save session
 	useHotkeys(
 		"mod+s",
@@ -111,7 +100,6 @@ export default function PromptsViewHeader() {
 		},
 		[handleSaveSession, selectedPrompt, isCreatingSession, isStreaming],
 	);
-
 	const handleCommitVersion = useCallback(async () => {
 		if (!selectedPrompt) return;
 		if (!hasChanges) {
@@ -151,7 +139,6 @@ export default function PromptsViewHeader() {
 		hasChanges,
 		t,
 	]);
-
 	const handleRenameSession = useCallback(
 		async (sessionId: number, name: string) => {
 			if (!selectedPrompt) return;
@@ -163,7 +150,6 @@ export default function PromptsViewHeader() {
 		},
 		[selectedPrompt?.id, renameSession, t],
 	);
-
 	const handleClearConversation = useCallback(() => {
 		const firstMsg = messages[0];
 		if (firstMsg?.role === MessageRole.SYSTEM) {
@@ -172,11 +158,9 @@ export default function PromptsViewHeader() {
 			onMessagesChange([Message.system("")]);
 		}
 	}, [messages]);
-
 	const selectedVersion = versions.find((v) => v.id === selectedVersionId);
 	const latestVersion = versions.find((v) => v.is_latest);
 	const displayVersion = selectedVersion ?? latestVersion;
-
 	return (
 		<div className="flex items-center justify-between border-b px-4 py-3">
 			<div className="flex min-w-0 items-center gap-2">
@@ -232,7 +216,7 @@ export default function PromptsViewHeader() {
 					button={{
 						dataTestId: "header-save-session",
 						className: "bg-transparent disabled:opacity-100 disabled:text-muted-foreground",
-						disabled: !hasChanges || !canUpdate,
+						disabled: !hasChanges || false,
 					}}
 				>
 					<Save className="h-4 w-4" />
@@ -282,7 +266,7 @@ export default function PromptsViewHeader() {
 					button={{
 						dataTestId: "header-commit-version",
 						className: "bg-transparent disabled:opacity-100 disabled:text-muted-foreground",
-						disabled: !hasVersionChanges || !canUpdate,
+						disabled: !hasVersionChanges || false,
 					}}
 				>
 					<GitCommit className="h-4 w-4" />
@@ -292,7 +276,6 @@ export default function PromptsViewHeader() {
 		</div>
 	);
 }
-
 function formatSessionDate(dateStr: string, language?: string): string {
 	const date = new Date(dateStr);
 	if (language && language !== "en") {
@@ -312,7 +295,6 @@ function formatSessionDate(dateStr: string, language?: string): string {
 	const displayHours = (hours % 12 || 12).toString().padStart(2, "0");
 	return `${month} ${day}, ${displayHours}:${minutes}${ampm}`;
 }
-
 function SessionItem({
 	session,
 	isSelected,
@@ -327,7 +309,6 @@ function SessionItem({
 	const { t, i18n } = useTranslation("config");
 	const [isEditing, setIsEditing] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
-
 	const handleRenameSubmit = () => {
 		const newName = inputRef.current?.value.trim() ?? "";
 		if (!newName || newName === session.name) {
@@ -337,9 +318,7 @@ function SessionItem({
 		onRename(newName);
 		setIsEditing(false);
 	};
-
 	const dateLabel = formatSessionDate(session.created_at, i18n.resolvedLanguage);
-
 	if (isEditing) {
 		return (
 			<div className="flex items-center gap-2 rounded-sm px-2 py-1.5" role="presentation" onKeyDown={(e) => e.stopPropagation()}>
@@ -359,7 +338,6 @@ function SessionItem({
 			</div>
 		);
 	}
-
 	return (
 		<CommandItem
 			value={`${session.id}-${dateLabel}-${session.name}`}

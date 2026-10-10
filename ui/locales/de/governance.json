@@ -5,7 +5,6 @@
 		"bookDemo": "Buche eine Demo",
 		"bookDemoAria": "Buche eine Demo (öffnet sich in einem neuen Tab mit Calendly),"
 	},
-	"unlockSharedDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Wir erfahren gern mehr über deinen Anwendungsfall und wie wir helfen können.",
 	"customers": {
 		"title": "Kunden",
 		"description": "Verwalte Kundenkonten mit eigenen Teams, Budgets und Zugriffskontrollen.",
@@ -355,52 +354,8 @@
 			"searchWebhooks": "Webhooks durchsuchen..."
 		}
 	},
-	"alerting": {
-		"channelsUnlockTitle": "Benachrichtigungskanäle für proaktives Monitoring freischalten",
-		"channelsUnlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Konfiguriere Benachrichtigungen über Slack, PagerDuty, OpsGenie und Webhooks, um Budget- und Leistungsproblemen zuvorzukommen.",
-		"rulesUnlockTitle": "Warnregeln für proaktives Monitoring freischalten",
-		"rulesUnlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Definiere Warnregeln, um Budget-, Latenz- und Leistungsprobleme zu erkennen, bevor sie zu Vorfällen werden.",
-		"historyUnlockTitle": "Benachrichtigungsverlauf für proaktives Monitoring freischalten",
-		"historyUnlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Überprüfe Ergebnisse der Benachrichtigungszustellung, Fehler und Behebungsereignisse an einem zentralen Ort."
-	},
 	"guardrails": {
 		"unlockTitle": "Guardrails für mehr Sicherheit freischalten"
-	},
-	"auditLogs": {
-		"unlockTitle": "Audit-Logs für bessere Compliance freischalten"
-	},
-	"rbac": {
-		"unlockTitle": "Rollen und Berechtigungen für mehr Sicherheit freischalten"
-	},
-	"projects": {
-		"unlockTitle": "Projekte für bereichsbezogenen Zugriff und Ausgabenkontrolle freischalten",
-		"unlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Ein Projekt ist etwas, für das sich eine Anfrage entscheidet: Es gewährt Zugriff zusätzlich zu dem, was der Aufrufer bereits besitzt, und bestimmt, auf wessen Konto die Ausgaben verbucht werden."
-	},
-	"userRankings": {
-		"unlockTitle": "Nutzer-Rankings für bessere Übersicht freischalten"
-	},
-	"promptDeployments": {
-		"unlockTitle": "Prompt-Deployments für bessere Prompt-Versionierung und A/B-Tests freischalten."
-	},
-	"connectorsUnlock": {
-		"splunk": "Native Splunk-Datenerfassung für bessere Observability freischalten",
-		"pubsub": "Google Cloud Pub/Sub-Trace-Streaming freischalten",
-		"datadog": "Native Datadog-Datenerfassung für bessere Observability freischalten",
-		"bigquery": "Native BigQuery-Datenerfassung für Analysen freischalten",
-		"kafka": "Natives Kafka-Log-Streaming für Echtzeit-Observability freischalten",
-		"kafkaDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Übertrage abgeschlossene Request-Traces als JSON an ein Kafka-Topic für Echtzeitanalysen, Warnmeldungen und nachgelagerte Verarbeitung."
-	},
-	"accessProfiles": {
-		"unlockTitle": "Zugriffsprofile für bessere Performance freischalten",
-		"unlockDescription": "Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz. Erstelle Zugriffsprofile, um den Zugriff auf deine Ressourcen zu steuern."
-	},
-	"users": {
-		"unlockTitle": "Nutzer und Nutzer-Governance freischalten",
-		"unlockDescription": "Verwalte Nutzer, lege Budgets sowie Rate-Limits pro Nutzer fest und steuere den Zugriff mit Governance auf Enterprise-Niveau. Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz."
-	},
-	"businessUnits": {
-		"unlockTitle": "Geschäftseinheiten und erweiterte Governance freischalten",
-		"unlockDescription": "Verwalte Benutzer und Geschäftsbereiche mit unserer Governance auf Enterprise-Niveau. Diese Funktion ist Teil der Bifrost-Enterprise-Lizenz."
 	},
 	"sheet": {
 		"saving": "Wird gespeichert...",

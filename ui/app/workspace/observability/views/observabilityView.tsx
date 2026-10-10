@@ -8,17 +8,11 @@ import { useTheme } from "next-themes";
 import { ArrowLeft } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
-import BigQueryView from "./plugins/bigqueryView";
-import DatadogView from "./plugins/datadogView";
-import KafkaView from "./plugins/kafkaView";
 import MaximView from "./plugins/maximView";
 import NewrelicView from "./plugins/newRelicView";
 import OtelView from "./plugins/otelView";
 import PrometheusView from "./plugins/prometheusView";
-import PubSubView from "./plugins/pubsubView";
-import SplunkView from "./plugins/splunkView";
 import { useTranslation } from "react-i18next";
-
 type SupportedPlatform = {
 	id: string;
 	name: string;
@@ -26,7 +20,6 @@ type SupportedPlatform = {
 	tag?: string;
 	disabled?: boolean;
 };
-
 const supportedPlatformsList = (resolvedTheme: string): SupportedPlatform[] => [
 	{
 		id: "otel",
@@ -55,39 +48,6 @@ const supportedPlatformsList = (resolvedTheme: string): SupportedPlatform[] => [
 		icon: <img alt="Maxim" src={`/maxim-logo${resolvedTheme === "dark" ? "-dark" : ""}.webp`} width={19} height={19} />,
 	},
 	{
-		id: "datadog",
-		name: "Datadog",
-		icon: <img alt="Datadog" src="/images/datadog-logo.webp" width={32} height={32} className="-ml-0.5" />,
-	},
-	{
-		id: "bigquery",
-		name: "BigQuery",
-		icon: <img alt="BigQuery" src="/images/bigquery-logo.svg" width={21} height={21} className="-ml-0.5" />,
-	},
-	{
-		id: "kafka",
-		name: "Kafka",
-		icon: <img alt="Kafka" src="/images/kafka-logo.svg" width={21} height={21} className="-ml-0.5" />,
-	},
-	{
-		id: "pubsub",
-		name: "Pub/Sub",
-		icon: <img alt="Pub/Sub" src="/images/pubsub-logo.svg" width={21} height={21} className="-ml-0.5" />,
-	},
-	{
-		id: "splunk",
-		name: "Splunk",
-		icon: (
-			<img
-				alt="Splunk"
-				src={`/images/splunk-${resolvedTheme === "dark" ? "white" : "black"}.png`}
-				width={21}
-				height={21}
-				className="-ml-0.5"
-			/>
-		),
-	},
-	{
 		id: "newrelic",
 		name: "New Relic",
 		icon: (
@@ -100,7 +60,6 @@ const supportedPlatformsList = (resolvedTheme: string): SupportedPlatform[] => [
 		disabled: true,
 	},
 ];
-
 export default function ObservabilityView() {
 	const { t } = useTranslation("observability");
 	const isMobile = useIsMobile();
@@ -109,12 +68,9 @@ export default function ObservabilityView() {
 	const [selectedPluginId, setSelectedPluginId] = useQueryState("plugin");
 	const { resolvedTheme } = useTheme();
 	const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-
 	const supportedPlatforms = useMemo(() => supportedPlatformsList(resolvedTheme || "light"), [resolvedTheme]);
-
 	// Map UI tab IDs to actual plugin names (prometheus tab uses telemetry plugin)
 	const getPluginNameForTab = (tabId: string) => (tabId === "prometheus" ? "telemetry" : tabId);
-
 	useEffect(() => {
 		if (!plugins || plugins.length === 0) return;
 		if (!selectedPluginId) {
@@ -132,7 +88,6 @@ export default function ObservabilityView() {
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [plugins]);
-
 	useEffect(() => {
 		if (selectedPluginId) {
 			const pluginName = getPluginNameForTab(selectedPluginId);
@@ -148,11 +103,9 @@ export default function ObservabilityView() {
 			setSelectedPluginId(supportedPlatforms[0].id);
 		}
 	}, [selectedPluginId]);
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	return (
 		<div className="flex h-full min-w-0 flex-col gap-4 p-4 md:flex-row">
 			<div className={cn("w-full flex-col md:flex md:w-[270px]", mobileDetailOpen ? "hidden" : "flex")}>
@@ -211,11 +164,11 @@ export default function ObservabilityView() {
 				{selectedPluginId === "prometheus" && <PrometheusView />}
 				{selectedPluginId === "otel" && <OtelView />}
 				{selectedPluginId === "maxim" && <MaximView />}
-				{selectedPluginId === "kafka" && <KafkaView />}
-				{selectedPluginId === "datadog" && <DatadogView />}
-				{selectedPluginId === "bigquery" && <BigQueryView />}
-				{selectedPluginId === "pubsub" && <PubSubView />}
-				{selectedPluginId === "splunk" && <SplunkView />}
+				{selectedPluginId === "kafka" && <></>}
+				{selectedPluginId === "datadog" && <></>}
+				{selectedPluginId === "bigquery" && <></>}
+				{selectedPluginId === "pubsub" && <></>}
+				{selectedPluginId === "splunk" && <></>}
 				{selectedPluginId === "newrelic" && <NewrelicView />}
 			</div>
 		</div>

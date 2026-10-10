@@ -8,21 +8,17 @@ import { CappedBarStack } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import type { ChartType } from "./chartTypeToggle";
 import { NoChartData } from "./noChartData";
-
 interface TokenUsageChartProps {
 	data: TokenHistogramResponse | null;
 	chartType: ChartType;
 	startTime: number;
 	endTime: number;
 }
-
 function CustomTooltip({ active, payload }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs text-zinc-500">{formatFullTimestamp(data.timestamp)}</div>
@@ -58,14 +54,12 @@ function CustomTooltip({ active, payload }: any) {
 		</div>
 	);
 }
-
 function TokenUsageChartImpl({ data, chartType, startTime, endTime }: TokenUsageChartProps) {
 	const { i18n } = useTranslation("observability");
 	const chartData = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return [];
 		}
-
 		return data.buckets.map((bucket, index) => ({
 			...bucket,
 			uncached_prompt_tokens: Math.max(bucket.prompt_tokens - bucket.cached_read_tokens, 0),
@@ -73,91 +67,70 @@ function TokenUsageChartImpl({ data, chartType, startTime, endTime }: TokenUsage
 			formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 		}));
 	}, [data, i18n.resolvedLanguage]);
-
 	if (!data?.buckets || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	const commonProps = {
 		data: chartData,
 		margin: { top: 6, right: 4, left: 4, bottom: 0 },
 	};
-
 	return (
 		<ChartErrorBoundary resetKey={`${startTime}-${endTime}-${chartData.length}`}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				{chartType === "bar" ? (
 					<BarChart {...commonProps} barCategoryGap={1}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500", dy: 5 }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={50}
 							tickFormatter={(v) => formatCompactNumber(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip content={<CustomTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
 						<CappedBarStack buckets={chartData.length}>
-							<Bar
-								isAnimationActive={false}
-								dataKey="uncached_prompt_tokens"
-								fill={CHART_COLORS.promptTokens}
-								fillOpacity={0.9}
-								barSize={30}
-							/>
-							<Bar
-								isAnimationActive={false}
-								dataKey="completion_tokens"
-								fill={CHART_COLORS.completionTokens}
-								fillOpacity={0.9}
-								barSize={30}
-							/>
-							<Bar
-								isAnimationActive={false}
-								dataKey="cached_read_tokens"
-								fill={CHART_COLORS.cachedReadTokens}
-								fillOpacity={0.9}
-								barSize={30}
-							/>
+							<Bar isAnimationActive dataKey="uncached_prompt_tokens" fill={CHART_COLORS.promptTokens} fillOpacity={0.9} barSize={30} />
+							<Bar isAnimationActive dataKey="completion_tokens" fill={CHART_COLORS.completionTokens} fillOpacity={0.9} barSize={30} />
+							<Bar isAnimationActive dataKey="cached_read_tokens" fill={CHART_COLORS.cachedReadTokens} fillOpacity={0.9} barSize={30} />
 						</CappedBarStack>
 					</BarChart>
 				) : (
 					<AreaChart {...commonProps}>
-						<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+						<CartesianGrid strokeDasharray="3 3" vertical className="stroke-zinc-200 dark:stroke-zinc-700" />
 						<XAxis
 							dataKey="index"
 							type="number"
 							domain={[-0.5, chartData.length - 0.5]}
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							tickFormatter={(idx) => chartData[Math.round(idx)]?.formattedTime || ""}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
 							tick={{ fontSize: 11, className: "fill-zinc-500" }}
-							tickLine={false}
-							axisLine={false}
+							tickLine
+							axisLine
 							width={50}
 							tickFormatter={(v) => formatCompactNumber(v)}
 							domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-							allowDataOverflow={false}
+							allowDataOverflow
 						/>
 						<Tooltip content={<CustomTooltip />} />
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="uncached_prompt_tokens"
 							stackId="1"
@@ -166,7 +139,7 @@ function TokenUsageChartImpl({ data, chartType, startTime, endTime }: TokenUsage
 							fillOpacity={0.7}
 						/>
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="completion_tokens"
 							stackId="1"
@@ -175,7 +148,7 @@ function TokenUsageChartImpl({ data, chartType, startTime, endTime }: TokenUsage
 							fillOpacity={0.7}
 						/>
 						<Area
-							isAnimationActive={false}
+							isAnimationActive
 							type="monotone"
 							dataKey="cached_read_tokens"
 							stackId="1"

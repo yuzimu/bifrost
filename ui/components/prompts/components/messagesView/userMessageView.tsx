@@ -9,14 +9,12 @@ import { useTranslation } from "react-i18next";
 import { fileToAttachment } from "../../utils/attachment";
 import { AttachmentDisplay } from "./attachmentViews";
 import MessageRoleSwitcher from "./messageRoleSwitcher";
-
 const LazyMarkdown = lazy(() => import("@/components/ui/markdown").then((m) => ({ default: m.Markdown })));
 const Markdown = (props: ComponentProps<typeof LazyMarkdown>) => (
-	<Suspense fallback={null}>
+	<Suspense fallback>
 		<LazyMarkdown {...props} />
 	</Suspense>
 );
-
 /**
  * Render an interactive user message block that supports viewing and editing content, role switching, file attachments (via picker or drag-and-drop), and special handling for JSON and Jinja-variable content.
  *
@@ -63,7 +61,6 @@ export function UserMessageView({
 			return content;
 		}
 	}, [content, contentIsJson]);
-
 	const applyPendingJsonBuffer = (msg: Message): Message => {
 		if (jsonBufferRef.current !== null) {
 			const clone = msg.clone();
@@ -73,14 +70,12 @@ export function UserMessageView({
 		}
 		return msg;
 	};
-
 	const flushJsonBuffer = () => {
 		const updated = applyPendingJsonBuffer(messageRef.current);
 		if (updated !== messageRef.current) {
 			onChange(updated.serialized);
 		}
 	};
-
 	useEffect(() => {
 		const handleClick = (e: MouseEvent) => {
 			if (!containerRef.current?.contains(e.target as Node)) {
@@ -90,14 +85,12 @@ export function UserMessageView({
 		document.addEventListener("mousedown", handleClick);
 		return () => document.removeEventListener("mousedown", handleClick);
 	}, []);
-
 	const handleRoleChange = (role: string) => {
 		const latest = applyPendingJsonBuffer(messageRef.current);
 		const clone = latest.clone();
 		clone.role = role as any;
 		onChange(clone.serialized);
 	};
-
 	const addAttachments = useCallback(
 		(newAttachments: MessageContent[]) => {
 			const latest = applyPendingJsonBuffer(messageRef.current);
@@ -107,7 +100,6 @@ export function UserMessageView({
 		},
 		[onChange],
 	);
-
 	const handleRemoveAttachment = useCallback(
 		(index: number) => {
 			const latest = applyPendingJsonBuffer(messageRef.current);
@@ -117,7 +109,6 @@ export function UserMessageView({
 		},
 		[message, onChange],
 	);
-
 	const handleFileSelect = useCallback(
 		async (e: React.ChangeEvent<HTMLInputElement>) => {
 			const files = e.target.files;
@@ -132,30 +123,25 @@ export function UserMessageView({
 		},
 		[addAttachments],
 	);
-
 	// Drag & drop state
 	const [isDragging, setIsDragging] = useState(false);
 	const dragCounterRef = useRef(0);
-
 	const handleDragEnter = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		dragCounterRef.current++;
 		if (e.dataTransfer.types.includes("Files")) setIsDragging(true);
 	}, []);
-
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		dragCounterRef.current--;
 		if (dragCounterRef.current === 0) setIsDragging(false);
 	}, []);
-
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 	}, []);
-
 	const handleDrop = useCallback(
 		async (e: React.DragEvent) => {
 			e.preventDefault();
@@ -173,14 +159,12 @@ export function UserMessageView({
 		},
 		[addAttachments],
 	);
-
 	const handleReadOnlyClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
 		if (disabled) return;
 		const target = e.target as HTMLTextAreaElement;
 		pendingCursorRef.current = target.selectionStart ?? 0;
 		setEditMode(true);
 	};
-
 	const handleEditFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
 		const pos = pendingCursorRef.current;
 		pendingCursorRef.current = null;
@@ -191,7 +175,6 @@ export function UserMessageView({
 			target.selectionEnd = cursorPos;
 		});
 	};
-
 	return (
 		<div
 			className="group hover:border-border focus-within:border-border relative rounded-sm border border-transparent px-3 py-2 transition-colors"

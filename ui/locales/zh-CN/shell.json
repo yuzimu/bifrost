@@ -3,7 +3,6 @@
 	"languageEnglish": "English",
 	"languageChinese": "简体中文",
 	"nav": {
-		"home": "主页",
 		"observability": "可观测性",
 		"dashboard": "仪表盘",
 		"llmLogs": "LLM 日志",
@@ -13,7 +12,6 @@
 		"agentCatalog": "智能体目录",
 		"pushConfigurations": "推送配置",
 		"agentSettings": "智能体设置",
-		"orgChart": "组织架构",
 		"incidents": "事件",
 		"connectors": "连接器",
 		"logsSettings": "日志设置",
@@ -36,30 +34,14 @@
 		"oauthGrants": "OAuth 授权",
 		"mcpSettings": "MCP 设置",
 		"plugins": "插件",
-		"alerting": "告警",
-		"channels": "通知渠道",
-		"rules": "规则",
-		"history": "历史记录",
 		"governance": "治理",
 		"virtualKeys": "虚拟密钥",
-		"users": "用户",
 		"teams": "团队",
-		"businessUnits": "业务单元",
 		"customers": "客户",
-		"userProvisioning": "用户配置",
-		"rolesPermissions": "角色与权限",
-		"accessProfiles": "访问配置",
-		"projects": "项目",
-		"auditLogs": "审计日志",
 		"guardrails": "护栏",
 		"guardrailRules": "规则",
 		"guardrailProviders": "提供商",
 		"webhooks": "网络回调",
-		"edgeControl": "边缘控制",
-		"devices": "设备",
-		"approvals": "审批",
-		"edgeSettings": "边缘设置",
-		"clusterConfig": "集群配置",
 		"adaptiveRouting": "自适应路由",
 		"adaptiveRoutingDashboard": "仪表盘",
 		"adaptiveRoutingSettings": "设置",
@@ -71,15 +53,10 @@
 		"caching": "缓存",
 		"security": "安全",
 		"warp": "Warp",
-		"proxy": "代理",
-		"apiKeys": "API 密钥",
 		"performanceTuning": "性能调优",
-		"featureFlags": "功能开关",
-		"branding": "品牌",
-		"licenseInfo": "许可证信息"
+		"featureFlags": "功能开关"
 	},
 	"navDesc": {
-		"home": "你的用量、密钥、预算和访问权限",
 		"observability": "请求日志与监控",
 		"dashboard": "仪表盘",
 		"llmLogs": "LLM 请求日志与监控",
@@ -89,7 +66,6 @@
 		"agentCatalog": "已注册的 A2A 智能体",
 		"pushConfigurations": "已保存的 A2A 推送回调",
 		"agentSettings": "智能体网关配置",
-		"orgChart": "业务单元、团队和用户的预算与用量",
 		"incidents": "自适应路由事件",
 		"connectors": "日志连接器",
 		"logsSettings": "日志配置",
@@ -111,30 +87,14 @@
 		"oauthGrants": "下游 OAuth 授权",
 		"mcpSettings": "MCP 配置",
 		"plugins": "管理自定义插件",
-		"alerting": "管理告警渠道、规则与历史",
-		"channels": "配置通知渠道",
-		"rules": "定义告警规则",
-		"history": "查看告警投递历史",
 		"governance": "虚拟密钥、用户、团队、客户与角色",
 		"virtualKeys": "管理虚拟密钥与访问权限",
-		"users": "管理用户",
 		"teams": "管理团队",
-		"businessUnits": "管理业务单元",
 		"customers": "管理客户",
-		"userProvisioning": "用户管理与配置",
-		"rolesPermissions": "用户角色与权限",
-		"accessProfiles": "管理角色的访问配置",
-		"projects": "将请求限定到项目的访问与预算",
-		"auditLogs": "审计日志与合规",
 		"guardrails": "护栏配置",
 		"guardrailRules": "护栏规则",
 		"guardrailProviders": "护栏提供商配置",
 		"webhooks": "异步任务网络回调端点",
-		"edgeControl": "边缘设备管理",
-		"devices": "管理边缘设备",
-		"approvals": "审批应用与 MCP 服务器",
-		"edgeSettings": "边缘设置",
-		"clusterConfig": "管理 Bifrost 集群",
 		"adaptiveRouting": "管理自适应路由",
 		"adaptiveRoutingDashboard": "自适应路由指标",
 		"adaptiveRoutingSettings": "自适应路由设置",
@@ -146,16 +106,8 @@
 		"caching": "缓存配置",
 		"security": "安全设置",
 		"warp": "Warp 代理配置",
-		"proxy": "代理配置",
-		"apiKeys": "API 密钥管理",
 		"performanceTuning": "性能调优设置",
-		"featureFlags": "切换功能开关",
-		"branding": "自定义标志与图标",
-		"licenseInfo": "企业许可证信息"
-	},
-	"home": {
-		"unlockTitle": "解锁你的个人主页",
-		"unlockDescription": "此功能属于 Bifrost 企业版许可证。主页会向每位用户展示自己的用量、密钥、预算和访问权限。"
+		"featureFlags": "切换功能开关"
 	},
 	"search": {
 		"placeholder": "搜索…",
@@ -188,11 +140,6 @@
 			"available": "{{name}} 现已可用。",
 			"viewNotes": "查看发布说明",
 			"imageAlt": "Bifrost"
-		},
-		"productionSetup": {
-			"title": "需要生产环境部署帮助？",
-			"body": "我们可协助生产环境部署，包括定制集成与专属支持。",
-			"bookDemo": "点击<link>这里</link>预约团队产品演示。"
 		}
 	},
 	"topbar": {
@@ -219,25 +166,14 @@
 		"pushConfigurations": "推送配置",
 		"agentSettings": "智能体设置",
 		"adaptiveRoutingSettings": "自适应路由设置",
-		"alertChannels": "告警渠道",
-		"alertHistory": "告警历史",
-		"alertRules": "告警规则",
-		"clusterConfig": "集群配置",
 		"settings": "设置",
-		"licenseInfo": "许可证信息",
-		"edgeSettings": "边缘设置",
-		"edgeDevices": "边缘设备",
-		"edgeApprovals": "边缘审批",
-		"rolesPermissions": "角色与权限",
 		"guardrailRules": "护栏规则",
 		"guardrailProviders": "护栏提供商",
 		"llmLogs": "LLM 日志",
-		"logConnectors": "日志连接器",
 		"observabilityConnectors": "可观测性连接器",
 		"promptRepository": "提示词仓库",
 		"modelProviders": "模型提供商",
-		"routingTree": "路由树",
-		"userProvisioning": "用户配置"
+		"routingTree": "路由树"
 	},
 	"error": {
 		"title": "出错了",
@@ -313,13 +249,6 @@
 		"title": "尚未配置配置存储。",
 		"description": "界面需要数据库连接来存储配置数据，但目前尚未配置数据库。",
 		"instructions": "要启用界面，请在 <code>config.json</code> 中添加数据库设置（参见<link>文档</link>）。"
-	},
-	"trial": {
-		"expiredSubject": "我需要关于已过期企业版试用的帮助",
-		"extendSubject": "我需要延长企业版试用的帮助",
-		"expired": "你的 Bifrost 企业版试用已到期。如需帮助，请<link>联系我们</link>。",
-		"expires_one": "你的 Bifrost 企业版试用将于 {{count}} 天后到期。如需帮助，请<link>联系我们</link>。",
-		"expires_other": "你的 Bifrost 企业版试用将于 {{count}} 天后到期。如需帮助，请<link>联系我们</link>。"
 	},
 	"warp": {
 		"ask": "询问 Warp",
@@ -538,6 +467,77 @@
 				"summary": "出了点问题。",
 				"cause": "Warp 返回了错误，但没有可识别的错误码。",
 				"suggestions": ["再试一次该问题。", "若持续发生，请连同下方详情一并反馈。"]
+			}
+		}
+	},
+	"docs": {
+		"headline": "提升您的 Bifrost 技术栈",
+		"fullDocumentation": "查看完整文档",
+		"quickStartGuide": "快速入门指南",
+		"readMore": "了解更多",
+		"popular": "热门",
+		"comprehensive": "全面",
+		"sections": {
+			"quickStart": {
+				"title": "快速入门",
+				"description": "在 30 秒内启动 Bifrost",
+				"httpTransport": "HTTP 传输配置",
+				"goPackage": "Go 包使用指南",
+				"docker": "Docker 指南"
+			},
+			"architecture": {
+				"title": "架构",
+				"description": "深入了解 Bifrost 的设计与性能",
+				"overview": "系统概览",
+				"requestFlow": "请求流程",
+				"concurrency": "并发模型",
+				"decisions": "设计决策"
+			},
+			"usage": {
+				"title": "使用指南",
+				"description": "完整的 API 参考与配置指南",
+				"providers": "服务商配置",
+				"keys": "密钥管理",
+				"errors": "错误处理",
+				"memory": "内存与网络"
+			},
+			"contributing": {
+				"title": "参与贡献",
+				"description": "帮助大家共同改进 Bifrost",
+				"guide": "贡献指南",
+				"providers": "添加服务商",
+				"plugins": "插件开发",
+				"conventions": "代码规范"
+			},
+			"integrations": {
+				"title": "集成示例",
+				"description": "实用示例与测试代码",
+				"openai": "OpenAI 集成",
+				"anthropic": "Anthropic 集成",
+				"genai": "GenAI 集成",
+				"migration": "迁移指南"
+			},
+			"benchmarks": {
+				"title": "性能基准",
+				"description": "性能指标与指南",
+				"results": "5K RPS 测试结果",
+				"metrics": "性能指标",
+				"tuning": "配置调优",
+				"hardware": "硬件对比"
+			}
+		},
+		"featured": {
+			"mcp": {
+				"title": "MCP 文档",
+				"description": "模型上下文协议集成的全面指南",
+				"content": "了解如何利用 MCP 支持、工具调用与外部集成构建强大的 AI 智能体。",
+				"button": "查看 MCP 指南"
+			},
+			"governance": {
+				"title": "治理插件",
+				"description": "访问控制、预算和速率限制的完整指南",
+				"content": "掌握虚拟密钥、分层预算、速率限制与用量跟踪，保障 AI 基础设施安全。",
+				"button": "查看治理指南"
 			}
 		}
 	}

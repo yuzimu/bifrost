@@ -11,18 +11,15 @@ import {
 	useSubmitOAuth2ConsentFlowMutation,
 } from "@/lib/store";
 import { getActiveTempToken } from "@/lib/store/apis/tempToken";
-import { Fingerprint, KeyRound, Loader2, LogIn, ShieldCheck, UserRound } from "lucide-react";
+import { Fingerprint, KeyRound, Loader2, LogIn, ShieldCheck } from "lucide-react";
 import { useQueryState } from "nuqs";
 import React, { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-
 // Mirrors handlers.TempTokenRejectedCode: a presented token was refused.
 const TEMP_TOKEN_REJECTED_CODE = "temp_token_rejected";
-
 export default function OAuth2ConsentPage() {
 	const { t } = useTranslation("login");
 	const [flowId] = useQueryState("flow");
-
 	if (!flowId) {
 		return (
 			<Shell>
@@ -39,10 +36,8 @@ export default function OAuth2ConsentPage() {
 			</Shell>
 		);
 	}
-
 	return <ConsentView flowId={flowId} />;
 }
-
 // isSafeRedirect rejects URLs whose scheme could execute script when assigned to
 // location.href (javascript:, data:, …) while allowing http(s) and any native
 // custom-scheme redirect a client may have registered.
@@ -54,30 +49,25 @@ function isSafeRedirect(url: string): boolean {
 		return false;
 	}
 }
-
 /** 展示授权身份选项，拒绝危险回调并区分失效链接与未登录状态。 */
 function ConsentView({ flowId }: { flowId: string }) {
 	const { t } = useTranslation("login");
-	const { t: te } = useTranslation("enterprise");
+	const { t: te } = useTranslation("login");
 	const { t: tc } = useTranslation("common");
 	const { data: flow, isLoading, isError, error } = useGetOAuth2ConsentFlowQuery(flowId);
 	const { data: authState } = useIsAuthEnabledQuery();
 	const [submitFlow, { isLoading: submitting }] = useSubmitOAuth2ConsentFlowMutation();
 	const [vkValue, setVkValue] = useState("");
 	const [selectedMode, setSelectedMode] = useState<"vk" | "session" | "user" | null>(null);
-
 	// TempTokenScope installs the token during its own render, so any
 	// sessionStorage restore has already happened by now.
 	const [usingTempToken] = useState(() => getActiveTempToken() !== null);
-
 	const loginHref = useMemo(() => {
 		const returnPath = `/oauth/consent?flow=${encodeURIComponent(flowId)}`;
 		return `/login?goto=${encodeURIComponent(returnPath)}`;
 	}, [flowId]);
-
 	const signedOut = authState?.is_auth_enabled === true && authState.has_valid_token === false;
 	const showLoginOption = usingTempToken && signedOut;
-
 	const handleSubmit = async (mode: "vk" | "session" | "user") => {
 		setSelectedMode(mode);
 		try {
@@ -101,11 +91,15 @@ function ConsentView({ flowId }: { flowId: string }) {
 			setSelectedMode(null);
 		}
 	};
-
 	if (isLoading) return <FullPageLoader />;
-
 	if (isError || !flow) {
-		const status = (error as { status?: number } | undefined)?.status;
+		const status = (
+			error as
+				| {
+						status?: number;
+				  }
+				| undefined
+		)?.status;
 		if (status === 401) {
 			// A rejected token is the only 401 that means the link is finished.
 			// Anything else is fixed by having a session — go get one.
@@ -123,13 +117,10 @@ function ConsentView({ flowId }: { flowId: string }) {
 			</Shell>
 		);
 	}
-
-	const hasUser = flow.available_modes.includes("user");
 	const hasVK = flow.available_modes.includes("vk");
 	const hasSession = flow.available_modes.includes("session");
-	const hasAnyMode = hasUser || hasVK || hasSession;
+	const hasAnyMode = hasVK || hasSession;
 	const clientName = flow.client_name || t("consent.mcpClient");
-
 	return (
 		<Shell>
 			{/* Header */}
@@ -155,65 +146,10 @@ function ConsentView({ flowId }: { flowId: string }) {
 				)}
 
 				{/* User mode — most prominent when logged in */}
-				{hasUser && flow.logged_in_user && (
-					<div className="rounded-sm border p-4">
-						<div className="flex items-center gap-3">
-							<div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
-								<UserRound className="text-muted-foreground size-4" />
-							</div>
-							<div className="min-w-0 flex-1">
-								<p className="text-sm leading-tight font-medium">{flow.logged_in_user.name || flow.logged_in_user.id}</p>
-								<p className="text-muted-foreground text-xs">{t("consent.signedInAccount")}</p>
-							</div>
-						</div>
-						<Button
-							data-testid="oauth-consent-continue-user-btn"
-							className="mt-4 w-full"
-							onClick={() => handleSubmit("user")}
-							disabled={submitting}
-						>
-							{submitting && selectedMode === "user" ? (
-								<>
-									<Loader2 className="mr-2 size-4 animate-spin" />
-									{t("consent.connecting")}
-								</>
-							) : (
-								<>{t("consent.continueAs", { name: flow.logged_in_user.name || flow.logged_in_user.id })}</>
-							)}
-						</Button>
-					</div>
-				)}
 
 				{/* User mode — sign in prompt when not logged in */}
-				{hasUser && !flow.logged_in_user && showLoginOption && (
-					<div className="rounded-sm border p-4">
-						<div className="flex items-center gap-3">
-							<div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full">
-								<UserRound className="text-muted-foreground size-4" />
-							</div>
-							<div>
-								<p className="text-sm font-medium">{t("consent.signInWithAccount")}</p>
-								<p className="text-muted-foreground text-xs">{t("consent.requiresDashboard")}</p>
-							</div>
-						</div>
-						<Button asChild variant="outline" className="mt-4 w-full">
-							<a href={loginHref} data-testid="oauth-consent-signin-link">
-								<LogIn className="mr-2 size-4" />
-								{t("consent.signInToContinue")}
-							</a>
-						</Button>
-					</div>
-				)}
 
 				{/* Divider between user and key options */}
-				{hasUser && (hasVK || hasSession) && (
-					<div className="relative">
-						<Separator />
-						<span className="bg-card text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs">
-							{tc("or")}
-						</span>
-					</div>
-				)}
 
 				{/* VK mode */}
 				{hasVK && (
@@ -258,7 +194,6 @@ function ConsentView({ flowId }: { flowId: string }) {
 								t("consent.connectWithKey")
 							)}
 						</Button>
-						{hasUser && <p className="text-muted-foreground mt-2.5 text-xs">{t("consent.keyLinkedHint")}</p>}
 					</div>
 				)}
 
@@ -298,14 +233,21 @@ function ConsentView({ flowId }: { flowId: string }) {
 		</Shell>
 	);
 }
-
-function formatExpiry(iso: string, t: (key: string, options?: { count?: number }) => string): string {
+function formatExpiry(
+	iso: string,
+	t: (
+		key: string,
+		options?: {
+			count?: number;
+		},
+	) => string,
+): string {
 	const ts = new Date(iso).getTime();
 	if (Number.isNaN(ts)) return t("consent.soon");
 	try {
 		const diffMs = ts - Date.now();
 		if (diffMs < 0) return t("consent.soon");
-		const mins = Math.floor(diffMs / 60_000);
+		const mins = Math.floor(diffMs / 60000);
 		if (mins < 1) return t("consent.inLessThanMinute");
 		if (mins === 1) return t("consent.inOneMinute");
 		return t("consent.inMinutes", { count: mins });
@@ -313,7 +255,6 @@ function formatExpiry(iso: string, t: (key: string, options?: { count?: number }
 		return t("consent.soon");
 	}
 }
-
 function Shell({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="mx-auto flex min-h-screen w-full items-center justify-center p-4 sm:p-6">
@@ -321,15 +262,13 @@ function Shell({ children }: { children: React.ReactNode }) {
 		</div>
 	);
 }
-
 /** 将未登录访客送往登录页，保留返回地址并展示本地化跳转提示。 */
 function RedirectToSignIn({ loginHref }: { loginHref: string }) {
-	const { t } = useTranslation("enterprise");
+	const { t } = useTranslation("login");
 	useEffect(() => {
 		// replace(), so Back from /login doesn't re-enter the redirect.
 		window.location.replace(loginHref);
 	}, [loginHref]);
-
 	return (
 		<Shell>
 			<div className="text-center">
@@ -345,7 +284,6 @@ function RedirectToSignIn({ loginHref }: { loginHref: string }) {
 		</Shell>
 	);
 }
-
 function InvalidLinkView() {
 	const { t } = useTranslation("login");
 	return (

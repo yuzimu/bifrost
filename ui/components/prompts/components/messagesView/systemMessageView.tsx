@@ -7,14 +7,12 @@ import { PencilIcon, XIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import MessageRoleSwitcher from "./messageRoleSwitcher";
-
 const LazyMarkdown = lazy(() => import("@/components/ui/markdown").then((m) => ({ default: m.Markdown })));
 const Markdown = (props: ComponentProps<typeof LazyMarkdown>) => (
-	<Suspense fallback={null}>
+	<Suspense fallback>
 		<LazyMarkdown {...props} />
 	</Suspense>
 );
-
 /**
  * Renders an editable system message block that supports role switching, rich-text editing, JSON editing with buffered changes, Jinja variable highlighting, and optional removal.
  *
@@ -55,7 +53,6 @@ export function SystemMessageView({
 			return content;
 		}
 	}, [content, contentIsJson]);
-
 	const applyPendingJsonBuffer = (msg: Message): Message => {
 		if (jsonBufferRef.current !== null) {
 			const clone = msg.clone();
@@ -65,14 +62,12 @@ export function SystemMessageView({
 		}
 		return msg;
 	};
-
 	const flushJsonBuffer = () => {
 		const updated = applyPendingJsonBuffer(messageRef.current);
 		if (updated !== messageRef.current) {
 			onChange(updated.serialized);
 		}
 	};
-
 	useEffect(() => {
 		const handleClick = (e: MouseEvent) => {
 			if (!containerRef.current?.contains(e.target as Node)) {
@@ -82,21 +77,18 @@ export function SystemMessageView({
 		document.addEventListener("mousedown", handleClick);
 		return () => document.removeEventListener("mousedown", handleClick);
 	}, []);
-
 	const handleRoleChange = (role: string) => {
 		const latest = applyPendingJsonBuffer(messageRef.current);
 		const clone = latest.clone();
 		clone.role = role as any;
 		onChange(clone.serialized);
 	};
-
 	const handleReadOnlyClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
 		if (disabled) return;
 		const target = e.target as HTMLTextAreaElement;
 		pendingCursorRef.current = target.selectionStart ?? 0;
 		setEditMode(true);
 	};
-
 	const handleEditFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
 		const pos = pendingCursorRef.current;
 		pendingCursorRef.current = null;
@@ -107,7 +99,6 @@ export function SystemMessageView({
 			target.selectionEnd = cursorPos;
 		});
 	};
-
 	return (
 		<div
 			className="group hover:border-border focus-within:border-border rounded-sm border border-transparent px-3 py-2 transition-colors"

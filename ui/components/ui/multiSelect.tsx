@@ -50,7 +50,7 @@ const multiSelectVariants = cva("m-1", {
 interface MultiSelectOption {
 	/** The text to display for the option. */
 	label: string;
-	/** The unique value associated with the option. */
+
 	value: string;
 	/** The description to display for the option. */
 	description?: string;

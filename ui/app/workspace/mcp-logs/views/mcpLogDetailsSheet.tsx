@@ -28,8 +28,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { OsIcon } from "@enterprise/lib/constants/edgeApps";
-import { useGetDeviceQuery } from "@enterprise/lib/store/apis/edgeControlApi";
 import { mapAppToClientApp, mapUserAgentToApp } from "@/lib/constants/logs";
 import { cn } from "@/lib/utils";
 import { useGetMCPLogByIdQuery, useGetUserAgentMappingsQuery } from "@/lib/store";
@@ -47,7 +45,6 @@ import { useTranslation } from "react-i18next";
 import { dateFnsLocale } from "@/lib/i18n/dateLocale";
 import i18n from "@/lib/i18n";
 import { toast } from "sonner";
-
 interface MCPLogDetailSheetProps {
 	log: MCPToolLogEntry | null;
 	open: boolean;
@@ -58,7 +55,6 @@ interface MCPLogDetailSheetProps {
 	hasPrev?: boolean;
 	hasNext?: boolean;
 }
-
 const pillStyles: Record<MCPLogPillTone, string> = {
 	success: "border-chart-success/30 bg-chart-success/10 text-chart-success-ink",
 	error: "border-chart-error/30 bg-chart-error/10 text-chart-error-ink",
@@ -66,7 +62,6 @@ const pillStyles: Record<MCPLogPillTone, string> = {
 	approved: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900",
 	neutral: "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/40 dark:text-gray-400 dark:border-gray-800",
 };
-
 const pillDotStyles: Record<MCPLogPillTone, string> = {
 	success: "bg-chart-success",
 	error: "bg-chart-error",
@@ -74,7 +69,6 @@ const pillDotStyles: Record<MCPLogPillTone, string> = {
 	approved: "bg-blue-500",
 	neutral: "bg-gray-400",
 };
-
 function StatusPill({ label, tone }: { label: string; tone: MCPLogPillTone }) {
 	return (
 		<span
@@ -85,7 +79,6 @@ function StatusPill({ label, tone }: { label: string; tone: MCPLogPillTone }) {
 		</span>
 	);
 }
-
 function CopyInlineButton({ text, testId }: { text: string; testId?: string }) {
 	const { t } = useTranslation("observability");
 	const { copy } = useCopyToClipboard({ successMessage: t("labels.copied") });
@@ -104,7 +97,6 @@ function CopyInlineButton({ text, testId }: { text: string; testId?: string }) {
 		</button>
 	);
 }
-
 function HeroStat({
 	label,
 	value,
@@ -130,7 +122,6 @@ function HeroStat({
 		</div>
 	);
 }
-
 function getPluginLogCount(pluginLogs?: string): number {
 	if (!pluginLogs) return 0;
 	try {
@@ -141,7 +132,6 @@ function getPluginLogCount(pluginLogs?: string): number {
 		return 0;
 	}
 }
-
 export function MCPLogDetailSheet({
 	log,
 	open,
@@ -164,12 +154,6 @@ export function MCPLogDetailSheet({
 	} = useGetMCPLogByIdQuery(log?.id ?? "", {
 		skip: !open || !log?.id,
 	});
-
-	// Device metadata (hostname, OS) comes from the Edge device registry; fall back to the raw id when absent.
-	const deviceId = fullLog?.device_id ?? log?.device_id ?? "";
-	const { data: deviceData } = useGetDeviceQuery(deviceId, { skip: !open || !deviceId });
-	const device = deviceData?.device;
-
 	// Keyboard navigation: arrow up/down to navigate between logs
 	const { prev: prevKeys, next: nextKeys } = useSheetNavigation({
 		enabled: open,
@@ -177,7 +161,6 @@ export function MCPLogDetailSheet({
 		hasNext,
 		onNavigate: (direction) => onNavigate?.(direction),
 	});
-
 	const isFullDataReady = Boolean(log) && (isError || (fullLog?.id === log?.id && !isLoading));
 	const displayLog = log ? (isFullDataReady && fullLog ? fullLog : log) : null;
 	const revealMapping = displayLog?.redaction_mapping;
@@ -186,13 +169,10 @@ export function MCPLogDetailSheet({
 	const inputRevealMapping = revealEnabled ? revealMapping?.input : undefined;
 	const outputRevealMapping = revealEnabled ? revealMapping?.output : undefined;
 	const mixedRevealMapping = revealEnabled ? mergeRedactionMappings(revealMapping) : undefined;
-
 	useEffect(() => {
 		setShowRevealedValues(false);
 	}, [displayLog?.id, revealAvailable]);
-
 	if (!log || !displayLog) return null;
-
 	if (!isFullDataReady) {
 		return (
 			<Sheet open={open} onOpenChange={onOpenChange}>
@@ -205,7 +185,6 @@ export function MCPLogDetailSheet({
 			</Sheet>
 		);
 	}
-
 	const appKey = displayLog.app || displayLog.app_key;
 	const app = appKey ? mapAppToClientApp(appKey) : mapUserAgentToApp(displayLog.user_agent);
 	const mapping = userAgentMappings?.mappings.find((item) => item.app === appKey && item.logo && item.logo_mime);
@@ -230,15 +209,10 @@ export function MCPLogDetailSheet({
 		if (startStr && endStr && startStr !== endStr) return `${startStr} → ${endStr}`;
 		return startStr ?? endStr ?? "";
 	})();
-	// Team, customer and business unit can hold more than one value for a request
-	// (a user in more than one team, say), so each carries its plural columns
-	// alongside the scalar. User, project and device stay scalar-only; their
-	// plural slots are just left empty. filterKey ships without its "_ids"
-	// suffix here so the pluralized filter always applies to every id, single
-	// value included.
+
+	// 多重团队及客户关联使用完整 ID 集合，避免筛选只命中第一项。
 	const scopeLinks = (
 		[
-			[t("labels.user"), t("mcpLogs.detail.users"), "user_id", displayLog.user_name, displayLog.user_id, undefined, undefined],
 			[
 				t("labels.team"),
 				t("mcpLogs.detail.teams"),
@@ -257,25 +231,6 @@ export function MCPLogDetailSheet({
 				displayLog.customer_names,
 				displayLog.customer_ids,
 			],
-			[
-				t("labels.businessUnit"),
-				t("mcpLogs.detail.businessUnits"),
-				"business_unit_id",
-				displayLog.business_unit_name,
-				displayLog.business_unit_id,
-				displayLog.business_unit_names,
-				displayLog.business_unit_ids,
-			],
-			[
-				t("labels.project"),
-				t("mcpLogs.detail.projects"),
-				"project_id",
-				displayLog.project_name,
-				displayLog.project_id,
-				undefined,
-				undefined,
-			],
-			[t("labels.device"), t("mcpLogs.detail.devices"), "device_id", null, displayLog.device_id, undefined, undefined],
 		] as const
 	)
 		.map(([label, pluralLabel, idKey, name, id, names, ids]) => {
@@ -288,7 +243,6 @@ export function MCPLogDetailSheet({
 		})
 		.filter(({ items }) => items.length > 0);
 	const metadataEntries = Object.entries(displayLog.metadata ?? {});
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent className="border-secondary flex w-full flex-col gap-4 overflow-x-hidden border p-4 sm:max-w-[60%] md:p-8">
@@ -452,7 +406,9 @@ export function MCPLogDetailSheet({
 									</div>
 									<Link
 										to="/workspace/governance/virtual-keys"
-										search={{ selected_vk: displayLog.virtual_key?.id || displayLog.virtual_key_id! }}
+										search={{
+											selected_vk: displayLog.virtual_key?.id || displayLog.virtual_key_id!,
+										}}
 										className="truncate font-mono text-[13px] text-blue-600 hover:underline dark:text-blue-400"
 										data-testid="mcplogdetails-virtual-key-link"
 									>
@@ -483,36 +439,14 @@ export function MCPLogDetailSheet({
 							hasRightBorder
 						/>
 						<HeroStat
-							label={t("labels.user")}
-							value={displayLog.user_name || displayLog.user_id || "—"}
-							sub={displayLog.team_name || displayLog.team_id || ""}
-							valueClass={displayLog.user_name ? undefined : "font-mono text-[15px]"}
+							label={t("labels.team")}
+							value={displayLog.team_name || displayLog.team_id || "—"}
+							valueClass={displayLog.team_name ? undefined : "font-mono text-[15px]"}
 							hasRightBorder
-						/>
-						<HeroStat
-							label={t("labels.device")}
-							mono={!device?.hostname}
-							value={
-								displayLog.device_id ? (
-									<Link
-										to="/workspace/mcp-logs"
-										search={(prev) => ({ ...prev, offset: 0, selected_log: "", device_ids: [displayLog.device_id!] })}
-										className="inline-flex max-w-full items-center gap-1.5 text-blue-600 hover:underline dark:text-blue-400"
-										title={displayLog.device_id}
-										data-testid="mcplogdetails-device-tile-link"
-									>
-										<OsIcon platform={device?.platform} className="h-4 w-4 shrink-0" />
-										<span className="truncate">{device?.hostname || displayLog.device_id}</span>
-									</Link>
-								) : (
-									"—"
-								)
-							}
-							sub={device ? [device.platform, device.os_version, device.arch].filter(Boolean).join(" · ") : ""}
 						/>
 					</div>
 				</div>
-				<details className="group bg-card rounded-sm border" open={false}>
+				<details className="group bg-card rounded-sm border" open>
 					<summary className="hover:bg-muted/30 flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm transition">
 						<span className="text-foreground font-medium">{t("mcpLogs.detail.moreDetails")}</span>
 						<span className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -533,7 +467,9 @@ export function MCPLogDetailSheet({
 									label={t("mcpLogs.detail.startTimestamp")}
 									value={
 										startTimestamp && isValid(startTimestamp)
-											? format(startTimestamp, "PP pp", { locale: dateFnsLocale(i18n.resolvedLanguage) })
+											? format(startTimestamp, "PP pp", {
+													locale: dateFnsLocale(i18n.resolvedLanguage),
+												})
 											: t("labels.nA")
 									}
 								/>
@@ -542,7 +478,9 @@ export function MCPLogDetailSheet({
 									label={endLabel}
 									value={
 										endTimestamp && isValid(endTimestamp)
-											? format(endTimestamp, "PP pp", { locale: dateFnsLocale(i18n.resolvedLanguage) })
+											? format(endTimestamp, "PP pp", {
+													locale: dateFnsLocale(i18n.resolvedLanguage),
+												})
 											: t("labels.nA")
 									}
 								/>
@@ -613,7 +551,12 @@ export function MCPLogDetailSheet({
 														<TooltipTrigger asChild>
 															<Link
 																to="/workspace/mcp-logs"
-																search={(prev) => ({ ...prev, offset: 0, selected_log: "", [`${idKey}s`]: [item.id] })}
+																search={(prev) => ({
+																	...prev,
+																	offset: 0,
+																	selected_log: "",
+																	[`${idKey}s`]: [item.id],
+																})}
 																className={`text-sm font-normal text-blue-600 underline-offset-2 hover:underline dark:text-blue-400${item.name !== item.id ? "" : " font-mono"}`}
 																data-testid={`mcplogdetails-${idKey.replace("_id", "").replaceAll("_", "-")}-link-${item.id}`}
 															>
@@ -693,7 +636,12 @@ export function MCPLogDetailSheet({
 									code={typeof displayedArguments === "string" ? displayedArguments : JSON.stringify(displayedArguments, null, 2)}
 									lang="json"
 									readonly={true}
-									options={{ scrollBeyondLastLine: false, collapsibleBlocks: true, lineNumbers: "off", alwaysConsumeMouseWheel: false }}
+									options={{
+										scrollBeyondLastLine: false,
+										collapsibleBlocks: true,
+										lineNumbers: "off",
+										alwaysConsumeMouseWheel: false,
+									}}
 								/>
 							</div>
 						)}
@@ -710,7 +658,12 @@ export function MCPLogDetailSheet({
 									code={typeof displayedResult === "string" ? displayedResult : JSON.stringify(displayedResult, null, 2)}
 									lang="json"
 									readonly={true}
-									options={{ scrollBeyondLastLine: false, collapsibleBlocks: true, lineNumbers: "off", alwaysConsumeMouseWheel: false }}
+									options={{
+										scrollBeyondLastLine: false,
+										collapsibleBlocks: true,
+										lineNumbers: "off",
+										alwaysConsumeMouseWheel: false,
+									}}
 								/>
 							</div>
 						)}
@@ -729,7 +682,12 @@ export function MCPLogDetailSheet({
 									code={JSON.stringify(displayedErrorDetails, null, 2)}
 									lang="json"
 									readonly={true}
-									options={{ scrollBeyondLastLine: false, collapsibleBlocks: true, lineNumbers: "off", alwaysConsumeMouseWheel: false }}
+									options={{
+										scrollBeyondLastLine: false,
+										collapsibleBlocks: true,
+										lineNumbers: "off",
+										alwaysConsumeMouseWheel: false,
+									}}
 								/>
 							</div>
 						)}

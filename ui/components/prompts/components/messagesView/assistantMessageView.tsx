@@ -7,14 +7,12 @@ import { useTranslation } from "react-i18next";
 import MessageRoleSwitcher from "./messageRoleSwitcher";
 import { isJson } from "@/lib/utils/validation";
 import { CodeEditor } from "@/components/ui/codeEditor";
-
 const LazyMarkdown = lazy(() => import("@/components/ui/markdown").then((m) => ({ default: m.Markdown })));
 const Markdown = (props: ComponentProps<typeof LazyMarkdown>) => (
-	<Suspense fallback={null}>
+	<Suspense fallback>
 		<LazyMarkdown {...props} />
 	</Suspense>
 );
-
 /**
  * Renders the assistant message UI including role switcher, usage tooltip, edit/delete controls, and editable or view-only content.
  *
@@ -56,7 +54,6 @@ export function AssistantMessageView({
 			return content;
 		}
 	}, [content, contentIsJson]);
-
 	const flushJsonBuffer = () => {
 		if (jsonBufferRef.current !== null) {
 			const clone = message.clone();
@@ -65,7 +62,6 @@ export function AssistantMessageView({
 			jsonBufferRef.current = null;
 		}
 	};
-
 	useEffect(() => {
 		const handleClick = (e: MouseEvent) => {
 			if (!containerRef.current?.contains(e.target as Node)) {
@@ -75,13 +71,11 @@ export function AssistantMessageView({
 		document.addEventListener("mousedown", handleClick);
 		return () => document.removeEventListener("mousedown", handleClick);
 	}, []);
-
 	const handleRoleChange = (role: string) => {
 		const clone = message.clone();
 		clone.role = role as any;
 		onChange(clone.serialized);
 	};
-
 	return (
 		<div
 			className="group hover:border-border focus-within:border-border rounded-sm border border-transparent px-3 py-2 transition-colors"
@@ -101,7 +95,8 @@ export function AssistantMessageView({
 										<span className="inline-block w-12">{t("promptRepo.inputColon")}</span> {usage.prompt_tokens} {t("promptRepo.tokens")}
 									</span>
 									<span>
-										<span className="inline-block w-12">{t("promptRepo.outputColon")}</span> {usage.completion_tokens} {t("promptRepo.tokens")}
+										<span className="inline-block w-12">{t("promptRepo.outputColon")}</span> {usage.completion_tokens}{" "}
+										{t("promptRepo.tokens")}
 									</span>
 									<span>
 										<span className="inline-block w-12">{t("promptRepo.totalColon")}</span> {usage.total_tokens} {t("promptRepo.tokens")}

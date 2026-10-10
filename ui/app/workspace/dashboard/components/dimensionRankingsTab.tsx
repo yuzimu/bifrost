@@ -13,10 +13,8 @@ import { ChartErrorBoundary } from "./charts/chartErrorBoundary";
 import { formatCost, SortableHeader, TrendBadge } from "./rankingsShared";
 import { useTranslation } from "react-i18next";
 import { NoChartData } from "./charts/noChartData";
-
 type SortField = "total_requests" | "total_tokens" | "total_cost";
 type SortOrder = "asc" | "desc";
-
 interface DimensionRankingsTabProps {
 	data: DimensionRankingsResponse | null;
 	loading: boolean;
@@ -24,7 +22,6 @@ interface DimensionRankingsTabProps {
 	testIdPrefix: string;
 	attributed?: boolean;
 }
-
 function TopDimensionTooltip({ active, payload }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
@@ -37,7 +34,6 @@ function TopDimensionTooltip({ active, payload }: any) {
 		</div>
 	);
 }
-
 function TopDimensionChart({
 	data,
 	loading,
@@ -61,11 +57,9 @@ function TopDimensionChart({
 				actualTotal: null,
 				attributedTotal: null,
 			};
-
 		const sorted = [...data.rankings].sort((a, b) => b.total_requests - a.total_requests);
 		const top = sorted.slice(0, 10);
 		const total = sorted.reduce((sum, r) => sum + r.total_requests, 0);
-
 		const items = top.map((entry, idx) => ({
 			displayName: entry.name || entry.id,
 			id: entry.id,
@@ -73,17 +67,14 @@ function TopDimensionChart({
 			pct: total > 0 ? (entry.total_requests / total) * 100 : 0,
 			colorIdx: idx,
 		}));
-
 		const chart = items.map((item) => ({
 			...item,
 			fill: getModelColor(item.colorIdx),
 		}));
-
 		// Server-computed totals (fan-out dimensions only); when absent, fall
 		// back to the client-side attributed sum.
 		const actual = attributed ? (data.total_actual_requests ?? null) : null;
 		const attributedSum = actual !== null ? (data.total_attributed_requests ?? total) : total;
-
 		return {
 			chartData: chart,
 			grandTotal: total,
@@ -92,7 +83,6 @@ function TopDimensionChart({
 			attributedTotal: attributedSum,
 		};
 	}, [data, attributed]);
-
 	return (
 		<ChartCard
 			title={t("dashboard.rankings.topDimension", { dimension: dimensionLabel })}
@@ -142,12 +132,12 @@ function TopDimensionChart({
 					<ChartErrorBoundary resetKey={`${chartData.length}`}>
 						<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 							<BarChart data={chartData} layout="vertical" margin={{ top: 6, right: 20, left: 0, bottom: 0 }} barCategoryGap={4}>
-								<CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+								<CartesianGrid strokeDasharray="3 3" horizontal className="stroke-zinc-200 dark:stroke-zinc-700" />
 								<XAxis
 									type="number"
 									tick={{ fontSize: 11, className: "fill-zinc-500" }}
-									tickLine={false}
-									axisLine={false}
+									tickLine
+									axisLine
 									tickFormatter={(v) => formatNumber(v)}
 								/>
 								<YAxis
@@ -168,12 +158,12 @@ function TopDimensionChart({
 											</foreignObject>
 										);
 									}}
-									tickLine={false}
-									axisLine={false}
+									tickLine
+									axisLine
 									width={100}
 								/>
 								<Tooltip content={<TopDimensionTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
-								<Bar dataKey="total_requests" isAnimationActive={false} barSize={24} shape={rankingBarShape}>
+								<Bar dataKey="total_requests" isAnimationActive barSize={24} shape={rankingBarShape}>
 									{chartData.map((entry, idx) => (
 										<Cell key={entry.id} fill={getModelColor(idx)} />
 									))}
@@ -205,12 +195,10 @@ function TopDimensionChart({
 		</ChartCard>
 	);
 }
-
 function DimensionRankingsTabImpl({ data, loading, dimensionLabel, testIdPrefix, attributed }: DimensionRankingsTabProps) {
 	const { t } = useTranslation("observability");
 	const [sortField, setSortField] = useState<SortField>("total_requests");
 	const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-
 	const handleSort = useCallback(
 		(field: SortField) => {
 			if (sortField === field) {
@@ -222,7 +210,6 @@ function DimensionRankingsTabImpl({ data, loading, dimensionLabel, testIdPrefix,
 		},
 		[sortField],
 	);
-
 	const sortedRankings = useMemo(() => {
 		if (!data?.rankings) return [];
 		return [...data.rankings].sort((a, b) => {
@@ -231,7 +218,6 @@ function DimensionRankingsTabImpl({ data, loading, dimensionLabel, testIdPrefix,
 			return sortOrder === "desc" ? (bVal as number) - (aVal as number) : (aVal as number) - (bVal as number);
 		});
 	}, [data, sortField, sortOrder]);
-
 	return (
 		<div className="flex flex-col gap-4">
 			<TopDimensionChart
@@ -319,7 +305,7 @@ function DimensionRankingsTabImpl({ data, loading, dimensionLabel, testIdPrefix,
 									<TableCell className="text-right">
 										<div className="flex items-center justify-end gap-2">
 											<span>{formatCost(entry.total_cost)}</span>
-											<TrendBadge value={entry.trend.cost_trend} positiveIsGood={false} isNew={!entry.trend.has_previous_period} />
+											<TrendBadge value={entry.trend.cost_trend} positiveIsGood isNew={!entry.trend.has_previous_period} />
 										</div>
 									</TableCell>
 								</TableRow>
@@ -331,5 +317,4 @@ function DimensionRankingsTabImpl({ data, loading, dimensionLabel, testIdPrefix,
 		</div>
 	);
 }
-
 export const DimensionRankingsTab = memo(DimensionRankingsTabImpl);

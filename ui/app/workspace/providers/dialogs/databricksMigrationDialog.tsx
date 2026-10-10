@@ -1,5 +1,4 @@
 "use client";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	AlertDialog,
@@ -53,32 +52,26 @@ import {
 	planNeedsInput,
 	runDatabricksMigration,
 } from "@/lib/utils/databricksMigration";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { AlertTriangle, Check, CircleDashed, Loader2, X } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-
 interface Props {
 	show: boolean;
 	provider: ModelProvider;
 	onDeferred: () => void;
 	onMigrated: () => void;
 }
-
 type Stage = "intro" | "loading" | "preview" | "running" | "finished";
-
 const API_FORMAT_KEYS: Record<DatabricksApiFormat, string> = {
 	auto: "providers.databricksMigration.apiAuto",
 	model_serving: "providers.databricksMigration.apiModelServing",
 	ai_gateway: "providers.databricksMigration.apiAiGateway",
 };
-
 /** Wraps an RTK error so the pure orchestrator can read a message and HTTP status. */
 const wrapError = (err: unknown): Error =>
 	Object.assign(new Error(getErrorMessage(err)), {
 		status: getErrorStatus(err),
 	});
-
 /** 用当前语言展示迁移计划，语言变化只更新文案，不重放迁移请求。 */
 export default function DatabricksMigrationDialog({ show, provider, onDeferred, onMigrated }: Props) {
 	const { t, i18n } = useTranslation("models");
@@ -86,11 +79,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 	const { t: tc } = useTranslation("common");
 	const dispatch = useAppDispatch();
 	const providerFormIsDirty = useAppSelector((state) => state.provider.isDirty);
-	const canCreate = useRbac(RbacResource.ModelProvider, RbacOperation.Create);
-	const canUpdate = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
-	const canDelete = useRbac(RbacResource.ModelProvider, RbacOperation.Delete);
-	const hasAccess = canCreate && canUpdate && canDelete;
-
 	const [getProvider] = useLazyGetProviderQuery();
 	const [getProviderKeys] = useLazyGetProviderKeysQuery();
 	const [createProvider] = useCreateProviderMutation();
@@ -100,14 +88,12 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 	const [updateProviderKey] = useUpdateProviderKeyMutation();
 	const [deleteProviderKey] = useDeleteProviderKeyMutation();
 	const [refreshModels] = useRefreshProviderModelsMutation();
-
 	const [stage, setStage] = useState<Stage>("intro");
 	const [planState, setPlan] = useState<MigrationPlan | undefined>();
 	const [existingTarget, setExistingTarget] = useState<ExistingTarget | undefined>();
 	const [loadError, setLoadError] = useState<string | undefined>();
 	const [steps, setSteps] = useState<MigrationStep[]>([]);
 	const [result, setResult] = useState<MigrationResult | undefined>();
-
 	const plan = useMemo(
 		() =>
 			planState
@@ -123,7 +109,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 		const labels = new Map(buildMigrationSteps(plan, t).map((step) => [step.id, step.label]));
 		return steps.map((step) => ({ ...step, label: labels.get(step.id) ?? step.label }));
 	}, [plan, steps, t, locale]);
-
 	// Start over whenever a different provider is opened.
 	useEffect(() => {
 		setStage("intro");
@@ -133,7 +118,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 		setSteps([]);
 		setResult(undefined);
 	}, [provider.name]);
-
 	const api = useMemo<MigrationApi>(
 		() => ({
 			getProvider: (name) =>
@@ -185,7 +169,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 			refreshModels,
 		],
 	);
-
 	/** 读取源与目标快照，以当前语言生成可编辑计划。 */
 	const loadPlan = async () => {
 		setStage("loading");
@@ -210,7 +193,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 			setStage("intro");
 		}
 	};
-
 	/** 仅在用户确认时执行迁移，保留原有权限与缓存失效流程。 */
 	const runMigration = async () => {
 		if (!plan) return;
@@ -223,7 +205,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 			dispatch(providersApi.util.invalidateTags(["Providers", { type: "ProviderKeys", id: DATABRICKS_PROVIDER }, "DBKeys", "VirtualKeys"]));
 		}
 	};
-
 	const updateKeyValue = (tempId: string, value: SecretVar) => {
 		setPlan((prev) =>
 			prev
@@ -234,15 +215,8 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 				: prev,
 		);
 	};
-
-	const migrateDisabledReason = !hasAccess
-		? t("providers.databricksMigration.needAccess")
-		: providerFormIsDirty
-			? t("providers.databricksMigration.saveFirst")
-			: undefined;
-
+	const migrateDisabledReason = providerFormIsDirty ? t("providers.databricksMigration.saveFirst") : undefined;
 	const canMigrate = !!plan && !migrateDisabledReason && !planNeedsInput(plan);
-
 	return (
 		<AlertDialog open={show}>
 			<AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" data-testid="databricks-migration-dialog">
@@ -350,7 +324,6 @@ export default function DatabricksMigrationDialog({ show, provider, onDeferred, 
 		</AlertDialog>
 	);
 }
-
 function DisabledTooltip({ reason, children }: { reason?: string; children: ReactNode }) {
 	if (!reason) return <>{children}</>;
 	return (
@@ -362,20 +335,17 @@ function DisabledTooltip({ reason, children }: { reason?: string; children: Reac
 		</Tooltip>
 	);
 }
-
 interface PreviewProps {
 	plan: MigrationPlan;
 	onWorkspaceUrlChange: (value: string) => void;
 	onApiFormatChange: (value: DatabricksApiFormat) => void;
 	onKeyValueChange: (tempId: string, value: SecretVar) => void;
 }
-
 function MigrationPreview({ plan, onWorkspaceUrlChange, onApiFormatChange, onKeyValueChange }: PreviewProps) {
 	const { t } = useTranslation("models");
 	const net = plan.providerSettings.network_config;
 	const perf = plan.providerSettings.concurrency_and_buffer_size;
 	const otherHeaders = Object.keys(net.extra_headers ?? {});
-
 	return (
 		<div className="space-y-4 text-sm" data-testid="databricks-migration-preview">
 			<section className="space-y-2">
@@ -447,10 +417,18 @@ function MigrationPreview({ plan, onWorkspaceUrlChange, onApiFormatChange, onKey
 									})}
 								</span>
 								{key.blacklisted_models.length > 0 && (
-									<span>{t("providers.databricksMigration.blacklisted", { value: key.blacklisted_models.join(", ") })}</span>
+									<span>
+										{t("providers.databricksMigration.blacklisted", {
+											value: key.blacklisted_models.join(", "),
+										})}
+									</span>
 								)}
 								<span>{t("providers.databricksMigration.weight", { value: key.weight })}</span>
-								<span>{t("providers.databricksMigration.aliases", { value: Object.keys(key.aliases ?? {}).length })}</span>
+								<span>
+									{t("providers.databricksMigration.aliases", {
+										value: Object.keys(key.aliases ?? {}).length,
+									})}
+								</span>
 								{!key.enabled && <span>{t("providers.databricksMigration.disabled")}</span>}
 							</div>
 							{key.needsValue || !isSecretVarSet(key.value) ? (
@@ -536,7 +514,6 @@ function MigrationPreview({ plan, onWorkspaceUrlChange, onApiFormatChange, onKey
 		</div>
 	);
 }
-
 function MigrationProgress({ steps }: { steps: MigrationStep[] }) {
 	return (
 		<ol className="space-y-2 text-sm" data-testid="databricks-migration-progress">
@@ -558,7 +535,6 @@ function MigrationProgress({ steps }: { steps: MigrationStep[] }) {
 		</ol>
 	);
 }
-
 function StepIcon({ status }: { status: MigrationStep["status"] }) {
 	switch (status) {
 		case "running":
@@ -573,11 +549,9 @@ function StepIcon({ status }: { status: MigrationStep["status"] }) {
 			return <CircleDashed className="text-muted-foreground/50 mt-0.5 h-4 w-4 shrink-0" />;
 	}
 }
-
 function SectionTitle({ children }: { children: ReactNode }) {
 	return <h4 className="flex items-center text-xs font-semibold tracking-wide uppercase">{children}</h4>;
 }
-
 function Stat({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="min-w-0">

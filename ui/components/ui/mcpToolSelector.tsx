@@ -10,13 +10,11 @@ import { Option } from "./multiselectUtils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
 import { cn } from "./utils";
 import { useTranslation } from "react-i18next";
-
 // Types
 export interface SelectedTool {
 	mcpClientId: string;
 	toolName: string;
 }
-
 export interface ToolFunction {
 	name: string;
 	description?: string;
@@ -24,7 +22,6 @@ export interface ToolFunction {
 	parameters?: Record<string, unknown> | object;
 	strict?: boolean;
 }
-
 export interface MCPClientInfo {
 	config: {
 		client_id: string;
@@ -34,7 +31,6 @@ export interface MCPClientInfo {
 	tools: ToolFunction[];
 	state?: string;
 }
-
 interface ToolOptionMeta {
 	mcpClientId: string;
 	mcpClientName: string;
@@ -42,7 +38,6 @@ interface ToolOptionMeta {
 	description?: string;
 	parameters?: Record<string, unknown> | object;
 }
-
 interface MCPToolSelectorProps {
 	value: SelectedTool[];
 	onChange: (tools: SelectedTool[]) => void;
@@ -51,23 +46,18 @@ interface MCPToolSelectorProps {
 	disabled?: boolean;
 	className?: string;
 }
-
 export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disabled = false, className }: MCPToolSelectorProps) {
 	const { t } = useTranslation("mcp");
 	const { t: tShared } = useTranslation("observability");
 	const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
-
 	// Flatten all tools from all MCP clients into searchable options
 	// Using meta field for complex data as per Option type definition
 	const allToolOptions = useMemo(() => {
 		const options: Option<ToolOptionMeta>[] = [];
-
 		for (const client of mcpClients) {
 			if (!client.tools) continue;
-
 			for (const tool of client.tools) {
 				const key = `${client.config.client_id}:${tool.name}`;
-
 				options.push({
 					label: `${client.config.name} / ${tool.name}`,
 					value: key,
@@ -81,10 +71,8 @@ export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disa
 				});
 			}
 		}
-
 		return options;
 	}, [mcpClients]);
-
 	// Get full tool info for selected tools
 	const selectedToolsWithInfo = useMemo(() => {
 		return value.map((selected) => {
@@ -98,13 +86,11 @@ export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disa
 			};
 		});
 	}, [value, mcpClients]);
-
 	// Filter out already selected tools from options
 	const availableOptions = useMemo(() => {
 		const selectedKeys = new Set(value.map((t) => `${t.mcpClientId}:${t.toolName}`));
 		return allToolOptions.filter((opt) => !selectedKeys.has(opt.value));
 	}, [allToolOptions, value]);
-
 	const toggleExpanded = useCallback((key: string) => {
 		setExpandedTools((prev) => {
 			const next = new Set(prev);
@@ -116,36 +102,29 @@ export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disa
 			return next;
 		});
 	}, []);
-
 	const handleSelectTool = useCallback(
 		(selected: Option<ToolOptionMeta>[]) => {
 			if (selected.length === 0) return;
-
 			const newTool = selected[selected.length - 1];
 			if (!newTool?.meta) return;
-
 			const newSelectedTool: SelectedTool = {
 				mcpClientId: newTool.meta.mcpClientId,
 				toolName: newTool.meta.toolName,
 			};
-
 			// Check if already selected
 			const exists = value.some((t) => t.mcpClientId === newSelectedTool.mcpClientId && t.toolName === newSelectedTool.toolName);
-
 			if (!exists) {
 				onChange([...value, newSelectedTool]);
 			}
 		},
 		[value, onChange],
 	);
-
 	const handleRemoveTool = useCallback(
 		(mcpClientId: string, toolName: string) => {
 			onChange(value.filter((t) => !(t.mcpClientId === mcpClientId && t.toolName === toolName)));
 		},
 		[value, onChange],
 	);
-
 	const reload = useCallback(
 		(query: string, callback: (options: Option<ToolOptionMeta>[]) => void) => {
 			const lowerQuery = query.toLowerCase();
@@ -156,7 +135,6 @@ export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disa
 		},
 		[availableOptions],
 	);
-
 	return (
 		<div className={cn("space-y-3", className)}>
 			{/* Search dropdown */}
@@ -168,10 +146,10 @@ export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disa
 				debounce={150}
 				onChange={handleSelectTool}
 				value={[]}
-				isClearable={false}
+				isClearable
 				closeMenuOnSelect={true}
 				hideSelectedOptions={true}
-				controlShouldRenderValue={false}
+				controlShouldRenderValue
 				noOptionsMessage={() => tShared("shared.noResults")}
 				views={{
 					option: (optionProps: OptionProps<ToolOptionMeta>) => {
@@ -217,7 +195,6 @@ export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disa
 							{selectedToolsWithInfo.map((tool) => {
 								const key = `${tool.mcpClientId}:${tool.toolName}`;
 								const isExpanded = expandedTools.has(key);
-
 								return (
 									<Collapsible key={key} open={isExpanded} onOpenChange={() => toggleExpanded(key)} asChild>
 										<>

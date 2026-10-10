@@ -39,76 +39,59 @@ import {
 } from "./multiselectUtils";
 import { Separator } from "./separator";
 import { cn, radixDialogOnBlurWorkaround } from "./utils";
-
 // Create wrapper functions for react-select components to fix TypeScript issues
 const OptionWrapper = <T extends unknown = unknown>(props: OptionProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.Option(props) as React.ReactNode;
 };
-
 const GroupHeadingWrapper = <T extends unknown = unknown>(props: GroupHeadingProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.GroupHeading(props) as React.ReactNode;
 };
-
 const GroupWrapper = <T extends unknown = unknown>(props: GroupProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.Group(props) as React.ReactNode;
 };
-
 const MultiValueWrapper = <T extends unknown = unknown>(props: MultiValueProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.MultiValue(props) as React.ReactNode;
 };
-
 const ControlWrapper = <T extends unknown = unknown>(props: ControlProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.Control(props) as React.ReactNode;
 };
-
 const MultiValueRemoveWrapper = <T extends unknown = unknown>(props: MultiValueRemoveProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.MultiValueRemove(props) as React.ReactNode;
 };
-
 const IndicatorSeparatorWrapper = <T extends unknown = unknown>(
 	props: IndicatorSeparatorProps<T, boolean, GroupBase<T>>,
 ): React.ReactNode => {
 	return components.IndicatorSeparator(props) as React.ReactNode;
 };
-
 const InputWrapper = <T extends unknown = unknown>(props: InputProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.Input(props) as React.ReactNode;
 };
-
 const LoadingIndicatorWrapper = <T extends unknown = unknown>(props: LoadingIndicatorProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.LoadingIndicator(props) as React.ReactNode;
 };
-
 const MenuWrapper = <T extends unknown = unknown>(props: MenuProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.Menu(props) as React.ReactNode;
 };
-
 const MenuListWrapper = <T extends unknown = unknown>(props: MenuListProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.MenuList(props) as React.ReactNode;
 };
-
 const MultiValueContainerWrapper = <T extends unknown = unknown>(
 	props: MultiValueGenericProps<T, boolean, GroupBase<T>>,
 ): React.ReactNode => {
 	return components.MultiValueContainer(props) as React.ReactNode;
 };
-
 const NoOptionsMessageWrapper = <T extends unknown = unknown>(props: NoticeProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.NoOptionsMessage(props) as React.ReactNode;
 };
-
 const PlaceholderWrapper = <T extends unknown = unknown>(props: PlaceholderProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.Placeholder(props) as React.ReactNode;
 };
-
 const SingleValueWrapper = <T extends unknown = unknown>(props: SingleValueProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.SingleValue(props) as React.ReactNode;
 };
-
 const ValueContainerWrapper = <T extends unknown = unknown>(props: ValueContainerProps<T, boolean, GroupBase<T>>): React.ReactNode => {
 	return components.ValueContainer(props) as React.ReactNode;
 };
-
 interface AsyncMultiSelectProps<T> {
 	/** disable multiselect */
 	isSingleSelect?: boolean;
@@ -127,23 +110,19 @@ interface AsyncMultiSelectProps<T> {
 	hideSelectedOptions?: boolean;
 	/** style of the check icon if hideSelectedOption is false */
 	checkIconStyling?: string;
-
 	/** Controls whether the selected value is rendered in the control element.
 	 * Set to false to hide the selected value in the control when rendering custom selection UI
 	 * or to reduce visual clutter when labels are shown elsewhere.
 	 * @default true
 	 */
 	controlShouldRenderValue?: boolean;
-
 	/** enable loading state */
 	isLoading?: boolean;
 	debounce?: number;
 	reload?: (query: string, callback: (options: Option<T>[] | OptionGroup<T>[]) => void) => void;
-
 	menuPosition?: "absolute" | "fixed";
 	/** Target element for the menu portal. When set, the menu renders inside this element instead of document.body. */
 	menuPortalTarget?: HTMLElement | null;
-
 	/** enable dynamic option creation from the input */
 	dynamicOptionCreation?: boolean;
 	/** default options to be displayed */
@@ -151,9 +130,7 @@ interface AsyncMultiSelectProps<T> {
 	onChange?: (items: Option<T>[]) => any;
 	/** callback function to be called when a new option is created */
 	onCreateOption?: (value: string) => void;
-
 	placeholder?: React.ReactNode;
-
 	/** placeholder to be displayed when no results are found */
 	noResultsFoundPlaceholder?: string;
 	/** placeholder to be displayed when no results currently */
@@ -162,7 +139,6 @@ interface AsyncMultiSelectProps<T> {
 	inputValue?: string;
 	hideDropdownIndicator?: boolean;
 	autoFocus?: boolean;
-
 	/** hide search icon present on the left */
 	hideSearchIcon?: boolean;
 	/** hide plus icon present in the create option */
@@ -175,18 +151,20 @@ interface AsyncMultiSelectProps<T> {
 	menuPlacement?: "auto" | "top" | "bottom";
 	value?: any;
 	menuIsOpen?: boolean;
-
 	/** format create new option label when dynamically creating option */
 	formatCreateLabel?: (inputValue: string) => string;
 	defaultValue?: any;
 	defaultMenuIsOpen?: boolean;
-
 	/** text to be displayed when static create option */
 	createOptionText?: string;
 	onBlur?: () => void;
-
 	/** callback function to be called when input value changes */
-	onInputChange?: (inputValue: string, actionMeta: { action: string }) => void;
+	onInputChange?: (
+		inputValue: string,
+		actionMeta: {
+			action: string;
+		},
+	) => void;
 	/** called when the menu opens — e.g. to start fetching options lazily */
 	onMenuOpen?: () => void;
 	/** called when the menu closes */
@@ -194,12 +172,10 @@ interface AsyncMultiSelectProps<T> {
 	/** called when the option list is scrolled to the bottom — load the next page */
 	onMenuScrollToBottom?: () => void;
 	onKeyDown?: KeyboardEventHandler;
-
 	/** custom no options message */
 	noOptionsMessage?: () => React.ReactNode;
 	valueContainerClassName?: string;
 	noOptionsMessageClassName?: string;
-
 	/** id for the search input (accessibility) */
 	inputId?: string;
 	/** id of element that labels this control (accessibility) */
@@ -233,12 +209,10 @@ interface AsyncMultiSelectProps<T> {
 		valueContainer?: (props: ValueContainerProps) => React.ReactNode;
 	};
 }
-
 export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 	const { t } = useTranslation("observability");
 	const menuOpenRef = useRef(false);
 	const containerRef = useRef<HTMLDivElement>(null);
-
 	// Add a native keydown listener at document level in capture phase
 	useEffect(() => {
 		const handleKeyDownCapture = (event: KeyboardEvent) => {
@@ -248,7 +222,6 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 				event.stopPropagation();
 				event.stopImmediatePropagation();
 				event.preventDefault();
-
 				// Close the menu by blurring the currently focused input
 				// When react-select menu is open, its input is focused
 				if (document.activeElement && document.activeElement instanceof HTMLElement) {
@@ -256,7 +229,6 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 				}
 			}
 		};
-
 		// Listen at document level in capture phase with highest priority
 		// Must be in capture to beat Sheet/Dialog listeners
 		document.addEventListener("keydown", handleKeyDownCapture, { capture: true });
@@ -264,7 +236,6 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 			document.removeEventListener("keydown", handleKeyDownCapture, { capture: true });
 		};
 	}, []);
-
 	// When having an asynchronous component, this will loadOptions from the reload and debounce passed in through props
 	const debouncedReload = useDebouncedFunction(
 		useCallback(
@@ -279,12 +250,10 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 		props.debounce ?? 0,
 	);
 	const loadOptions = props.debounce && props.reload ? debouncedReload : props.reload;
-
 	// This is a custom implementation of the load options when using the nonAsync flag. This will help in filtering based on input value
 	const loadOptionsForNonAsyncComponents = (inputValue: string, callback: (options: Option<T>[] | OptionGroup<T>[]) => void) => {
 		const options = props.defaultOptions || [];
 		let filtered;
-
 		if (options.length > 0 && "options" in options[0]) {
 			// Grouped options
 			filtered = (options as OptionGroup<T>[])
@@ -297,10 +266,8 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 			// Flat options
 			filtered = (options as Option<T>[]).filter((opt) => opt.label.toLowerCase().includes(inputValue.toLowerCase()));
 		}
-
 		callback(filtered as Option<T>[] | OptionGroup<T>[]);
 	};
-
 	const handleKeyDown: KeyboardEventHandler = (event) => {
 		// If menu is open and Escape is pressed, stop propagation to prevent parent handlers (like dialogs)
 		if (menuOpenRef.current && event.key === "Escape") {
@@ -316,7 +283,6 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 			props.onKeyDown(event);
 		}
 	};
-
 	const customOptionProps: CustomOptionProps = {
 		dynamicOptionCreation: props.dynamicOptionCreation,
 		createOptionText: props.createOptionText,
@@ -324,16 +290,13 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 		hideSelectedOptions: props.hideSelectedOptions ?? false,
 		hidePlusIcon: props.hidePlusIcon,
 	};
-
 	const customDropdownIndicatorProps: CustomDropdownIndicatorProps = {
 		hideDropdownIndicator: props.hideDropdownIndicator,
 	};
-
 	const customPlaceholderProps: CustomPlaceholderProps = {
 		hideSearchIcon: props.hideSearchIcon,
 		placeholder: props.placeholder ?? t("shared.select"),
 	};
-
 	const customComponentsProps: CustomComponentsProps = {
 		clearIndicatorView: props.views?.clearIndicator,
 		controlView: props.views?.control,
@@ -354,7 +317,6 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 		singleValueView: props.views?.singleValue,
 		valueContainerView: props.views?.valueContainer,
 	};
-
 	return (
 		<div ref={containerRef} data-testid={props["data-testid"]}>
 			<AsyncCreatableSelect
@@ -384,7 +346,6 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 							}
 							break;
 					}
-
 					// Normalize selection to array for consistent API
 					// When isSingleSelect is true, react-select returns single object (not array)
 					let normalizedSelection: Option<T>[];
@@ -393,14 +354,13 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 					} else {
 						normalizedSelection = (selection as Option<T>[]) || [];
 					}
-
 					props.onChange && props.onChange(normalizedSelection);
 				}}
 				formatCreateLabel={props.formatCreateLabel ?? ((value) => t("shared.useValue", { value }))}
 				loadingMessage={() => t("shared.loading")}
 				controlShouldRenderValue={props.controlShouldRenderValue ?? true}
 				menuPlacement={props.menuPlacement}
-				blurInputOnSelect={false}
+				blurInputOnSelect
 				menuPosition={props.menuPosition ?? "fixed"}
 				menuPortalTarget={props.menuPortalTarget}
 				onInputChange={(newValue, actionMeta) => {
@@ -516,11 +476,9 @@ export function AsyncMultiSelect<T>(props: AsyncMultiSelectProps<T>) {
 		</div>
 	);
 }
-
 export function MultiSelectInput<T>(props: AsyncMultiSelectProps<T>) {
 	const [inputValue, setInputValue] = useState("");
 	const [value, setValue] = useState<readonly Option<T>[]>(props.value ? props.value.map((val: string) => createOption<T>(val)) : []);
-
 	const handleKeyDown: KeyboardEventHandler = (event) => {
 		if (!inputValue) return;
 		switch (event.key) {
@@ -535,14 +493,13 @@ export function MultiSelectInput<T>(props: AsyncMultiSelectProps<T>) {
 			}
 		}
 	};
-
 	return (
 		<AsyncMultiSelect<T>
 			{...props}
 			isCreatable
 			dynamicOptionCreation
 			isClearable
-			menuIsOpen={false}
+			menuIsOpen
 			value={value}
 			hideDropdownIndicator
 			hideSearchIcon
@@ -557,14 +514,15 @@ export function MultiSelectInput<T>(props: AsyncMultiSelectProps<T>) {
 		/>
 	);
 }
-
-function CustomOption<T>(props: OptionProps<Option<T>> & { selectProps: CustomOptionProps & CustomComponentsProps }) {
+function CustomOption<T>(
+	props: OptionProps<Option<T>> & {
+		selectProps: CustomOptionProps & CustomComponentsProps;
+	},
+) {
 	const { Option } = components;
-
 	if (props.selectProps.optionView) {
 		return props.selectProps.optionView(props);
 	}
-
 	// So, this is a bit of a hack to style the `Create new option` button for react select. React select populates this property for this option
 	if (props.selectProps.dynamicOptionCreation === true && (props.data as any).__isNew__) {
 		return (
@@ -577,7 +535,6 @@ function CustomOption<T>(props: OptionProps<Option<T>> & { selectProps: CustomOp
 			</div>
 		);
 	}
-
 	if ((props.data as any).__isNew__) {
 		return (
 			<div className={cn("flex w-full flex-col gap-2", props.options.length > 1 ? "pt-2" : "")}>
@@ -589,7 +546,6 @@ function CustomOption<T>(props: OptionProps<Option<T>> & { selectProps: CustomOp
 			</div>
 		);
 	}
-
 	return (
 		<OptionWrapper {...props}>
 			{props.children}
@@ -601,82 +557,98 @@ function CustomOption<T>(props: OptionProps<Option<T>> & { selectProps: CustomOp
 		</OptionWrapper>
 	);
 }
-
-function CustomControl<T>(props: ControlProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomControl<T>(
+	props: ControlProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.controlView) {
 		return props.selectProps.controlView(props);
 	}
-
 	return <ControlWrapper {...props}>{props.children}</ControlWrapper>;
 }
-
 function CustomDropdownIndicator<T>(
-	props: DropdownIndicatorProps<Option<T>> & { selectProps: CustomDropdownIndicatorProps & CustomComponentsProps },
+	props: DropdownIndicatorProps<Option<T>> & {
+		selectProps: CustomDropdownIndicatorProps & CustomComponentsProps;
+	},
 ) {
 	if (props.selectProps.dropdownIndicatorView) {
 		return props.selectProps.dropdownIndicatorView(props);
 	}
-
 	if (props.selectProps.hideDropdownIndicator) {
 		return null;
 	}
 	return <ChevronDown className="text-content-primary m-2 mt-2.5 h-4 w-4 shrink-0 self-start opacity-50" />;
 }
-
-function CustomMultiValueRemove<T>(props: MultiValueRemoveProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomMultiValueRemove<T>(
+	props: MultiValueRemoveProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	const { MultiValueRemove } = components;
-
 	if (props.selectProps.multiValueRemoveView) {
 		return props.selectProps.multiValueRemoveView(props);
 	}
-
 	return (
 		<MultiValueRemoveWrapper {...props}>
 			<XIcon size={14} />
 		</MultiValueRemoveWrapper>
 	);
 }
-
-function CustomMultiValueLabel<T>(props: MultiValueGenericProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomMultiValueLabel<T>(
+	props: MultiValueGenericProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.multiValueLabelView) {
 		return props.selectProps.multiValueLabelView(props);
 	}
-
 	return <Label className="text-content-tertiary text-sm font-normal">{props.children}</Label>;
 }
-
-function CustomMultiValue<T>(props: MultiValueProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomMultiValue<T>(
+	props: MultiValueProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.multiValueView) {
 		return props.selectProps.multiValueView(props);
 	}
-
 	return <MultiValueWrapper {...props} />;
 }
-
-function CustomGroupHeading<T>(props: GroupHeadingProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomGroupHeading<T>(
+	props: GroupHeadingProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.groupHeadingView) {
 		return props.selectProps.groupHeadingView(props);
 	}
-
 	return <GroupHeadingWrapper {...props} />;
 }
-
-function CustomGroup<T>(props: GroupProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomGroup<T>(
+	props: GroupProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	const { Group } = components;
-
 	if (props.selectProps.groupView) {
 		return props.selectProps.groupView(props);
 	}
-
 	return <GroupWrapper {...props} />;
 }
-
-function CustomClearIndicator<T>(props: ClearIndicatorProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomClearIndicator<T>(
+	props: ClearIndicatorProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.clearIndicatorView) {
 		return props.selectProps.clearIndicatorView(props);
 	}
-
-	const parentTestId = (props.selectProps as { ["data-testid"]?: string })["data-testid"];
+	const parentTestId = (
+		props.selectProps as {
+			["data-testid"]?: string;
+		}
+	)["data-testid"];
 	return (
 		<div
 			{...props.innerProps}
@@ -687,68 +659,84 @@ function CustomClearIndicator<T>(props: ClearIndicatorProps<Option<T>> & { selec
 		</div>
 	);
 }
-
-function CustomIndicatorSeparator<T>(props: IndicatorSeparatorProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomIndicatorSeparator<T>(
+	props: IndicatorSeparatorProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.indicatorSeparatorView) {
 		return props.selectProps.indicatorSeparatorView(props);
 	}
-
 	return <IndicatorSeparatorWrapper {...props} />;
 }
-
-function CustomInput<T>(props: InputProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomInput<T>(
+	props: InputProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.inputView) {
 		return props.selectProps.inputView(props);
 	}
-
 	return <InputWrapper {...props} />;
 }
-
-function CustomLoadingIndicator<T>(props: LoadingIndicatorProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomLoadingIndicator<T>(
+	props: LoadingIndicatorProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.loadingIndicatorView) {
 		return props.selectProps.loadingIndicatorView(props);
 	}
-
 	return <LoadingIndicatorWrapper {...props} />;
 }
-
-function CustomMenu<T>(props: MenuProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomMenu<T>(
+	props: MenuProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.menuView) {
 		return props.selectProps.menuView(props);
 	}
-
 	return <MenuWrapper {...props} />;
 }
-
-function CustomMenuList<T>(props: MenuListProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomMenuList<T>(
+	props: MenuListProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.menuListView) {
 		return props.selectProps.menuListView(props);
 	}
-
 	return <MenuListWrapper {...props} />;
 }
-
-function CustomMultiValueContainer<T>(props: MultiValueGenericProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomMultiValueContainer<T>(
+	props: MultiValueGenericProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.multiValueContainerView) {
 		return props.selectProps.multiValueContainerView(props);
 	}
-
 	return <MultiValueContainerWrapper {...props} />;
 }
-
-function CustomNoOptionsMessage<T>(props: NoticeProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomNoOptionsMessage<T>(
+	props: NoticeProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.noOptionsMessageView) {
 		return props.selectProps.noOptionsMessageView(props);
 	}
-
 	return <NoOptionsMessageWrapper {...props} />;
 }
-
-function CustomPlaceholder<T>(props: PlaceholderProps<Option<T>> & { selectProps: CustomPlaceholderProps & CustomComponentsProps }) {
+function CustomPlaceholder<T>(
+	props: PlaceholderProps<Option<T>> & {
+		selectProps: CustomPlaceholderProps & CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.placeholderView) {
 		return props.selectProps.placeholderView(props);
 	}
-
 	return (
 		<PlaceholderWrapper {...props} className="text-content-disabled flex flex-row items-center">
 			{props.selectProps.hideSearchIcon !== true && <Icons.search className="mr-2 h-3.5 w-3.5" strokeWidth={1.5} />}{" "}
@@ -756,19 +744,23 @@ function CustomPlaceholder<T>(props: PlaceholderProps<Option<T>> & { selectProps
 		</PlaceholderWrapper>
 	);
 }
-
-function CustomSingleValue<T>(props: SingleValueProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomSingleValue<T>(
+	props: SingleValueProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.singleValueView) {
 		return props.selectProps.singleValueView(props);
 	}
-
 	return <SingleValueWrapper {...props} />;
 }
-
-function CustomValueContainer<T>(props: ValueContainerProps<Option<T>> & { selectProps: CustomComponentsProps }) {
+function CustomValueContainer<T>(
+	props: ValueContainerProps<Option<T>> & {
+		selectProps: CustomComponentsProps;
+	},
+) {
 	if (props.selectProps.valueContainerView) {
 		return props.selectProps.valueContainerView(props);
 	}
-
 	return <ValueContainerWrapper {...props} />;
 }

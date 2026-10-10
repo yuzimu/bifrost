@@ -16,11 +16,9 @@ import {
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
 // ============================================================================
 // Utility Functions
 // ============================================================================
-
 function formatBytes(bytes: number): string {
 	if (bytes === 0) return "0 B";
 	const k = 1024;
@@ -28,14 +26,12 @@ function formatBytes(bytes: number): string {
 	const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
 	return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
-
 function formatNs(ns: number): string {
 	if (ns < 1000) return `${ns}ns`;
 	if (ns < 1000000) return `${(ns / 1000).toFixed(2)}µs`;
 	if (ns < 1000000000) return `${(ns / 1000000).toFixed(2)}ms`;
 	return `${(ns / 1000000000).toFixed(3)}s`;
 }
-
 function formatTime(timestamp: string): string {
 	const date = new Date(timestamp);
 	return date.toLocaleTimeString("en-US", {
@@ -45,7 +41,6 @@ function formatTime(timestamp: string): string {
 		second: "2-digit",
 	});
 }
-
 function getCategoryColor(category: string): string {
 	switch (category) {
 		case "per-request":
@@ -56,7 +51,6 @@ function getCategoryColor(category: string): string {
 			return "text-zinc-400 bg-zinc-400/10 border-zinc-400/20";
 	}
 }
-
 function getStackFilePath(stack: string[]): string {
 	for (const line of stack) {
 		const match = line.match(/^\s*([^\s]+\.go):\d+/);
@@ -66,15 +60,12 @@ function getStackFilePath(stack: string[]): string {
 	}
 	return "";
 }
-
 function getGoroutineId(g: GoroutineGroup): string {
 	const filePath = getStackFilePath(g.stack);
 	return `${g.top_func}::${g.state}::${g.category}::${g.count}::${g.wait_minutes ?? 0}::${g.wait_reason ?? ""}::${filePath}`;
 }
-
 // localStorage key for skipped goroutine file paths
 const SKIPPED_GOROUTINE_FILES_KEY = "pprofPage.skippedGoroutineFiles";
-
 function loadSkippedGoroutineFiles(): Set<string> {
 	if (typeof window === "undefined") return new Set();
 	try {
@@ -84,7 +75,6 @@ function loadSkippedGoroutineFiles(): Set<string> {
 		return new Set();
 	}
 }
-
 function saveSkippedGoroutineFiles(skipped: Set<string>): void {
 	if (typeof window === "undefined") return;
 	try {
@@ -93,16 +83,16 @@ function saveSkippedGoroutineFiles(skipped: Set<string>): void {
 		// Ignore storage errors
 	}
 }
-
 // ============================================================================
 // Sort Types
 // ============================================================================
-
 type AllocationSortField = "function" | "file" | "bytes" | "count";
 type SortDirection = "asc" | "desc";
-type AllocationSortState = { field: AllocationSortField; direction: SortDirection };
+type AllocationSortState = {
+	field: AllocationSortField;
+	direction: SortDirection;
+};
 type LeakSeverity = "high" | "medium" | "low";
-
 interface LeakCandidate {
 	key: string;
 	function: string;
@@ -118,16 +108,13 @@ interface LeakCandidate {
 	growthBytes: number;
 	severity: LeakSeverity;
 }
-
 // ~60 seconds of history at 10s polling interval
 const LEAK_MAX_SAMPLES = 6;
 const LEAK_MIN_GROWTH_SAMPLES = 3;
 const LEAK_SEVERITY_RANK: Record<LeakSeverity, number> = { high: 0, medium: 1, low: 2 };
-
 function makeStackKey(stack: string[]): string {
 	return stack.join("\n");
 }
-
 function isMonotonicGrowing(samples: number[]): boolean {
 	if (samples.length < LEAK_MIN_GROWTH_SAMPLES) return false;
 	for (let i = 1; i < samples.length; i++) {
@@ -135,7 +122,6 @@ function isMonotonicGrowing(samples: number[]): boolean {
 	}
 	return samples[samples.length - 1] > samples[0];
 }
-
 function classifyLeakSeverity(retention: number, liveBytes: number, isGrowing: boolean): LeakSeverity | null {
 	const MB = 1024 * 1024;
 	if (isGrowing && retention >= 0.5 && liveBytes >= MB) return "high";
@@ -144,13 +130,11 @@ function classifyLeakSeverity(retention: number, liveBytes: number, isGrowing: b
 	if (retention >= 0.3 && liveBytes >= 100 * 1024) return "low";
 	return null;
 }
-
 function detectLeaks(cumulative: AllocationInfo[], live: AllocationInfo[], inuseHistory: Map<string, number[]>): LeakCandidate[] {
 	const cumMap = new Map<string, AllocationInfo>();
 	for (const c of cumulative) {
 		cumMap.set(makeStackKey(c.stack), c);
 	}
-
 	const candidates: LeakCandidate[] = [];
 	for (const l of live) {
 		const key = makeStackKey(l.stack);
@@ -178,14 +162,12 @@ function detectLeaks(cumulative: AllocationInfo[], live: AllocationInfo[], inuse
 			severity,
 		});
 	}
-
 	candidates.sort((a, b) => {
 		if (a.severity !== b.severity) return LEAK_SEVERITY_RANK[a.severity] - LEAK_SEVERITY_RANK[b.severity];
 		return b.liveBytes - a.liveBytes;
 	});
 	return candidates;
 }
-
 function getLeakSeverityClasses(severity: LeakSeverity): string {
 	switch (severity) {
 		case "high":
@@ -196,13 +178,11 @@ function getLeakSeverityClasses(severity: LeakSeverity): string {
 			return "text-zinc-400 bg-zinc-400/10 border-zinc-400/20";
 	}
 }
-
 function getRetentionColor(retention: number): string {
 	if (retention >= 0.8) return "text-red-400";
 	if (retention >= 0.5) return "text-amber-400";
 	return "text-zinc-400";
 }
-
 function sortAllocations(list: AllocationInfo[], sort: AllocationSortState): AllocationInfo[] {
 	const sorted = [...list];
 	sorted.sort((a, b) => {
@@ -225,11 +205,9 @@ function sortAllocations(list: AllocationInfo[], sort: AllocationSortState): All
 	});
 	return sorted;
 }
-
 // ============================================================================
 // Components
 // ============================================================================
-
 // Stat Card Component
 function StatCard({
 	label,
@@ -255,7 +233,6 @@ function StatCard({
 		</div>
 	);
 }
-
 // Allocation Table Component
 function AllocationTable({
 	allocations,
@@ -277,7 +254,6 @@ function AllocationTable({
 	testIdPrefix?: string;
 }) {
 	const SortIcon = sortDirection === "asc" ? ArrowUp : ArrowDown;
-
 	const SortHeader = ({ field, children }: { field: AllocationSortField; children: React.ReactNode }) => (
 		<th
 			scope="col"
@@ -295,7 +271,6 @@ function AllocationTable({
 			</button>
 		</th>
 	);
-
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full">
@@ -387,7 +362,6 @@ function AllocationTable({
 		</div>
 	);
 }
-
 // Leak Candidates Table
 function LeakTable({
 	candidates,
@@ -526,7 +500,6 @@ function LeakTable({
 		</div>
 	);
 }
-
 // Goroutine Group Component
 function GoroutineGroupRow({
 	group,
@@ -606,45 +579,44 @@ function GoroutineGroupRow({
 		</div>
 	);
 }
-
 // ============================================================================
 // Main Page Component
 // ============================================================================
-
 export default function PprofPage() {
 	const [expandedGoroutines, setExpandedGoroutines] = useState<Set<string>>(new Set());
 	const [skippedGoroutines, setSkippedGoroutines] = useState<Set<string>>(new Set());
 	const [hasLoadedSkipped, setHasLoadedSkipped] = useState(false);
-	const [allocationSort, setAllocationSort] = useState<AllocationSortState>({ field: "bytes", direction: "desc" });
-	const [inuseSort, setInuseSort] = useState<AllocationSortState>({ field: "bytes", direction: "desc" });
+	const [allocationSort, setAllocationSort] = useState<AllocationSortState>({
+		field: "bytes",
+		direction: "desc",
+	});
+	const [inuseSort, setInuseSort] = useState<AllocationSortState>({
+		field: "bytes",
+		direction: "desc",
+	});
 	const [expandedAlloc, setExpandedAlloc] = useState<Set<string>>(new Set());
 	const [expandedInuse, setExpandedInuse] = useState<Set<string>>(new Set());
 	const [expandedLeaks, setExpandedLeaks] = useState<Set<string>>(new Set());
 	const inuseHistoryRef = useRef<Map<string, number[]>>(new Map());
 	const lastInuseSnapshotRef = useRef<string | null>(null);
 	const [historyVersion, setHistoryVersion] = useState(0);
-
 	// Load skipped goroutines from localStorage on client
 	useEffect(() => {
 		setSkippedGoroutines(loadSkippedGoroutineFiles());
 		setHasLoadedSkipped(true);
 	}, []);
-
 	// Sync skipped goroutines to localStorage
 	useEffect(() => {
 		if (!hasLoadedSkipped) return;
 		saveSkippedGoroutineFiles(skippedGoroutines);
 	}, [skippedGoroutines, hasLoadedSkipped]);
-
 	// Fetch data with 10s polling
 	const { data, isLoading, error, refetch } = useGetDevPprofQuery(undefined, {
 		pollingInterval: 10000,
 	});
-
 	const { data: goroutineData } = useGetDevGoroutinesQuery(undefined, {
 		pollingInterval: 10000,
 	});
-
 	// Memoize chart data transformation
 	const memoryChartData = useMemo(() => {
 		if (!data?.history) return [];
@@ -654,7 +626,6 @@ export default function PprofPage() {
 			heapInuse: point.heap_inuse / (1024 * 1024),
 		}));
 	}, [data?.history]);
-
 	const cpuChartData = useMemo(() => {
 		if (!data?.history) return [];
 		return data.history.map((point) => ({
@@ -663,7 +634,6 @@ export default function PprofPage() {
 			goroutines: point.goroutines,
 		}));
 	}, [data?.history]);
-
 	// Sort allocations
 	const sortedAllocations = useMemo(
 		() => sortAllocations(data?.top_allocations ?? [], allocationSort),
@@ -673,7 +643,6 @@ export default function PprofPage() {
 		() => sortAllocations(data?.inuse_allocations ?? [], inuseSort),
 		[data?.inuse_allocations, inuseSort],
 	);
-
 	// Roll a ~60s window of inuse bytes per stack signature so we can detect
 	// sites whose live memory grows monotonically across polls. Dedupe on
 	// data.timestamp (stamped fresh by the backend each poll) rather than
@@ -702,19 +671,16 @@ export default function PprofPage() {
 		}
 		setHistoryVersion((v) => v + 1);
 	}, [data?.timestamp, data?.inuse_allocations]);
-
 	const leakCandidates = useMemo(
 		() => detectLeaks(data?.top_allocations ?? [], data?.inuse_allocations ?? [], inuseHistoryRef.current),
 		// historyVersion bumps when the ref is mutated; top/inuse refs change per poll
 		[data?.top_allocations, data?.inuse_allocations, historyVersion],
 	);
-
 	const leakSummary = useMemo(() => {
 		const counts: Record<LeakSeverity, number> = { high: 0, medium: 0, low: 0 };
 		for (const c of leakCandidates) counts[c.severity]++;
 		return counts;
 	}, [leakCandidates]);
-
 	// Detect goroutine count trend
 	const goroutineTrend = useMemo(() => {
 		if (!data?.history || data.history.length < 5 || !data?.runtime) return null;
@@ -725,7 +691,6 @@ export default function PprofPage() {
 		const growthPercent = avg > 0 ? ((current - avg) / avg) * 100 : 0;
 		return { isGrowing, growthPercent, avg };
 	}, [data?.history, data?.runtime?.num_goroutine]);
-
 	// Filter problem goroutines
 	const filteredGoroutines = useMemo(() => {
 		if (!goroutineData?.groups) return [];
@@ -735,7 +700,6 @@ export default function PprofPage() {
 			return true;
 		});
 	}, [goroutineData?.groups, skippedGoroutines]);
-
 	// Get goroutine health status
 	const goroutineHealth = useMemo(() => {
 		if (!goroutineData?.summary) return "healthy";
@@ -744,21 +708,18 @@ export default function PprofPage() {
 		if (long_waiting > 0) return "warning";
 		return "healthy";
 	}, [goroutineData?.summary]);
-
 	const handleAllocationSort = useCallback((field: AllocationSortField) => {
 		setAllocationSort((prev) => ({
 			field,
 			direction: prev.field === field && prev.direction === "desc" ? "asc" : "desc",
 		}));
 	}, []);
-
 	const handleInuseSort = useCallback((field: AllocationSortField) => {
 		setInuseSort((prev) => ({
 			field,
 			direction: prev.field === field && prev.direction === "desc" ? "asc" : "desc",
 		}));
 	}, []);
-
 	const toggleAllocExpand = useCallback((key: string) => {
 		setExpandedAlloc((prev) => {
 			const next = new Set(prev);
@@ -770,7 +731,6 @@ export default function PprofPage() {
 			return next;
 		});
 	}, []);
-
 	const toggleInuseExpand = useCallback((key: string) => {
 		setExpandedInuse((prev) => {
 			const next = new Set(prev);
@@ -782,7 +742,6 @@ export default function PprofPage() {
 			return next;
 		});
 	}, []);
-
 	const toggleLeakExpand = useCallback((key: string) => {
 		setExpandedLeaks((prev) => {
 			const next = new Set(prev);
@@ -794,7 +753,6 @@ export default function PprofPage() {
 			return next;
 		});
 	}, []);
-
 	const toggleGoroutineExpand = useCallback((id: string) => {
 		setExpandedGoroutines((prev) => {
 			const next = new Set(prev);
@@ -806,7 +764,6 @@ export default function PprofPage() {
 			return next;
 		});
 	}, []);
-
 	const handleSkipGoroutine = useCallback((filePath: string) => {
 		setSkippedGoroutines((prev) => {
 			const next = new Set(prev);
@@ -814,11 +771,9 @@ export default function PprofPage() {
 			return next;
 		});
 	}, []);
-
 	const handleClearSkipped = useCallback(() => {
 		setSkippedGoroutines(new Set());
 	}, []);
-
 	// Loading state
 	if (isLoading && !data) {
 		return (
@@ -830,7 +785,6 @@ export default function PprofPage() {
 			</div>
 		);
 	}
-
 	// Error state
 	if (error && !data) {
 		return (
@@ -841,7 +795,6 @@ export default function PprofPage() {
 			</div>
 		);
 	}
-
 	return (
 		<div className="mx-auto max-w-7xl px-6 py-8">
 			{/* Header */}
@@ -913,24 +866,17 @@ export default function PprofPage() {
 											</linearGradient>
 										</defs>
 										<CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-										<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 11 }} tickLine={false} axisLine={false} />
+										<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 11 }} tickLine axisLine />
 										<YAxis
 											yAxisId="left"
 											tick={{ fill: "#71717a", fontSize: 11 }}
-											tickLine={false}
-											axisLine={false}
+											tickLine
+											axisLine
 											tickFormatter={(v) => `${Number(v).toFixed(0)}%`}
 											width={45}
 											domain={[0, "auto"]}
 										/>
-										<YAxis
-											yAxisId="right"
-											orientation="right"
-											tick={{ fill: "#71717a", fontSize: 11 }}
-											tickLine={false}
-											axisLine={false}
-											width={40}
-										/>
+										<YAxis yAxisId="right" orientation="right" tick={{ fill: "#71717a", fontSize: 11 }} tickLine axisLine width={40} />
 										<Tooltip
 											contentStyle={{
 												backgroundColor: "#18181b",
@@ -994,11 +940,11 @@ export default function PprofPage() {
 											</linearGradient>
 										</defs>
 										<CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-										<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 11 }} tickLine={false} axisLine={false} />
+										<XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 11 }} tickLine axisLine />
 										<YAxis
 											tick={{ fill: "#71717a", fontSize: 11 }}
-											tickLine={false}
-											axisLine={false}
+											tickLine
+											axisLine
 											tickFormatter={(v) => `${Number(v).toFixed(0)}MB`}
 											width={50}
 										/>

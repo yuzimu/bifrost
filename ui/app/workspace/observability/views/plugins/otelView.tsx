@@ -2,27 +2,22 @@ import { Button } from "@/components/ui/button";
 import { getErrorMessage, useAppSelector, useUpdatePluginMutation } from "@/lib/store";
 import { OtelFormSchema } from "@/lib/types/schemas";
 import { toHeaderStringMap } from "@/lib/utils/secretVarForm";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib/contexts/rbacContext";
 import { Activity } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OtelFormFragment } from "../../fragments/otelFormFragment";
 import PluginTracingSheet from "../../sheets/pluginTracingSheet";
 import { useTranslation } from "react-i18next";
-
 interface OtelViewProps {
 	onDelete?: () => void;
 	isDeleting?: boolean;
 }
-
 export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 	const { t } = useTranslation("observability");
 	const selectedPlugin = useAppSelector((state) => state.plugin.selectedPlugin);
 	const currentConfig = useMemo(() => ({ config: selectedPlugin?.config, enabled: selectedPlugin?.enabled }), [selectedPlugin]);
 	const [updatePlugin] = useUpdatePluginMutation();
 	const [isTracingSheetOpen, setIsTracingSheetOpen] = useState(false);
-	const hasUpdateAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
-
 	const handleOtelConfigSave = (config: OtelFormSchema): Promise<void> => {
 		// The backend stores headers as a plain "env.VAR"/literal string map, so flatten the
 		// SecretVar form values here. The config is sent as the { profiles: [...] } wrapper.
@@ -32,7 +27,6 @@ export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 			trace_headers: toHeaderStringMap(profile.trace_headers),
 			metrics_headers: toHeaderStringMap(profile.metrics_headers),
 		}));
-
 		return new Promise((resolve, reject) => {
 			updatePlugin({
 				name: "otel",
@@ -54,11 +48,10 @@ export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 				});
 		});
 	};
-
 	return (
 		<div className="flex w-full flex-col gap-4">
 			<div className="flex w-full flex-col gap-3">
-				{hasUpdateAccess && (
+				{
 					<div className="flex justify-end">
 						<Button
 							type="button"
@@ -71,7 +64,7 @@ export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 							{t("connectors.configurePluginTracing")}
 						</Button>
 					</div>
-				)}
+				}
 				<OtelFormFragment onSave={handleOtelConfigSave} currentConfig={currentConfig} onDelete={onDelete} isDeleting={isDeleting} />
 			</div>
 			<PluginTracingSheet

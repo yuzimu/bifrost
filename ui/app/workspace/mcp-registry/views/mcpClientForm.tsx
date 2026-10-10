@@ -3,11 +3,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { DottedSeparator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage, useCreateMCPClientMutation } from "@/lib/store";
 import { CreateMCPClientRequest, SecretVar, MCPStdioConfig } from "@/lib/types/mcp";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -20,21 +19,17 @@ import {
 } from "./mcpClientFormFields";
 import { MCPHeadersAuthorizer } from "./mcpHeadersAuthorizer";
 import { OAuth2Authorizer } from "./oauth2Authorizer";
-
 interface ClientFormProps {
 	open: boolean;
 	onClose: () => void;
 	onSaved: () => void;
 }
-
 const emptyStdioConfig: MCPStdioConfig = {
 	command: "",
 	args: [],
 	envs: [],
 };
-
 const emptySecretVar: SecretVar = { value: "", ref: "" };
-
 const emptyForm: CreateMCPClientRequest = {
 	name: "",
 	endpoint_slug: "",
@@ -45,14 +40,11 @@ const emptyForm: CreateMCPClientRequest = {
 	stdio_config: emptyStdioConfig,
 	auth_type: "none",
 };
-
 const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 	const { t } = useTranslation("mcp");
 	const { t: tc } = useTranslation("common");
-	const hasCreateMCPClientAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Create);
 	const { toast } = useToast();
 	const [createMCPClient] = useCreateMCPClientMutation();
-
 	const [isLoading, setIsLoading] = useState(false);
 	const [oauthFlow, setOauthFlow] = useState<{
 		authorizeUrl: string;
@@ -60,25 +52,21 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 		mcpClientId: string;
 		isPerUserOauth?: boolean;
 	} | null>(null);
-
 	// Per-user-headers admin flow: admin declares the required key names, then
 	// on Create the MCPHeadersAuthorizer dialog runs a sample-values verify and
 	// returns discovered tools. The form then persists the MCP client with those
 	// tools attached — first-time end users skip re-discovery that way. Mirrors
 	// the OAuth2Authorizer flow exactly: nothing is persisted until the test
 	// succeeds.
-	const [headersFlow, setHeadersFlow] = useState<{ payload: CreateMCPClientRequest } | null>(null);
-
+	const [headersFlow, setHeadersFlow] = useState<{
+		payload: CreateMCPClientRequest;
+	} | null>(null);
 	const methods = useForm<CreateMCPClientRequest>({ defaultValues: emptyForm });
 	const { control, handleSubmit, watch, reset, setError } = methods;
 	const satellites = useMCPClientFormSatellites();
-
 	const connectionType = watch("connection_type");
 	const headers = watch("headers");
-
-	const headersValidationError =
-		connectionType === "http" || connectionType === "sse" ? getHeadersValidationError(headers) : null;
-
+	const headersValidationError = connectionType === "http" || connectionType === "sse" ? getHeadersValidationError(headers) : null;
 	// Reset form state when the sheet opens
 	const { reset: resetSatellites } = satellites;
 	useEffect(() => {
@@ -89,7 +77,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 		setHeadersFlow(null);
 		setIsLoading(false);
 	}, [open, reset, resetSatellites]);
-
 	const onSubmit = async (data: CreateMCPClientRequest) => {
 		const isValid = validateMCPClientForm({
 			data,
@@ -98,10 +85,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 			onToast: (title, description) => toast({ title, description, variant: "destructive" }),
 		});
 		if (!isValid || headersValidationError) return;
-
 		setIsLoading(true);
 		const payload = buildMCPClientPayload(data, satellites);
-
 		// Per-user-headers: stash the payload and open the headers test dialog.
 		// The dialog collects sample values and POSTs once to /api/mcp/client
 		// where the server verifies, discovers tools, and persists in a single
@@ -111,10 +96,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 			setHeadersFlow({ payload });
 			return;
 		}
-
 		try {
 			const response = await createMCPClient(payload).unwrap();
-
 			if (response.status === "pending_oauth" && response.authorize_url) {
 				setIsLoading(false);
 				setOauthFlow({
@@ -138,7 +121,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 			toast({ title: tc("error"), description: getErrorMessage(error), variant: "destructive" });
 		}
 	};
-
 	return (
 		<Sheet open={open} onOpenChange={(open) => !open && !oauthFlow && onClose()}>
 			<SheetContent className="flex w-full flex-col gap-4 overflow-x-hidden p-0 pt-4">
@@ -167,7 +149,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 									<FormItem>
 										<FormLabel>{t("common.name")}</FormLabel>
 										<FormControl>
-											<Input id="client-name" data-testid="client-name-input" placeholder={t("registry.form.serverNamePlaceholder")} maxLength={50} {...field} />
+											<Input
+												id="client-name"
+												data-testid="client-name-input"
+												placeholder={t("registry.form.serverNamePlaceholder")}
+												maxLength={50}
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -210,21 +198,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 								<Tooltip>
 									<TooltipTrigger asChild>
 										<span className="inline-block">
-											<Button
-												type="submit"
-												disabled={isLoading || !hasCreateMCPClientAccess}
-												isLoading={isLoading}
-												data-testid="save-client-btn"
-											>
+											<Button type="submit" disabled={isLoading} isLoading={isLoading} data-testid="save-client-btn">
 												{tc("create")}
 											</Button>
 										</span>
 									</TooltipTrigger>
-									{!hasCreateMCPClientAccess && (
-										<TooltipContent>
-											<p>{t("common.noPermission")}</p>
-										</TooltipContent>
-									)}
 								</Tooltip>
 							</TooltipProvider>
 						</div>
@@ -246,7 +224,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 						onSaved();
 					}}
 					onError={(error) => {
-						toast({ title: t("registry.form.oauthError"), description: error, variant: "destructive" });
+						toast({
+							title: t("registry.form.oauthError"),
+							description: error,
+							variant: "destructive",
+						});
 					}}
 					onConflict={(error) => {
 						setOauthFlow(null);
@@ -260,10 +242,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 			)}
 
 			{/* Per-user-headers create dialog. Collects sample values inline,
-			    then calls POST /api/mcp/client once — the server verifies
-			    upstream + discovers tools + persists atomically. Mirrors
-			    the per-user OAuth flow's single-call shape. Nothing is
-			    committed if the user cancels or verification fails. */}
+              then calls POST /api/mcp/client once — the server verifies
+              upstream + discovers tools + persists atomically. Mirrors
+              the per-user OAuth flow's single-call shape. Nothing is
+              committed if the user cancels or verification fails. */}
 			{headersFlow && (
 				<MCPHeadersAuthorizer
 					open={!!headersFlow}
@@ -292,5 +274,4 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 		</Sheet>
 	);
 };
-
 export default ClientForm;

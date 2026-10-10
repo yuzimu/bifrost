@@ -21,10 +21,9 @@ export interface FeatureFlagStatus {
 	// badge in the UI so operators can investigate (the fix is removing
 	// the stale entry from values.yaml, or restoring the Register() call).
 	registered: boolean;
-	// True when the flag's registration is marked EnterpriseOnly. The
+
 	// backend forces enabled=false and locked=true in OSS mode; the UI
-	// shows an "Enterprise" badge so operators can see the feature exists
-	// but is gated. In enterprise builds the flag toggles normally and
+
 	// this field is informational.
 	enterprise_only: boolean;
 	updated_at?: number;

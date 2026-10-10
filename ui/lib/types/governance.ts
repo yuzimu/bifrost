@@ -124,19 +124,18 @@ export interface VirtualKey {
 	disable_content_logging?: boolean | null;
 	created_at: string;
 	updated_at: string;
-	// The third owner a key can have, alongside a team and a customer. Business units are an
-	// enterprise table this model does not preload, so its name arrives on `business_unit` below.
+
 	business_unit_id?: string;
 	// Populated relationships
 	team?: Team;
 	customer?: Customer;
-	// Owning business unit, named by the enterprise build; absent in OSS and when unresolved.
+
 	business_unit?: { id: string; name: string };
 	budgets?: Budget[];
 	rate_limit?: RateLimit;
-	// Read-only, server-computed: true when the VK is governed by an access profile.
+
 	// Lets the UI lock edits and show the managed-key notice without the separately
-	// RBAC-gated access-profile lookup.
+
 	is_access_profile_managed?: boolean;
 	// Read-only, server-computed: the user this key is assigned to, or null when it
 	// is assigned to a team, a customer, or nothing. Absent (rather than null) when
@@ -163,7 +162,7 @@ export interface VirtualKeyProviderConfig {
 	budgets?: Budget[];
 	rate_limit?: RateLimit;
 	model_budgets?: VirtualKeyModelBudget[]; // Per-model budgets/rate-limits under this provider
-	keys?: DBKey[]; // Associated database keys for this provider (only used when allow_all_keys is false)
+	keys?: DBKey[];
 }
 
 /** A virtual key's grant to call one registered A2A agent. Agents are keyed by name. */
@@ -224,7 +223,7 @@ export interface VirtualKeyProviderConfigRequest {
 	budgets?: CreateBudgetRequest[];
 	rate_limit?: CreateRateLimitRequest;
 	model_budgets?: VirtualKeyModelBudgetRequest[];
-	key_ids?: string[]; // List of DBKey UUIDs to associate with this provider config
+	key_ids?: string[];
 }
 
 export interface VirtualKeyProviderConfigUpdateRequest {
@@ -236,7 +235,7 @@ export interface VirtualKeyProviderConfigUpdateRequest {
 	budgets?: CreateBudgetRequest[];
 	rate_limit?: UpdateRateLimitRequest;
 	model_budgets?: VirtualKeyModelBudgetRequest[]; // Full desired per-model set when provider_configs is supplied
-	key_ids?: string[]; // List of DBKey UUIDs to associate with this provider config
+	key_ids?: string[];
 }
 
 // Request types for API calls
@@ -248,7 +247,7 @@ export interface CreateVirtualKeyRequest {
 	agent_grants?: { agent_name: string }[];
 	team_id?: string;
 	customer_id?: string;
-	// Third owner, mutually exclusive with team_id and customer_id (enterprise).
+
 	business_unit_id?: string;
 	budgets?: CreateBudgetRequest[];
 	rate_limit?: CreateRateLimitRequest;
@@ -268,7 +267,7 @@ export interface UpdateVirtualKeyRequest {
 	agent_grants?: { agent_name: string }[];
 	team_id?: string | null;
 	customer_id?: string | null;
-	// Third owner, mutually exclusive with team_id and customer_id (enterprise); null clears it.
+
 	business_unit_id?: string | null;
 	budgets?: CreateBudgetRequest[];
 	rate_limit?: UpdateRateLimitRequest;
@@ -367,9 +366,9 @@ export interface GetVirtualKeysParams {
 	search?: string;
 	customer_id?: string;
 	team_id?: string;
-	/** Enterprise-only owner kind; a key names at most one owner, so this ORs with the other two. */
+
 	business_unit_id?: string;
-	/** Enterprise-only: filters to virtual keys assigned to this user. */
+
 	user_id?: string;
 	exclude_access_profile_managed_virtual?: boolean;
 	exclude_assigned_virtual_keys?: boolean;
@@ -467,9 +466,9 @@ export interface ModelConfig {
 	scope?: string; // "global" (default) or "virtual_key"
 	scope_id?: string; // Target of a non-global scope (e.g. the virtual key ID)
 	scope_name?: string; // Resolved, human-readable name of the scope target (read-only)
-	// What externally manages this config, e.g. the access profile that materialized
+
 	// it (read-only). source_id addresses the SOURCE, not scope_id — for an
-	// access-profile-scoped row scope_id is the user's association row.
+
 	source_type?: string;
 	source_id?: string;
 	source_name?: string;

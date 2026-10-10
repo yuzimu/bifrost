@@ -3,10 +3,8 @@ import type { VirtualKey } from "@/lib/types/governance";
 import type { MCPClient } from "@/lib/types/mcp";
 import i18n from "@/lib/i18n";
 import type { AuthMethod, HarnessPlatform, ServerScope } from "./types";
-
 /** Default port Bifrost serves on; used when guessing the gateway URL in local dev. */
 const DEFAULT_BIFROST_PORT = "8080";
-
 /**
  * Resolve the externally reachable Bifrost base URL used in generated commands/configs.
  *
@@ -33,7 +31,6 @@ export function getExternalBaseUrl(clientConfig?: CoreConfig): string {
 	}
 	return "<YOUR_BIFROST_URL>";
 }
-
 /** Quote a value for safe inclusion in a POSIX shell command. */
 export function quoteShellValue(value: string): string {
 	if (/^[a-zA-Z0-9_./:@%+=,-]+$/.test(value)) return value;
@@ -43,7 +40,6 @@ export function quoteShellValue(value: string): string {
 	const sanitized = value.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
 	return `"${sanitized.replace(/(["\\$`])/g, "\\$1")}"`;
 }
-
 /** Quote a value as a TOML basic string, escaping control characters per the TOML spec. */
 export function quoteTomlString(value: string): string {
 	const escaped = value
@@ -58,27 +54,23 @@ export function quoteTomlString(value: string): string {
 		.replace(/[\x00-\x1f\x7f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0").toUpperCase()}`);
 	return `"${escaped}"`;
 }
-
 /** UTF-8 safe base64 encoding for the browser (used by the Cursor deeplink). */
 export function encodeBase64(value: string): string {
 	if (typeof window === "undefined") return "";
 	return window.btoa(String.fromCharCode(...new TextEncoder().encode(value)));
 }
-
 /** Whether an MCP client is reachable using the given virtual key. */
 export function isClientAllowedForVirtualKey(client: MCPClient, virtualKey: VirtualKey): boolean {
 	if (client.config.disabled) return false;
 	if (client.config.allow_by_default) return true;
 	return client.vk_configs?.some((config) => config.virtual_key_id === virtualKey.id) ?? false;
 }
-
 /** Mask a secret value, keeping a short prefix/suffix for recognisability. */
 export function maskSecret(value?: string): string {
 	if (!value) return "";
 	if (value.length <= 12) return "********";
 	return `${value.slice(0, 6)}****${value.slice(-4)}`;
 }
-
 /** Human-readable label describing how many servers a command registers. */
 export function getRegistrationLabel(serverScope: ServerScope, selectedServers: MCPClient[]): string {
 	if (serverScope === "selected" && selectedServers.length > 0) {
@@ -86,25 +78,20 @@ export function getRegistrationLabel(serverScope: ServerScope, selectedServers: 
 	}
 	return "bifrost";
 }
-
 /** The registration name used for the generated MCP server entry. */
 export function getRegistrationName(selectedServers?: MCPClient[]): string {
 	return selectedServers?.length === 1 ? selectedServers[0].config.name : "bifrost";
 }
-
 /** Comma-joined list of selected server names, or undefined when none are selected. */
 export function getIncludeClients(selectedServers?: MCPClient[]): string | undefined {
 	if (!selectedServers?.length) return undefined;
 	return selectedServers.map((server) => server.config.name).join(",");
 }
-
 export function getUserHomePrefix(platform: HarnessPlatform): string {
 	return platform === "windows" ? "%USERPROFILE%" : "~";
 }
-
 /** Stand-in for the identity-provider bearer the user pastes into their own config. */
 export const IDP_TOKEN_PLACEHOLDER = "<YOUR_IDP_ACCESS_TOKEN>";
-
 /**
  * Headers the generated client config must send, derived from the chosen
  * authentication method. OAuth clients carry no credential at all: the token
@@ -123,8 +110,6 @@ export function buildMCPHeaders({
 	virtualKey?: VirtualKey;
 }): Record<string, string> {
 	if (authMethod === "oauth") return {};
-	if (authMethod === "idp_token") return { Authorization: `Bearer ${IDP_TOKEN_PLACEHOLDER}` };
-
 	if (!virtualKey) return {};
 	const headers: Record<string, string> = { "x-bf-vk": virtualKey.value };
 	const includeClients = getIncludeClients(selectedServers);

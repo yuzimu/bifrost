@@ -1,9 +1,5 @@
-import CircuitBreakerView from "@enterprise/components/circuit-breaker/circuitBreakerView";
+import { CircuitBreakerView } from "./components/circuitBreakerView";
 
 export default function CircuitBreakerPage() {
-	return (
-		<div className="no-padding-parent w-full p-4">
-			<CircuitBreakerView />
-		</div>
-	);
+	return <CircuitBreakerView />;
 }

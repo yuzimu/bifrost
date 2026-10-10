@@ -161,8 +161,14 @@
 		"providerScope": "{{name}}（提供商）",
 		"modelScope": "{{name}}（模型）",
 		"fields": {
-			"model": { "label": "模型", "placeholder": "例如 gpt-4、claude-3-sonnet" },
-			"provider": { "label": "提供商", "placeholder": "选择提供商" },
+			"model": {
+				"label": "模型",
+				"placeholder": "例如 gpt-4、claude-3-sonnet"
+			},
+			"provider": {
+				"label": "提供商",
+				"placeholder": "选择提供商"
+			},
 			"request_type": {
 				"label": "请求类型",
 				"placeholder": "选择请求类型",
@@ -187,8 +193,14 @@
 				"placeholder": "例如 50",
 				"description": "检查预算用量百分比，以模型与提供商配置中的最大用量为准。"
 			},
-			"complexity_tier": { "label": "复杂度层级", "placeholder": "选择复杂度层级" },
-			"params": { "label": "查询参数", "placeholder": "例如 api_key、user_id" }
+			"complexity_tier": {
+				"label": "复杂度层级",
+				"placeholder": "选择复杂度层级"
+			},
+			"params": {
+				"label": "查询参数",
+				"placeholder": "例如 api_key、user_id"
+			}
 		},
 		"values": {
 			"text_completion": "文本补全",
@@ -2004,5 +2016,24 @@
 		"scopeGlobal": "全局",
 		"clearFallbackApiKey": "清除回退 {{n}} 的 API 密钥",
 		"pinnedKeyTitle": "固定密钥：{{id}}"
+	},
+	"routingOperators": {
+		"=": "等于",
+		"!=": "不等于",
+		">": "大于",
+		"<": "小于",
+		">=": "大于或等于",
+		"<=": "小于或等于",
+		"in": "在列表中",
+		"notIn": "不在列表中",
+		"contains": "包含",
+		"beginsWith": "开头为",
+		"endsWith": "结尾为",
+		"matches": "匹配（正则表达式）",
+		"null": "不存在",
+		"notNull": "存在"
+	},
+	"routingDisplay": {
+		"ttftStreaming": "{{ms}} 毫秒（流式）"
 	}
 }

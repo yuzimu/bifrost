@@ -3,13 +3,11 @@
  * Maps UI operators to CEL syntax
  */
 import i18n from "@/lib/i18n";
-
 export interface CELOperatorDefinition {
 	name: string;
 	label: string;
 	celSyntax: string;
 }
-
 export const celOperatorsRouting: CELOperatorDefinition[] = [
 	// Comparison operators
 	{ name: "=", label: "equals", celSyntax: "==" },
@@ -18,17 +16,14 @@ export const celOperatorsRouting: CELOperatorDefinition[] = [
 	{ name: "<", label: "less than", celSyntax: "<" },
 	{ name: ">=", label: "greater than or equal", celSyntax: ">=" },
 	{ name: "<=", label: "less than or equal", celSyntax: "<=" },
-
 	// List operators
 	{ name: "in", label: "is in list", celSyntax: "in" },
 	{ name: "notIn", label: "is not in list", celSyntax: "!in" },
-
 	// String operators
 	{ name: "contains", label: "contains", celSyntax: "contains" },
 	{ name: "beginsWith", label: "begins with", celSyntax: "startsWith" },
 	{ name: "endsWith", label: "ends with", celSyntax: "endsWith" },
 	{ name: "matches", label: "matches (regex)", celSyntax: "matches" },
-
 	// Existence operators
 	{ name: "null", label: "does not exist", celSyntax: "!has" },
 	{ name: "notNull", label: "exists", celSyntax: "has" },
@@ -36,10 +31,9 @@ export const celOperatorsRouting: CELOperatorDefinition[] = [
 	...operator,
 	// 消费组件订阅语言变化并逐次读取标签；表达式标识与语法不变。
 	get label() {
-		return i18n.t(`routingOperators.${operator.name}`, { ns: "enterprise", defaultValue: operator.label });
+		return i18n.t(`routingOperators.${operator.name}`, { ns: "models", defaultValue: operator.label });
 	},
 }));
-
 /**
  * Get CEL syntax for a given operator name
  */
@@ -47,7 +41,6 @@ export function getOperatorCELSyntax(operatorName: string): string {
 	const operator = celOperatorsRouting.find((op) => op.name === operatorName);
 	return operator ? operator.celSyntax : operatorName;
 }
-
 /**
  * Get operator label for display
  */

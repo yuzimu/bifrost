@@ -5756,6 +5756,11 @@ func (bifrost *Bifrost) handleRequest(ctx *schemas.BifrostContext, req *schemas.
 	// (and may mutate other request fields). Mutations commit to req and are observed by
 	// all downstream phases and fallbacks. Plugin errors are non-blocking (logged + skipped).
 	preReqPipeline := bifrost.getPluginPipeline()
+	if guardErr := preReqPipeline.runInputGuardrails(ctx, req); guardErr != nil {
+		bifrost.releasePluginPipeline(preReqPipeline)
+		bifrost.endCoreSpan(setupSpan)
+		return nil, guardErr
+	}
 	preReqPipeline.RunPreRequestHooks(ctx, req)
 	bifrost.releasePluginPipeline(preReqPipeline)
 	// A key the caller pinned brings the provider that has it to the front of the chain.
@@ -5927,6 +5932,10 @@ func (bifrost *Bifrost) handleStreamRequest(ctx *schemas.BifrostContext, req *sc
 
 	// PreRequestHook: once-per-request phase. See handleRequest for semantics.
 	preReqPipeline := bifrost.getPluginPipeline()
+	if guardErr := preReqPipeline.runInputGuardrails(ctx, req); guardErr != nil {
+		bifrost.releasePluginPipeline(preReqPipeline)
+		return nil, guardErr
+	}
 	preReqPipeline.RunPreRequestHooks(ctx, req)
 	bifrost.releasePluginPipeline(preReqPipeline)
 	// A key the caller pinned brings the provider that has it to the front of the chain.
@@ -6802,6 +6811,11 @@ func isFirstTokenTimeoutError(err *schemas.BifrostError) bool {
 	return err != nil && err.Error != nil && err.Error.Code != nil && *err.Error.Code == schemas.FirstTokenTimeoutErrorCode
 }
 
+type providerAttemptObserver interface {
+	BeginProviderAttempt(*schemas.BifrostContext, schemas.ModelProvider, string, string, schemas.RequestType) *schemas.BifrostError
+	FinishProviderAttempt(*schemas.BifrostContext, *schemas.BifrostResponse, *schemas.BifrostError, time.Duration)
+}
+
 func executeRequestWithRetries[T any](
 	ctx *schemas.BifrostContext,
 	config *schemas.ProviderConfig,
@@ -7216,6 +7230,14 @@ func executeRequestWithRetries[T any](
 			ctx.ClearValue(schemas.BifrostContextKeyStreamParkedAfterFinish)
 		}
 
+		observer, _ := ctx.Value("bifrost-provider-attempt-observer").(providerAttemptObserver)
+		if observer != nil {
+			if gateErr := observer.BeginProviderAttempt(ctx, providerKey, model, currentKey.ID, requestType); gateErr != nil {
+				tracer.EndSpan(handle, schemas.SpanStatusError, "provider attempt unavailable")
+				return result, gateErr
+			}
+		}
+		attemptStarted := time.Now()
 		// Attempt the request
 		result, bifrostError = requestHandler(currentKey)
 
@@ -7302,6 +7324,10 @@ func executeRequestWithRetries[T any](
 			}
 			// Don't end the span here - it will be ended when streaming completes
 		} else {
+			if observer != nil {
+				response, _ := any(result).(*schemas.BifrostResponse)
+				observer.FinishProviderAttempt(ctx, response, bifrostError, time.Since(attemptStarted))
+			}
 			// Populate LLM response attributes for non-streaming responses
 			if resp, ok := any(result).(*schemas.BifrostResponse); ok {
 				// Populate ExtraFields with provider/model/requestType before cost
@@ -9016,6 +9042,70 @@ func (bifrost *Bifrost) handleProviderStreamRequest(provider schemas.Provider, c
 
 // PLUGIN MANAGEMENT
 
+type guardrailPreparedContextKey struct{}
+
+type priorityGuardrailPlugin interface {
+	schemas.LLMPlugin
+	GuardrailPriority() bool
+}
+
+// bindGuardrailSnapshot 固定请求使用的护栏实例，并让输入校验先于普通插件。
+func (p *PluginPipeline) bindGuardrailSnapshot(ctx *schemas.BifrostContext) {
+	pinned, _ := ctx.Value(guardrailPreparedContextKey{}).(priorityGuardrailPlugin)
+	var selected priorityGuardrailPlugin
+	others := make([]schemas.LLMPlugin, 0, len(p.llmPlugins)+1)
+	for _, plugin := range p.llmPlugins {
+		if guardrail, ok := plugin.(priorityGuardrailPlugin); ok && guardrail.GuardrailPriority() {
+			if pinned == nil {
+				selected = guardrail
+			}
+			continue
+		}
+		others = append(others, plugin)
+	}
+	if pinned != nil {
+		selected = pinned
+	}
+	if selected != nil {
+		p.llmPlugins = append([]schemas.LLMPlugin{selected}, others...)
+	}
+}
+
+// runInputGuardrails 在路由和缓存之前执行可阻断护栏，不改变普通 pre-request hook 的语义。
+func (p *PluginPipeline) runInputGuardrails(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) *schemas.BifrostError {
+	if skip, _ := ctx.Value(schemas.BifrostContextKeySkipPluginPipeline).(bool); skip {
+		return nil
+	}
+	ctx.SetValue(guardrailPreparedContextKey{}, nil)
+	p.bindGuardrailSnapshot(ctx)
+	for _, plugin := range p.llmPlugins {
+		guardrail, ok := plugin.(priorityGuardrailPlugin)
+		if !ok || !guardrail.GuardrailPriority() {
+			continue
+		}
+		ctx.SetValue(schemas.BifrostContextKeyTracer, p.tracer)
+		if _, ok := ctx.Value(schemas.BifrostContextKeyTraceID).(string); !ok {
+			if id := p.tracer.CreateTrace(""); id != "" {
+				ctx.SetValue(schemas.BifrostContextKeyTraceID, id)
+			}
+		}
+		_, short, err := guardrail.PreLLMHook(ctx, req)
+		if err != nil {
+			return &schemas.BifrostError{IsBifrostError: true, AllowFallbacks: schemas.Ptr(false),
+				StatusCode: schemas.Ptr(403), Error: &schemas.ErrorField{Message: "guardrail evaluation failed"}}
+		}
+		if short != nil {
+			if short.Error != nil {
+				return short.Error
+			}
+			return &schemas.BifrostError{IsBifrostError: true, AllowFallbacks: schemas.Ptr(false),
+				StatusCode: schemas.Ptr(403), Error: &schemas.ErrorField{Message: "guardrail rejected request"}}
+		}
+		ctx.SetValue(guardrailPreparedContextKey{}, guardrail)
+	}
+	return nil
+}
+
 // RunLLMPreHooks executes PreHooks in order, tracks how many ran, and returns the final request, any short-circuit decision, and the count.
 func (p *PluginPipeline) RunLLMPreHooks(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) (*schemas.BifrostRequest, *schemas.LLMPluginShortCircuit, int) {
 	// If the skip plugin pipeline flag is set, skip the plugin pipeline
@@ -9024,6 +9114,7 @@ func (p *PluginPipeline) RunLLMPreHooks(ctx *schemas.BifrostContext, req *schema
 	}
 	var shortCircuit *schemas.LLMPluginShortCircuit
 	var err error
+	p.bindGuardrailSnapshot(ctx)
 	ctx.BlockRestrictedWrites()
 	defer ctx.UnblockRestrictedWrites()
 	for i, plugin := range p.llmPlugins {
@@ -9152,7 +9243,20 @@ func (p *PluginPipeline) RunPostLLMHooks(ctx *schemas.BifrostContext, resp *sche
 	ctx.BlockRestrictedWrites()
 	defer ctx.UnblockRestrictedWrites()
 	var err error
+	postOrder := make([]int, 0, runFrom)
+	var guardrailDenial *schemas.BifrostError
+	for i := 0; i < runFrom; i++ {
+		if guardrail, ok := p.llmPlugins[i].(priorityGuardrailPlugin); ok && guardrail.GuardrailPriority() {
+			postOrder = append(postOrder, i)
+		}
+	}
 	for i := runFrom - 1; i >= 0; i-- {
+		if guardrail, ok := p.llmPlugins[i].(priorityGuardrailPlugin); ok && guardrail.GuardrailPriority() {
+			continue
+		}
+		postOrder = append(postOrder, i)
+	}
+	for _, i := range postOrder {
 		plugin := p.llmPlugins[i]
 		pluginName := plugin.GetName()
 		p.logger.Debug("running post-hook for plugin %s", pluginName)
@@ -9202,6 +9306,14 @@ func (p *PluginPipeline) RunPostLLMHooks(ctx *schemas.BifrostContext, resp *sche
 			// Restore the parent so the next plugin is a sibling, not chained under this one.
 			ctx.SetValue(schemas.BifrostContextKeySpanID, prevSpanID)
 		}
+		if guardrail, ok := plugin.(priorityGuardrailPlugin); ok && guardrail.GuardrailPriority() &&
+			bifrostErr != nil && bifrostErr.Error != nil && bifrostErr.Error.Type != nil &&
+			*bifrostErr.Error.Type == "guardrail_intervention" {
+			guardrailDenial = bifrostErr
+		}
+		if guardrailDenial != nil {
+			resp, bifrostErr = nil, guardrailDenial
+		}
 		// If a plugin recovers from an error (sets bifrostErr to nil and sets resp), allow that
 		// If a plugin invalidates a response (sets resp to nil and sets bifrostErr), allow that
 	}
@@ -9234,6 +9346,16 @@ func (p *PluginPipeline) RunMCPPreHooks(ctx *schemas.BifrostContext, req *schema
 	}
 	var shortCircuit *schemas.MCPPluginShortCircuit
 	var err error
+	guards := make([]schemas.MCPPlugin, 0, len(p.mcpPlugins))
+	others := make([]schemas.MCPPlugin, 0, len(p.mcpPlugins))
+	for _, plugin := range p.mcpPlugins {
+		if guardrail, ok := plugin.(interface{ GuardrailPriority() bool }); ok && guardrail.GuardrailPriority() {
+			guards = append(guards, plugin)
+		} else {
+			others = append(others, plugin)
+		}
+	}
+	p.mcpPlugins = append(guards, others...)
 	ctx.BlockRestrictedWrites()
 	defer ctx.UnblockRestrictedWrites()
 	for i, plugin := range p.mcpPlugins {
@@ -9289,7 +9411,19 @@ func (p *PluginPipeline) RunMCPPostHooks(ctx *schemas.BifrostContext, mcpResp *s
 	ctx.BlockRestrictedWrites()
 	defer ctx.UnblockRestrictedWrites()
 	var err error
+	order := make([]int, 0, runFrom)
+	var guardrailDenial *schemas.BifrostError
 	for i := runFrom - 1; i >= 0; i-- {
+		if guardrail, ok := p.mcpPlugins[i].(interface{ GuardrailPriority() bool }); ok && guardrail.GuardrailPriority() {
+			order = append(order, i)
+		}
+	}
+	for i := runFrom - 1; i >= 0; i-- {
+		if guardrail, ok := p.mcpPlugins[i].(interface{ GuardrailPriority() bool }); !ok || !guardrail.GuardrailPriority() {
+			order = append(order, i)
+		}
+	}
+	for _, i := range order {
 		plugin := p.mcpPlugins[i]
 		pluginName := plugin.GetName()
 		p.logger.Debug("running MCP post-hook for plugin %s", pluginName)
@@ -9312,6 +9446,14 @@ func (p *PluginPipeline) RunMCPPostHooks(ctx *schemas.BifrostContext, mcpResp *s
 			p.logger.Warn("error in PostMCPHook for plugin %s: %v", pluginName, err)
 		} else {
 			p.tracer.EndSpan(handle, schemas.SpanStatusOk, "")
+		}
+		if guardrail, ok := plugin.(interface{ GuardrailPriority() bool }); ok && guardrail.GuardrailPriority() &&
+			bifrostErr != nil && bifrostErr.Error != nil && bifrostErr.Error.Type != nil &&
+			*bifrostErr.Error.Type == "guardrail_intervention" {
+			guardrailDenial = bifrostErr
+		}
+		if guardrailDenial != nil {
+			mcpResp, bifrostErr = nil, guardrailDenial
 		}
 		// If a plugin recovers from an error (sets bifrostErr to nil and sets mcpResp), allow that
 		// If a plugin invalidates a response (sets mcpResp to nil and sets bifrostErr), allow that

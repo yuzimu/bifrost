@@ -3,24 +3,19 @@ import FullPageLoader from "@/components/fullPageLoader";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 import { parseAsSafeString } from "@/lib/queryParamsParser";
 import { getErrorMessage, useGetCustomersQuery } from "@/lib/store";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 const POLLING_INTERVAL = 5000;
 const PAGE_SIZE = 25;
-
 export default function GovernanceCustomersPage() {
 	const { t } = useTranslation("governance");
-	const hasCustomersAccess = useRbac(RbacResource.Customers, RbacOperation.View);
 	const shownErrorsRef = useRef(new Set<string>());
 	// Background refetches replace the rows behind an open edit sheet, which is
 	// how in-progress edits used to get discarded. Hold the poll while a sheet
 	// is open; it resumes as soon as the operator is done.
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
-
 	const [urlState, setUrlState] = useQueryStates(
 		{
 			search: parseAsSafeString.withDefault(""),
@@ -28,9 +23,7 @@ export default function GovernanceCustomersPage() {
 		},
 		{ history: "push" },
 	);
-
 	const debouncedSearch = useDebouncedValue(urlState.search, 300);
-
 	const {
 		data: customersData,
 		error: customersError,
@@ -42,25 +35,23 @@ export default function GovernanceCustomersPage() {
 			search: debouncedSearch || undefined,
 		},
 		{
-			skip: !hasCustomersAccess,
+			skip: false,
 			pollingInterval: isSheetOpen ? 0 : POLLING_INTERVAL,
 			skipPollingIfUnfocused: true,
 		},
 	);
-
 	const customersTotal = customersData?.total_count ?? 0;
-
 	// Snap offset back when total shrinks past current page (e.g. delete last item on last page)
 	useEffect(() => {
 		if (!customersData || urlState.offset < customersTotal) return;
 		// Nothing to snap back to on an empty list, and setUrlState pushes a
 		// history entry even when the value is unchanged.
 		if (customersTotal === 0 && urlState.offset === 0) return;
-		setUrlState({ offset: customersTotal === 0 ? 0 : Math.floor((customersTotal - 1) / PAGE_SIZE) * PAGE_SIZE });
+		setUrlState({
+			offset: customersTotal === 0 ? 0 : Math.floor((customersTotal - 1) / PAGE_SIZE) * PAGE_SIZE,
+		});
 	}, [customersTotal, urlState.offset]);
-
 	const isLoading = customersLoading;
-
 	useEffect(() => {
 		if (!customersError) {
 			shownErrorsRef.current.clear();
@@ -71,11 +62,9 @@ export default function GovernanceCustomersPage() {
 		shownErrorsRef.current.add(errorKey);
 		toast.error(t("customers.loadFailed", { message: getErrorMessage(customersError) }));
 	}, [customersError, t]);
-
 	if (isLoading) {
 		return <FullPageLoader />;
 	}
-
 	return (
 		<div className="no-padding-parent mx-auto flex h-[calc(var(--app-content-viewport)_-_var(--app-bottom-padding))] w-full flex-col p-4">
 			<CustomersTable
@@ -83,7 +72,7 @@ export default function GovernanceCustomersPage() {
 				totalCount={customersData?.total_count || 0}
 				search={urlState.search}
 				debouncedSearch={debouncedSearch}
-				onSearchChange={(val) => setUrlState({ search: val || null, offset: 0 })}
+				onSearchChange={(val) => setUrlState({ search: val, offset: 0 })}
 				offset={urlState.offset}
 				limit={PAGE_SIZE}
 				onOffsetChange={(newOffset) => setUrlState({ offset: newOffset })}

@@ -7,18 +7,14 @@ import { rankingBarShape } from "./barShape";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
 import { NoChartData } from "./noChartData";
 import { useTranslation } from "react-i18next";
-
 interface MCPTopToolsChartProps {
 	data: MCPTopToolsResponse | null;
 }
-
 function CustomTooltip({ active, payload }: any) {
 	const { t } = useTranslation("observability");
 	if (!active || !payload || !payload.length) return null;
-
 	const data = payload[0]?.payload;
 	if (!data) return null;
-
 	return (
 		<div className="rounded-sm border border-zinc-200 bg-white px-3 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 			<div className="mb-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">{data.tool_name}</div>
@@ -35,45 +31,41 @@ function CustomTooltip({ active, payload }: any) {
 		</div>
 	);
 }
-
 function MCPTopToolsChartImpl({ data }: MCPTopToolsChartProps) {
 	const chartData = useMemo(() => {
 		if (!data?.tools || data.tools.length === 0) {
 			return [];
 		}
-
 		return data.tools.slice(0, 10);
 	}, [data]);
-
 	if (!data?.tools || chartData.length === 0) {
 		return <NoChartData />;
 	}
-
 	return (
 		<ChartErrorBoundary resetKey={JSON.stringify(chartData.map(({ tool_name, count, cost }) => [tool_name, count, cost]))}>
 			<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 				<BarChart data={chartData} layout="vertical" margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
-					<CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-zinc-200 dark:stroke-zinc-700" />
+					<CartesianGrid strokeDasharray="3 3" horizontal className="stroke-zinc-200 dark:stroke-zinc-700" />
 					<XAxis
 						type="number"
 						tick={{ fontSize: 11, className: "fill-zinc-500" }}
-						tickLine={false}
-						axisLine={false}
+						tickLine
+						axisLine
 						tickFormatter={(v) => formatCompactNumber(v)}
 						domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
-						allowDataOverflow={false}
+						allowDataOverflow
 					/>
 					<YAxis
 						type="category"
 						dataKey="tool_name"
 						tick={{ fontSize: 11, className: "fill-zinc-500" }}
-						tickLine={false}
-						axisLine={false}
+						tickLine
+						axisLine
 						width={120}
 						interval={0}
 					/>
 					<Tooltip content={<CustomTooltip />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
-					<Bar isAnimationActive={false} dataKey="count" shape={rankingBarShape} barSize={20}>
+					<Bar isAnimationActive dataKey="count" shape={rankingBarShape} barSize={20}>
 						{chartData.map((_, index) => (
 							<Cell key={`cell-${index}`} fill={getModelColor(index)} fillOpacity={0.9} />
 						))}

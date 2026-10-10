@@ -150,7 +150,7 @@ export const mcpApi = baseApi.injectEndpoints({
 						dispatch(mcpApi.util.invalidateTags(["MCPClients"]));
 						break;
 					}
-				} catch { }
+				} catch {}
 			},
 		}),
 
@@ -199,7 +199,7 @@ export const mcpApi = baseApi.injectEndpoints({
 							}),
 						);
 					}
-				} catch { }
+				} catch {}
 			},
 		}),
 
@@ -227,7 +227,7 @@ export const mcpApi = baseApi.injectEndpoints({
 							}),
 						);
 					}
-				} catch { }
+				} catch {}
 			},
 		}),
 
@@ -327,7 +327,6 @@ export const mcpApi = baseApi.injectEndpoints({
 			invalidatesTags: ["MCPClients"],
 		}),
 
-		// Verify a token_exchange MCP client (pending_verification bootstrap, or
 		// needs_reauth repair). No body: the backend exchanges the signed-in
 		// admin's own identity-provider token, verifies upstream, discovers
 		// tools, and retains the admin discovery credential.

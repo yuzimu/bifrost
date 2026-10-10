@@ -2,17 +2,13 @@ import { clearAutoReloadGuard, getSkewMode, installVersionSkewListeners, subscri
 import { RouterProvider, createRouter, parseSearchWith, stringifySearchWith } from "@tanstack/react-router";
 import { StrictMode, useEffect, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-
 // Tailwind + global styles (also declares @font-face for local Geist fonts).
 import "@/app/globals.css";
-
 import { ErrorComponent } from "./__error";
 import { NotFoundComponent } from "./__notFound";
 import { UpdatingBanner, UpdatingScreen } from "./__updating";
 import { routeTree } from "./routeTree.gen";
-
 installVersionSkewListeners();
-
 // Only JSON.parse structured values (objects/arrays). Plain strings and numbers
 // stay as-is so large numeric IDs don't lose precision through Number coercion.
 function safeJsonParse(value: string): unknown {
@@ -26,7 +22,6 @@ function safeJsonParse(value: string): unknown {
 	}
 	return value;
 }
-
 // Keep query params compatible with nuqs parsers: primitive strings stay raw
 // (so numeric-looking IDs are not JSON-quoted), while arrays use comma lists.
 function stringifySearchValue(value: unknown): string {
@@ -37,7 +32,6 @@ function stringifySearchValue(value: unknown): string {
 	}
 	return JSON.stringify(value);
 }
-
 const router = createRouter({
 	routeTree,
 	defaultPreload: "intent",
@@ -48,26 +42,20 @@ const router = createRouter({
 	parseSearch: parseSearchWith(safeJsonParse),
 	stringifySearch: stringifySearchWith(stringifySearchValue),
 });
-
 declare module "@tanstack/react-router" {
 	interface Register {
 		router: typeof router;
 	}
 }
-
-const HEALTHY_UPTIME_MS = 30_000;
-
+const HEALTHY_UPTIME_MS = 30000;
 function Root() {
 	const skewMode = useSyncExternalStore(subscribeSkew, getSkewMode, getSkewMode);
-
 	useEffect(() => {
 		if (skewMode !== "none") return;
 		const timer = setTimeout(clearAutoReloadGuard, HEALTHY_UPTIME_MS);
 		return () => clearTimeout(timer);
 	}, [skewMode]);
-
 	if (skewMode === "hard") return <UpdatingScreen />;
-
 	return (
 		<>
 			<RouterProvider router={router} />
@@ -75,17 +63,14 @@ function Root() {
 		</>
 	);
 }
-
 declare global {
 	interface Window {
 		__bifrostBooted?: boolean;
 	}
 }
 window.__bifrostBooted = true;
-
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found");
-
 createRoot(rootEl).render(
 	<StrictMode>
 		<Root />

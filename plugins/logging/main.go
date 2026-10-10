@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"regexp"
 	"strconv"
 	"strings"
@@ -201,6 +202,9 @@ func (c contentPolicy) visible() bool { return c.storeContent && !c.hidden }
 //     store keeps the full payload. Requires an object-storage-backed log
 //     store; degrades to not-persisted otherwise.
 func (p *LoggerPlugin) resolveContentPolicy(ctx *schemas.BifrostContext) contentPolicy {
+	if schemas.GuardrailOutputUnreviewed(ctx) {
+		return contentPolicy{}
+	}
 	disabled := p.disableContentLogging != nil && *p.disableContentLogging
 	if ctx != nil {
 		if virtualKeyDecision, ok := ctx.Value(schemas.BifrostContextKeyGovernanceDisableContentLogging).(bool); ok {
@@ -2682,11 +2686,45 @@ drainQueue:
 	}
 }
 
+// suppressUnreviewedGuardrailLog 在异步入队前移除未审查载体，保留用量、费用和静态错误诊断。
+func suppressUnreviewedGuardrailLog(entry *logstore.Log) {
+	if entry == nil {
+		return
+	}
+	logstore.ClearPayloadFiltered(entry, map[string]struct{}{
+		"token_usage": {}, "guardrail_debug": {}, "error_details": {},
+	})
+	entry.ContentSummary = ""
+	entry.RedactionData = nil
+	entry.ContentHidden = true
+	if entry.ErrorDetailsParsed != nil {
+		err := *entry.ErrorDetailsParsed
+		err.ExtraFields.RawRequest, err.ExtraFields.RawResponse = nil, nil
+		if err.Error != nil {
+			detail := *err.Error
+			detail.Message = "guardrail output content not reviewed"
+			detail.Error, detail.Param, detail.EventID = nil, nil, nil
+			err.Error = &detail
+		}
+		entry.ErrorDetailsParsed = &err
+	}
+	entry.ErrorDetails = ""
+	entry.MetadataParsed = maps.Clone(entry.MetadataParsed)
+	if entry.MetadataParsed == nil {
+		entry.MetadataParsed = make(map[string]any)
+	}
+	entry.MetadataParsed["guardrail_output_review_pending"] = true
+}
+
 // storeOrEnqueueEntry stores a log entry in pendingLogs keyed by traceID for later
 // retrieval by Inject(), or enqueues directly if no traceID is available (Go SDK path).
 // Multiple entries per traceID are supported (e.g. fallback/retry attempts within the same trace).
 func (p *LoggerPlugin) storeOrEnqueueEntry(ctx *schemas.BifrostContext, entry *logstore.Log, callback func(entry *logstore.Log)) {
 	policy := p.resolveContentPolicy(ctx)
+	if schemas.GuardrailOutputUnreviewed(ctx) {
+		policy = contentPolicy{}
+		suppressUnreviewedGuardrailLog(entry)
+	}
 	// ContentHidden marks entries whose content the API/UI never serves back —
 	// both the retained-in-object-storage case and the dropped-entirely case.
 	entry.ContentHidden = !policy.visible()
@@ -2884,6 +2922,9 @@ func (p *LoggerPlugin) Inject(_ context.Context, trace *schemas.Trace) error {
 			entry.OverheadLatency = nil
 		}
 		p.logger.Debug("Inject: enqueuing log entry %s", entry.ID)
+		if pending, _ := entry.MetadataParsed["guardrail_output_review_pending"].(bool); pending {
+			suppressUnreviewedGuardrailLog(entry)
+		}
 		p.enqueueLogEntry(entry, p.makePostWriteCallback(nil))
 	}
 	return nil

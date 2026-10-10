@@ -20,9 +20,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeValueOption, type ProviderSelectorOption, type ProviderSelectorValue } from "./providerSelector.utils";
-
 export type { ProviderSelectorOption, ProviderSelectorValue } from "./providerSelector.utils";
-
 interface ProviderSelectorBaseProps {
 	/**
 	 * Where the list comes from. "configured" is every provider the user has set up,
@@ -59,7 +57,10 @@ interface ProviderSelectorBaseProps {
 	/** Test id on the open dropdown, for suites that assert the list itself. */
 	contentTestId?: string;
 	/** The "all providers" row. The sentinel value is the call site's to choose. */
-	allOption?: { value: string; label?: string };
+	allOption?: {
+		value: string;
+		label?: string;
+	};
 	/** Renders base and custom providers under separate headings. */
 	groupByCustom?: boolean;
 	placeholder?: string;
@@ -89,21 +90,18 @@ interface ProviderSelectorBaseProps {
 	ariaInvalid?: boolean;
 	"data-testid"?: string;
 }
-
 interface ProviderSelectorSingleProps extends ProviderSelectorBaseProps {
 	mode?: "select";
 	multiple?: false;
 	value: string;
 	onChange: (provider: string) => void;
 }
-
 interface ProviderSelectorMultiProps extends ProviderSelectorBaseProps {
 	mode?: "select";
 	multiple: true;
 	value: string[];
 	onChange: (providers: string[]) => void;
 }
-
 interface ProviderSelectorAddProps extends ProviderSelectorBaseProps {
 	/** Fire-and-forget: nothing is held selected and the trigger keeps its own label. */
 	mode: "add";
@@ -111,21 +109,17 @@ interface ProviderSelectorAddProps extends ProviderSelectorBaseProps {
 	/** Replaces the default trigger, for an "Add provider" button that opens the list. */
 	trigger?: React.ReactNode;
 }
-
 export type ProviderSelectorProps = ProviderSelectorSingleProps | ProviderSelectorMultiProps | ProviderSelectorAddProps;
-
 /** Custom providers come after the base ones, then alphabetical by what the user reads. */
 function byLabel(a: ProviderSelectorOption, b: ProviderSelectorOption): number {
 	if (Boolean(a.isCustom) !== Boolean(b.isCustom)) return a.isCustom ? 1 : -1;
 	return a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
 }
-
 function matches(option: ProviderSelectorOption, term: string): boolean {
 	if (!term) return true;
 	// Both, so "Amazon Bedrock" is found by typing either half of it or the raw key.
 	return option.label.toLowerCase().includes(term) || option.value.toLowerCase().includes(term);
 }
-
 /** 翻译提供商选择辅助文案，保留品牌名与全部选择模式。 */
 export function ProviderSelector(props: ProviderSelectorProps) {
 	const { t } = useTranslation(["common", "models"]);
@@ -159,10 +153,8 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 	} = props;
 	const placeholder = placeholderProp ?? t("providerSelect.select");
 	const searchPlaceholder = searchPlaceholderProp ?? t("providerSelect.search");
-
 	const isAdd = props.mode === "add";
 	const isMulti = !isAdd && props.multiple === true;
-
 	// Pulled out of the union before the hooks, so the memo and callback deps below are the
 	// values themselves rather than the props object, whose identity changes every render.
 	const singleValue = isAdd || isMulti ? undefined : (props as ProviderSelectorSingleProps).value;
@@ -170,20 +162,16 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 	const onChange = isAdd ? undefined : (props as ProviderSelectorSingleProps | ProviderSelectorMultiProps).onChange;
 	const onSelect = isAdd ? (props as ProviderSelectorAddProps).onSelect : undefined;
 	const addTrigger = isAdd ? (props as ProviderSelectorAddProps).trigger : undefined;
-
 	const selected = useMemo<string[]>(() => {
 		if (isAdd) return [];
 		if (isMulti) return multiValue ?? [];
 		return singleValue ? [singleValue] : [];
 	}, [isAdd, isMulti, multiValue, singleValue]);
-
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
-
 	// Void-arg and cached: fifteen other components already subscribe to it, so gating it
 	// behind the popover would buy nothing and leave the trigger showing a bare key.
 	const { data: providers, isLoading, isError } = useGetProvidersQuery(undefined, { skip: source !== "configured" });
-
 	const sourceOptions = useMemo<ProviderSelectorOption[]>(() => {
 		if (source === "configured") {
 			return (providers ?? [])
@@ -198,12 +186,10 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 		const names: readonly ProviderSelectorValue[] = source === "catalog" ? VisibleProviderNames : (values ?? []);
 		return names.filter(Boolean).map(normalizeValueOption);
 	}, [source, providers, filter, resolveIconKey, values]);
-
 	const options = useMemo<ProviderSelectorOption[]>(() => {
 		const excluded = new Set(excludeValues ?? []);
 		return sourceOptions.filter((option) => !excluded.has(option.value)).sort(byLabel);
 	}, [sourceOptions, excludeValues]);
-
 	// Filtering is local: the whole list is already in the browser, so there is nothing to
 	// debounce and nothing to page. cmdk is told to leave membership and order alone.
 	const term = search.trim().toLowerCase();
@@ -215,10 +201,8 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 		return matches(row, term) ? [row] : [];
 	}, [allOption, term, t]);
 	const visible = useMemo(() => options.filter((o) => matches(o, term)), [options, term]);
-
 	const base = useMemo(() => visible.filter((o) => !o.isCustom), [visible]);
 	const custom = useMemo(() => visible.filter((o) => o.isCustom), [visible]);
-
 	// A saved value can sit outside the list: the provider was deleted, or the caller narrowed
 	// the list after it was picked. Pin it so the trigger says something and it stays
 	// deselectable, instead of the row silently vanishing.
@@ -234,7 +218,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 			}))
 			.filter((o) => matches(o, term));
 	}, [isAdd, options, extraOptions, visibleAll, selected, term]);
-
 	// Every row the arrow keys can land on, in the order they are rendered.
 	const navigableValues = useMemo(() => {
 		const rows = groupByCustom
@@ -242,7 +225,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 			: [...visibleExtras, ...visibleAll, ...pinned, ...visible, ...visibleFooters];
 		return rows.filter((o) => !o.disabled).map((o) => o.value);
 	}, [groupByCustom, visibleExtras, visibleAll, pinned, base, custom, visible, visibleFooters]);
-
 	/*
 	 * cmdk re-points the highlight only when the row holding it is the one unmounting. Typing
 	 * swaps out every row at once, and cmdk's scheduler keeps just the last unmount callback,
@@ -254,12 +236,10 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 	useEffect(() => {
 		setHighlighted((current) => (current && navigableValues.includes(current) ? current : (navigableValues[0] ?? "")));
 	}, [navigableValues]);
-
 	const closeAndResetSearch = useCallback(() => {
 		setOpen(false);
 		setSearch("");
 	}, []);
-
 	const commit = useCallback(
 		(next: string[]) => {
 			if (isMulti) {
@@ -271,7 +251,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 		},
 		[isMulti, onChange, closeAndResetSearch],
 	);
-
 	const toggle = useCallback(
 		(value: string) => {
 			if (isAdd) {
@@ -287,7 +266,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 		},
 		[isAdd, isMulti, onSelect, commit, selected, closeAndResetSearch],
 	);
-
 	// Backspace on an empty search field drops the last chip, the way a tag input behaves.
 	// Only with the field empty, so it never eats a character the user meant to erase.
 	const handleInputKeyDown = useCallback(
@@ -298,7 +276,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 		},
 		[commit, isMulti, search, selected],
 	);
-
 	const handleOpenChange = useCallback(
 		(next: boolean) => {
 			if (!next) {
@@ -309,7 +286,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 		},
 		[closeAndResetSearch],
 	);
-
 	const optionFor = useCallback(
 		(value: string): ProviderSelectorOption =>
 			[...(extraOptions ?? []), ...(footerOptions ?? []), ...visibleAll, ...options, ...pinned].find((o) => o.value === value) ?? {
@@ -319,7 +295,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 			},
 		[extraOptions, footerOptions, visibleAll, options, pinned],
 	);
-
 	const renderOption = (option: ProviderSelectorOption) => (
 		<ComboboxItem
 			key={option.value}
@@ -341,7 +316,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 			)}
 		</ComboboxItem>
 	);
-
 	const renderTriggerValue = (value: string) => {
 		if (renderValueLabel) return renderValueLabel(value);
 		const option = optionFor(value);
@@ -352,7 +326,6 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 			</>
 		);
 	};
-
 	return (
 		<Combobox
 			multiple={isMulti}
@@ -435,7 +408,7 @@ export function ProviderSelector(props: ProviderSelectorProps) {
 				className={cn("min-w-[var(--radix-popover-trigger-width)]", contentClassName)}
 				// Radix measures the room it has each time it positions, so the clamp holds wherever the trigger sits.
 				style={contentWidth === undefined ? undefined : { width: contentWidth, maxWidth: "var(--radix-popper-available-width)" }}
-				shouldFilter={false}
+				shouldFilter
 				highlightedValue={highlighted}
 				onHighlightedValueChange={setHighlighted}
 			>

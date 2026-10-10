@@ -6,7 +6,6 @@ import { getErrorMessage } from "@/lib/store";
 import { useCreateProviderKeyMutation, useGetProviderKeysQuery, useUpdateProviderKeyMutation } from "@/lib/store/apis/providersApi";
 import { ModelProvider } from "@/lib/types/config";
 import { modelProviderKeySchema } from "@/lib/types/schemas";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
 import { useCallback, useEffect } from "react";
@@ -23,24 +22,19 @@ interface Props {
 	onCancel: () => void;
 	onSave: () => void;
 }
-
 // Create a simple form schema using only ModelProviderKeySchema
 const providerKeyFormSchema = z.object({
 	key: modelProviderKeySchema,
 });
-
 type ProviderKeyFormValues = z.infer<typeof modelProviderKeySchema>;
-
 export default function ProviderKeyForm({ provider, keyId, onCancel, onSave }: Props) {
 	const { t } = useTranslation("models");
 	const { t: tc } = useTranslation("common");
-	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [createProviderKey, { isLoading: isCreatingProviderKey }] = useCreateProviderKeyMutation();
 	const [updateProviderKey, { isLoading: isUpdatingProviderKey }] = useUpdateProviderKeyMutation();
 	const { data: keys = [] } = useGetProviderKeysQuery(provider.name);
 	const isEditing = keyId !== null;
 	const currentKey = keyId ? keys.find((k) => k.id === keyId) : undefined;
-
 	const form = useForm({
 		resolver: zodResolver(providerKeyFormSchema),
 		mode: "onChange",
@@ -56,25 +50,19 @@ export default function ProviderKeyForm({ provider, keyId, onCancel, onSave }: P
 			},
 		},
 	});
-
 	// Reset form when currentKey arrives (handles late async resolution)
 	// Skip reset if user has unsaved edits to avoid discarding changes during background refetches
 	useEffect(() => {
 		if (!isEditing || !currentKey || form.formState.isDirty) return;
 		form.reset({ key: currentKey as ProviderKeyFormValues });
 	}, [isEditing, currentKey, form]);
-
 	// Trigger validation on mount when editing existing data
 	useEffect(() => {
 		if (isEditing) {
 			form.trigger();
 		}
 	}, [isEditing, form]);
-
 	const getTooltipContent = useCallback(() => {
-		if (!hasUpdateProviderAccess) {
-			return t("providers.noPermissionModifyKeys");
-		}
 		if (!form.formState.isValid && form.formState.errors.root?.message) {
 			return form.formState.errors.root?.message;
 		}
@@ -82,8 +70,7 @@ export default function ProviderKeyForm({ provider, keyId, onCancel, onSave }: P
 			return t("providers.noChanges");
 		}
 		return null;
-	}, [form?.formState.errors, form?.formState.isValid, form?.formState.isDirty, hasUpdateProviderAccess, t]);
-
+	}, [form?.formState.errors, form?.formState.isValid, form?.formState.isDirty, t]);
 	const onSubmit = (value: any) => {
 		if (isEditing && !currentKey) return;
 		// Strip internal _auth_type fields before sending to API
@@ -117,7 +104,6 @@ export default function ProviderKeyForm({ provider, keyId, onCancel, onSave }: P
 					provider: provider.name,
 					key,
 				});
-
 		mutation
 			.unwrap()
 			.then(() => {
@@ -133,7 +119,6 @@ export default function ProviderKeyForm({ provider, keyId, onCancel, onSave }: P
 				});
 			});
 	};
-
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="flex grow flex-col gap-6 pt-4">
@@ -157,7 +142,7 @@ export default function ProviderKeyForm({ provider, keyId, onCancel, onSave }: P
 									<span>
 										<Button
 											type="submit"
-											disabled={!form.formState.isDirty || !hasUpdateProviderAccess}
+											disabled={!form.formState.isDirty}
 											isLoading={form.formState.isSubmitting || isCreatingProviderKey || isUpdatingProviderKey}
 											data-testid="key-save-btn"
 										>

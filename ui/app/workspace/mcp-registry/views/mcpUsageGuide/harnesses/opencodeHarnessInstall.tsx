@@ -4,7 +4,6 @@ import { buildOpenCodeConfig } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { HarnessInstallProps } from "../types";
 import { getRegistrationLabel } from "../utils";
-
 export function OpenCodeHarnessInstall({
 	canGenerateCommand,
 	clientConfig,
@@ -20,7 +19,6 @@ export function OpenCodeHarnessInstall({
 		macos: "~/.config/opencode/opencode.json",
 		windows: "%APPDATA%/opencode/opencode.json",
 	}[platform];
-
 	const config = useMemo(
 		() =>
 			buildOpenCodeConfig({
@@ -30,12 +28,11 @@ export function OpenCodeHarnessInstall({
 			}),
 		[clientConfig, headers, selectedServers, serverScope],
 	);
-
 	return (
 		<HarnessCommandSection
 			canCopyCommand={canGenerateCommand}
 			command={config}
-			controls={null}
+			controls
 			copySuccessMessage={t("common.configCopied")}
 			emptyMessage={emptyMessage}
 			harnessName="OpenCode"

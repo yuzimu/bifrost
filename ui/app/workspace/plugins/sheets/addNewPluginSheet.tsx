@@ -3,7 +3,6 @@ import { Form } from "@/components/ui/form";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getErrorMessage, useCreatePluginMutation, useUpdatePluginMutation } from "@/lib/store";
 import { Plugin } from "@/lib/types/plugins";
-import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -11,32 +10,25 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PluginFormFragment } from "../fragments/pluginFormFragments";
-
 type PluginFormData = {
 	name: string;
 	path: string;
 	hasConfig: boolean;
 	config?: string;
 };
-
 interface AddNewPluginSheetProps {
 	open: boolean;
 	onClose: () => void;
 	onCreate?: (pluginName: string) => void;
 	plugin?: Plugin | null;
 }
-
 export default function AddNewPluginSheet({ open, onClose, onCreate, plugin }: AddNewPluginSheetProps) {
 	const { t } = useTranslation("governance");
 	const { t: tCommon } = useTranslation("common");
-	const hasCreatePluginAccess = useRbac(RbacResource.Plugins, RbacOperation.Create);
-	const hasUpdatePluginAccess = useRbac(RbacResource.Plugins, RbacOperation.Update);
 	const [createPlugin, { isLoading: isCreating }] = useCreatePluginMutation();
 	const [updatePlugin, { isLoading: isUpdating }] = useUpdatePluginMutation();
-
 	const isEditMode = !!plugin;
 	const isLoading = isCreating || isUpdating;
-
 	const pluginFormSchema = useMemo(
 		() =>
 			z.object({
@@ -77,7 +69,6 @@ export default function AddNewPluginSheet({ open, onClose, onCreate, plugin }: A
 			}),
 		[t],
 	);
-
 	const form = useForm<PluginFormData>({
 		resolver: zodResolver(pluginFormSchema),
 		mode: "onChange",
@@ -88,7 +79,6 @@ export default function AddNewPluginSheet({ open, onClose, onCreate, plugin }: A
 			config: undefined,
 		},
 	});
-
 	// Load plugin data when editing
 	useEffect(() => {
 		if (plugin) {
@@ -108,11 +98,9 @@ export default function AddNewPluginSheet({ open, onClose, onCreate, plugin }: A
 			});
 		}
 	}, [plugin, form]);
-
 	const onSubmit = async (data: PluginFormData) => {
 		try {
 			let parsedConfig = {};
-
 			if (data.hasConfig && data.config) {
 				try {
 					parsedConfig = JSON.parse(data.config);
@@ -121,7 +109,6 @@ export default function AddNewPluginSheet({ open, onClose, onCreate, plugin }: A
 					return;
 				}
 			}
-
 			if (isEditMode && plugin) {
 				// Update existing plugin
 				await updatePlugin({
@@ -144,21 +131,17 @@ export default function AddNewPluginSheet({ open, onClose, onCreate, plugin }: A
 				// Notify parent with the config name to select it
 				onCreate?.(data.name);
 			}
-
 			form.reset();
 			onClose();
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		}
 	};
-
 	const handleClose = () => {
 		form.reset();
 		onClose();
 	};
-
-	const disableAction = isEditMode ? !hasUpdatePluginAccess : !hasCreatePluginAccess;
-
+	const disableAction = isEditMode ? false : false;
 	return (
 		<Sheet open={open} onOpenChange={handleClose}>
 			<SheetContent className="flex w-full flex-col overflow-x-hidden pt-4">
