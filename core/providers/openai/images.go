@@ -10,6 +10,30 @@ import (
 	"github.com/maximhq/bifrost/core/schemas"
 )
 
+// encodeRegionImageEdit 保留选区及参考图信息，避免 JSON 扩展被标准表单转换丢弃。
+func encodeRegionImageEdit(request *OpenAIImageEditRequest) ([]byte, error) {
+	images := make([]map[string]string, 0, len(request.Input.Images))
+	for _, image := range request.Input.Images {
+		source := image.URL
+		if len(image.Image) > 0 {
+			source = providerUtils.FileBytesToBase64DataURL(image.Image)
+		}
+		if source == "" {
+			return nil, fmt.Errorf("image must contain bytes or a URL")
+		}
+		images = append(images, map[string]string{"url": source})
+	}
+	return providerUtils.MarshalSorted(struct {
+		Model  string              `json:"model"`
+		Prompt string              `json:"prompt"`
+		Images []map[string]string `json:"images"`
+		schemas.ImageEditParameters
+	}{
+		Model: request.Model, Prompt: request.Input.Prompt, Images: images,
+		ImageEditParameters: request.ImageEditParameters,
+	})
+}
+
 // ToOpenAIImageGenerationRequest converts a Bifrost Image Request to OpenAI format
 func ToOpenAIImageGenerationRequest(bifrostReq *schemas.BifrostImageGenerationRequest) *OpenAIImageGenerationRequest {
 	if bifrostReq == nil || bifrostReq.Input == nil || bifrostReq.Input.Prompt == "" {
@@ -122,6 +146,7 @@ func ToOpenAIImageEditRequest(bifrostReq *schemas.BifrostImageEditRequest) *Open
 	return req
 }
 
+// parseImageEditFormDataBodyFromRequest 保留标准编辑字段并透传显式选区扩展。
 func parseImageEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *OpenAIImageEditRequest, providerName schemas.ModelProvider) *schemas.BifrostError {
 	// Add model field (required)
 	if err := writer.WriteField("model", openaiReq.Model); err != nil {
@@ -131,6 +156,19 @@ func parseImageEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *
 	// Add prompt field (required)
 	if err := writer.WriteField("prompt", openaiReq.Input.Prompt); err != nil {
 		return providerUtils.NewBifrostOperationError("failed to write prompt field", err)
+	}
+	for _, field := range []struct {
+		name  string
+		value []byte
+	}{
+		{"selection_regions", openaiReq.SelectionRegions},
+		{"multi_region_edits", openaiReq.MultiRegionEdits},
+	} {
+		if len(field.value) > 0 {
+			if err := writer.WriteField(field.name, string(field.value)); err != nil {
+				return providerUtils.NewBifrostOperationError("failed to write "+field.name, err)
+			}
+		}
 	}
 
 	// Add stream field when requesting streaming

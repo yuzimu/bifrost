@@ -2,6 +2,7 @@ package openai
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -224,7 +225,7 @@ func (req *OpenAIVideoGenerationRequest) ToBifrostVideoGenerationRequest(ctx *sc
 	}
 }
 
-// parseVideoGenerationFormDataBodyFromRequest parses the video generation request and writes it to the multipart form.
+// parseVideoGenerationFormDataBodyFromRequest 区分延长字段与标准生成字段，避免丢失源视频。
 func parseVideoGenerationFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *OpenAIVideoGenerationRequest, providerName schemas.ModelProvider) *schemas.BifrostError {
 	// Add prompt field (required)
 	if openaiReq.Prompt == "" {
@@ -239,6 +240,28 @@ func parseVideoGenerationFormDataBodyFromRequest(writer *multipart.Writer, opena
 		if err := writer.WriteField("model", openaiReq.Model); err != nil {
 			return providerUtils.NewBifrostOperationError("failed to write model field", err)
 		}
+	}
+	if source, extending := openaiReq.ExtraParams["video"]; extending {
+		for _, name := range []string{"video", "duration", "video_extension_start_time"} {
+			value, exists := openaiReq.ExtraParams[name]
+			if name == "video" {
+				value, exists = source, true
+			}
+			if !exists {
+				continue
+			}
+			raw, err := json.Marshal(value)
+			if err != nil {
+				return providerUtils.NewBifrostOperationError("invalid "+name, err)
+			}
+			if err := writer.WriteField(name, string(raw)); err != nil {
+				return providerUtils.NewBifrostOperationError("failed to write "+name, err)
+			}
+		}
+		if err := writer.Close(); err != nil {
+			return providerUtils.NewBifrostOperationError("failed to close multipart writer", err)
+		}
+		return nil
 	}
 
 	// Add optional seconds field

@@ -109,6 +109,8 @@ const DefaultVideoDuration = "8"
 
 // BifrostVideoGenerationResponse represents the video generation job response in bifrost format.
 type BifrostVideoGenerationResponse struct {
+	ContentURL         string             `json:"content_url,omitempty"`
+	Video              *VideoOutput       `json:"video,omitempty"`
 	ID                 string             `json:"id,omitempty"`
 	CompletedAt        *int64             `json:"completed_at,omitempty"`          // Unix timestamp (seconds) when the job completed
 	CreatedAt          int64              `json:"created_at,omitempty"`            // Unix timestamp (seconds) when the job was created

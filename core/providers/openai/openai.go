@@ -4534,8 +4534,7 @@ func (provider *OpenAIProvider) VideoList(ctx *schemas.BifrostContext, key schem
 	)
 }
 
-// HandleOpenAIVideoGenerationRequest handles video generation requests for OpenAI-compatible APIs.
-// It creates a multipart form, adds fields, makes the API call, and returns the response.
+// HandleOpenAIVideoGenerationRequest 复用视频任务协议，延长时以同一凭据解析源任务引用。
 func HandleOpenAIVideoGenerationRequest(
 	ctx *schemas.BifrostContext,
 	client *fasthttp.Client,
@@ -4575,6 +4574,28 @@ func HandleOpenAIVideoGenerationRequest(
 	}
 	if reqBody == nil {
 		return nil, providerUtils.NewBifrostOperationError("video generation input is not provided", nil)
+	}
+	if source, ok := reqBody.ExtraParams["video"].(map[string]string); ok && source["id"] != "" && providerName != schemas.OpenAI {
+		videoID := providerUtils.StripVideoIDProviderSuffix(source["id"], providerName)
+		escapedID, idErr := providerUtils.EscapeResourceID(videoID, "video_id")
+		if idErr != nil {
+			return nil, idErr
+		}
+		// 延长操作先以同一上游凭据读取源任务，避免把 Bifrost 的提供方后缀或未完成任务交给上游。
+		sourceURL := strings.TrimSuffix(url, "/extensions") + "/" + escapedID
+		sourceVideo, sourceErr := HandleOpenAIVideoRetrieveRequest(
+			ctx, client, sourceURL,
+			&schemas.BifrostVideoRetrieveRequest{Provider: providerName, ID: videoID},
+			key, extraHeaders, authHeaders, providerName, false, false, nil, logger,
+		)
+		if sourceErr != nil {
+			return nil, sourceErr
+		}
+		if sourceVideo.Status != schemas.VideoStatusCompleted || sourceVideo.Video == nil || sourceVideo.Video.URL == nil || *sourceVideo.Video.URL == "" {
+			return nil, providerUtils.NewBifrostOperationError("source video is not completed or has no reusable URL", nil)
+		}
+		reqBody.ExtraParams = maps.Clone(reqBody.ExtraParams)
+		reqBody.ExtraParams["video"] = map[string]string{"url": *sourceVideo.Video.URL}
 	}
 
 	// Create multipart form
@@ -5418,6 +5439,14 @@ func HandleOpenAIImageEditRequest(
 
 	req.Header.SetContentType(writer.FormDataContentType())
 	bodyData := body.Bytes()
+	if len(openaiReq.SelectionRegions) > 0 || len(openaiReq.MultiRegionEdits) > 0 {
+		var encodeErr error
+		bodyData, encodeErr = encodeRegionImageEdit(openaiReq)
+		if encodeErr != nil {
+			return nil, providerUtils.NewBifrostOperationError("failed to encode region image edit", encodeErr)
+		}
+		req.Header.SetContentType("application/json")
+	}
 	timedSetBody(ctx, req, bodyData)
 
 	latency, bifrostErr, wait := providerUtils.MakeRequestWithContext(ctx, activeClient, req, resp)

@@ -3554,6 +3554,7 @@ func OpenAIRealtimeClientSecretPaths(pathPrefix string) []string {
 // NewOpenAIRouter creates a new OpenAIRouter with the given bifrost client.
 func NewOpenAIRouter(client *bifrost.Bifrost, handlerStore lib.HandlerStore, accessResolver AccessResolver, logger schemas.Logger) *OpenAIRouter {
 	routes := CreateOpenAIRouteConfigs("/openai", handlerStore)
+	routes = append(routes, openAIVideoExtensionRoutes("/openai", client)...)
 	routes = append(routes, CreateOpenAIListModelsRouteConfigs("/openai", handlerStore)...)
 	routes = append(routes, CreateOpenAIModelRetrieveRouteConfigs("/openai", handlerStore)...)
 	routes = append(routes, CreateOpenAIBatchRouteConfigs("/openai", handlerStore)...)
@@ -3794,11 +3795,14 @@ func videoIDProviderSuffix(videoID string) string {
 	return ""
 }
 
-// parseOpenAIImageEditMultipartRequest is a RequestParser that handles multipart/form-data for image edit requests
+// parseOpenAIImageEditMultipartRequest 解析标准文件编辑表单及选区 JSON 扩展。
 func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interface{}) error {
 	imageEditReq, ok := req.(*openai.OpenAIImageEditRequest)
 	if !ok {
 		return errors.New("invalid request type for image edit")
+	}
+	if strings.HasPrefix(string(ctx.Request.Header.ContentType()), "application/json") {
+		return parseOpenAIRegionEditJSON(ctx.Request.Body(), imageEditReq)
 	}
 
 	// Parse multipart form
@@ -3857,6 +3861,27 @@ func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interfac
 	imageEditReq.Input = &schemas.ImageEditInput{
 		Images: images,
 		Prompt: prompt,
+	}
+	for _, field := range []struct {
+		name string
+		dest *json.RawMessage
+	}{
+		{"selection_regions", &imageEditReq.SelectionRegions},
+		{"multi_region_edits", &imageEditReq.MultiRegionEdits},
+	} {
+		if values := form.Value[field.name]; len(values) > 0 {
+			if len(values) != 1 || !json.Valid([]byte(values[0])) {
+				return fmt.Errorf("%s must be a single JSON array", field.name)
+			}
+			var items []json.RawMessage
+			if err := json.Unmarshal([]byte(values[0]), &items); err != nil || len(items) == 0 || len(items) > 8 {
+				return fmt.Errorf("%s must contain 1 to 8 entries", field.name)
+			}
+			*field.dest = json.RawMessage(values[0])
+		}
+	}
+	if len(imageEditReq.SelectionRegions) > 0 && len(imageEditReq.MultiRegionEdits) > 0 {
+		return errors.New("selection_regions and multi_region_edits are mutually exclusive")
 	}
 
 	// Extract optional parameters
@@ -3969,6 +3994,9 @@ func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interfac
 			return errors.New("invalid stream value")
 		}
 		imageEditReq.Stream = &stream
+	}
+	if imageEditReq.Stream != nil && *imageEditReq.Stream && (len(imageEditReq.SelectionRegions) > 0 || len(imageEditReq.MultiRegionEdits) > 0) {
+		return errors.New("region edits do not support stream=true")
 	}
 
 	// Extract fallbacks

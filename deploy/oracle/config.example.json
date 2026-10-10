@@ -42,12 +42,17 @@
         "provider_configs": [
           {
             "provider": "grok2api",
-            "allowed_models": ["*"],
+            "allowed_models": [
+              "grok-4.7", "grok-imagine-image", "grok-imagine-image-2.0",
+              "grok-imagine-image-2.0-web",
+              "grok-imagine-image-quality", "grok-imagine-video", "grok-imagine-video-1.5",
+              "grok-stt", "grok-voice-latest", "grok-voice-think-fast-1.0", "grok-voice-think-fast-2.0"
+            ],
             "key_ids": ["oracle-grok2api"]
           },
           {
             "provider": "x2api",
-            "allowed_models": ["*"],
+            "allowed_models": ["chatgpt-latest", "gpt-image-2", "gpt-image-2.5", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "whisper-1"],
             "key_ids": ["oracle-x2api"]
           }
         ]
@@ -79,7 +84,12 @@
           "id": "oracle-grok2api",
           "name": "bifrost-oracle",
           "value": "env.BIFROST_GROK2API_KEY",
-          "models": ["*"],
+          "models": [
+            "grok-4.7", "grok-imagine-image", "grok-imagine-image-2.0",
+            "grok-imagine-image-2.0-web",
+            "grok-imagine-image-quality", "grok-imagine-video", "grok-imagine-video-1.5",
+            "grok-stt", "grok-voice-latest", "grok-voice-think-fast-1.0", "grok-voice-think-fast-2.0"
+          ],
           "weight": 1
         }
       ]
@@ -99,7 +109,7 @@
           "id": "oracle-x2api",
           "name": "x2api-gateway",
           "value": "env.BIFROST_X2API_KEY",
-          "models": ["*"],
+          "models": ["chatgpt-latest", "gpt-image-2", "gpt-image-2.5", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "whisper-1"],
           "weight": 1
         }
       ]
