@@ -1,0 +1,36 @@
+name: bifrost
+services:
+  bifrost:
+    image: ${BIFROST_IMAGE:?Specify an immutable Bifrost image}
+    platform: linux/arm64
+    container_name: bifrost
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    env_file:
+      - /etc/bifrost/bifrost.env
+    environment:
+      APP_DIR: /app/data
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8080"
+    ports:
+      - "127.0.0.1:8088:8080"
+    volumes:
+      - /opt/bifrost/data:/app/data
+      - /etc/bifrost/config.json:/app/data/config.json:ro
+    networks:
+      - entry
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    stop_grace_period: 60s
+networks:
+  entry:
+    external: true
+    name: x2api-entry

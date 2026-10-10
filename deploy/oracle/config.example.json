@@ -1,0 +1,108 @@
+{
+  "$schema": "https://www.getbifrost.ai/schema",
+  "version": 2,
+  "encryption_key": "env.BIFROST_ENCRYPTION_KEY",
+  "env_label": "oracle",
+  "client": {
+    "allowed_origins": [
+      "https://api.mooo.si"
+    ],
+    "enable_logging": true,
+    "disable_content_logging": true,
+    "enforce_auth_on_inference": true,
+    "log_retention_days": 30
+  },
+  "config_store": {
+    "enabled": true,
+    "type": "sqlite",
+    "config": {
+      "path": "/app/data/config.db"
+    }
+  },
+  "logs_store": {
+    "enabled": true,
+    "type": "sqlite",
+    "config": {
+      "path": "/app/data/logs.db"
+    }
+  },
+  "governance": {
+    "auth_config": {
+      "admin_username": "env.BIFROST_ADMIN_USERNAME",
+      "admin_password": "env.BIFROST_ADMIN_PASSWORD",
+      "is_enabled": true
+    },
+    "virtual_keys": [
+      {
+        "id": "oracle-openai",
+        "name": "oracle-openai",
+        "value": "env.BIFROST_VIRTUAL_KEY",
+        "is_active": true,
+        "allow_all_providers": false,
+        "provider_configs": [
+          {
+            "provider": "grok2api",
+            "allowed_models": ["*"],
+            "key_ids": ["oracle-grok2api"]
+          },
+          {
+            "provider": "x2api",
+            "allowed_models": ["*"],
+            "key_ids": ["oracle-x2api"]
+          }
+        ]
+      }
+    ]
+  },
+  "plugins": [
+    {
+      "name": "governance",
+      "enabled": true,
+      "config": {
+        "is_vk_mandatory": true
+      }
+    }
+  ],
+  "providers": {
+    "grok2api": {
+      "network_config": {
+        "base_url": "http://grok2api-go:8000",
+        "allow_private_network": true,
+        "max_retries": 0
+      },
+      "custom_provider_config": {
+        "base_provider_type": "openai",
+        "is_key_less": false
+      },
+      "keys": [
+        {
+          "id": "oracle-grok2api",
+          "name": "bifrost-oracle",
+          "value": "env.BIFROST_GROK2API_KEY",
+          "models": ["*"],
+          "weight": 1
+        }
+      ]
+    },
+    "x2api": {
+      "network_config": {
+        "base_url": "http://x2api-core:8080",
+        "allow_private_network": true,
+        "max_retries": 0
+      },
+      "custom_provider_config": {
+        "base_provider_type": "openai",
+        "is_key_less": false
+      },
+      "keys": [
+        {
+          "id": "oracle-x2api",
+          "name": "x2api-gateway",
+          "value": "env.BIFROST_X2API_KEY",
+          "models": ["*"],
+          "weight": 1
+        }
+      ]
+    }
+  }
+}
