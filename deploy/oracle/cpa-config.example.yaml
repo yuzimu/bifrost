@@ -1,0 +1,27 @@
+host: ""
+port: 8317
+auth-dir: /data/auths
+api-keys:
+  - REPLACE_WITH_RUNTIME_CPA_KEY
+remote-management:
+  allow-remote: false
+  secret-key: ""
+  disable-control-panel: true
+debug: false
+plugins:
+  enabled: false
+  dir: /data/plugins
+logging-to-file: false
+usage-statistics-enabled: true
+redis-usage-queue-retention-seconds: 3600
+request-retry: 3
+proxy-url: ""
+quota-exceeded:
+  antigravity-credits: true
+routing:
+  strategy: round-robin
+  session-affinity: true
+  session-affinity-ttl: 24h
+oauth-excluded-models:
+  antigravity:
+    - claude-*

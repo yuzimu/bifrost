@@ -1,0 +1,26 @@
+name: cpa
+services:
+  cpa:
+    image: eceasy/cli-proxy-api:v7.2.139@sha256:7145258f0bec00e12d6fa19488baaa15768c0e234538ce80528d0da9bc6aef2b
+    platform: linux/arm64
+    container_name: cpa
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8317:8317"
+    volumes:
+      - /opt/cpa/data/config.yaml:/CLIProxyAPI/config.yaml
+      - /opt/cpa/data:/data
+    networks:
+      - x2api-entry
+    environment:
+      TZ: Asia/Shanghai
+    mem_limit: 1g
+    cpus: 2
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+networks:
+  x2api-entry:
+    external: true

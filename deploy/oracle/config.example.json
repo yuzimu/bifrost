@@ -48,14 +48,49 @@
               "grok-imagine-image-quality", "grok-imagine-video", "grok-imagine-video-1.5",
               "grok-stt", "grok-voice-latest", "grok-voice-think-fast-1.0", "grok-voice-think-fast-2.0"
             ],
+            "weight": 1,
             "key_ids": ["oracle-grok2api"]
           },
           {
             "provider": "x2api",
-            "allowed_models": ["chatgpt-latest", "gpt-image-2", "gpt-image-2.5", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "whisper-1"],
+            "allowed_models": ["chatgpt-latest", "gpt-image-2.5", "whisper-1"],
+            "weight": 1,
             "key_ids": ["oracle-x2api"]
+          },
+          {
+            "provider": "cpa",
+            "allowed_models": [
+              "gemini-3.5-flash-lite", "gemini-3.6-flash-high",
+              "gemini-3.7-flash-high", "gemini-3.8-flash-high",
+              "gemini-3-flash", "gemini-pro-agent", "gemini-3.1-pro-low",
+              "gemini-3.1-flash-lite", "gemini-3.1-flash-image",
+              "gpt-oss-120b-medium", "gpt-5.5", "codex-auto-review",
+              "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6-sol",
+              "gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol",
+              "gpt-image-2"
+            ],
+            "weight": 1,
+            "key_ids": ["oracle-cpa"]
           }
         ]
+      }
+    ],
+    "routing_rules": [
+      {
+        "id": "2d29957b-b771-4fd1-9de3-f4f63469550b",
+        "name": "Unified GPT Image 2.5",
+        "enabled": true,
+        "chain_rule": false,
+        "cel_expression": "provider == \"\" && model == \"gpt-image-2.5\"",
+        "targets": [
+          { "provider": "x2api", "model": "gpt-image-2.5", "weight": 1 }
+        ],
+        "fallbacks": [
+          { "provider": "cpa", "model": "gpt-image-2" }
+        ],
+        "scope": "virtual_key",
+        "scope_id": "oracle-openai",
+        "priority": 0
       }
     ]
   },
@@ -65,6 +100,22 @@
       "enabled": true,
       "config": {
         "is_vk_mandatory": true
+      }
+    },
+    {
+      "name": "routing",
+      "enabled": true,
+      "config": {}
+    },
+    {
+      "name": "adaptive-routing",
+      "enabled": true,
+      "config": {
+        "direction_selection_enabled": true,
+        "route_selection_enabled": true,
+        "append_fallbacks_to_pinned": false,
+        "reroute_failed_directions": false,
+        "prune_failed_fallbacks": false
       }
     }
   ],
@@ -109,7 +160,42 @@
           "id": "oracle-x2api",
           "name": "x2api-gateway",
           "value": "env.BIFROST_X2API_KEY",
-          "models": ["chatgpt-latest", "gpt-image-2", "gpt-image-2.5", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "whisper-1"],
+          "models": ["chatgpt-latest", "gpt-image-2.5", "whisper-1"],
+          "weight": 1
+        }
+      ]
+    },
+    "cpa": {
+      "network_config": {
+        "base_url": "http://cpa:8317",
+        "allow_private_network": true,
+        "max_retries": 0,
+        "default_request_timeout_in_seconds": 90
+      },
+      "custom_provider_config": {
+        "base_provider_type": "openai",
+        "is_key_less": false
+      },
+      "concurrency_and_buffer_size": {
+        "concurrency": 10,
+        "buffer_size": 100
+      },
+      "send_back_raw_response": true,
+      "keys": [
+        {
+          "id": "oracle-cpa",
+          "name": "oracle-cpa",
+          "value": "env.BIFROST_CPA_KEY",
+          "models": [
+            "gemini-3.5-flash-lite", "gemini-3.6-flash-high",
+            "gemini-3.7-flash-high", "gemini-3.8-flash-high",
+            "gemini-3-flash", "gemini-pro-agent", "gemini-3.1-pro-low",
+            "gemini-3.1-flash-lite", "gemini-3.1-flash-image",
+            "gpt-oss-120b-medium", "gpt-5.5", "codex-auto-review",
+            "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.6-sol",
+            "gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol",
+            "gpt-image-2"
+          ],
           "weight": 1
         }
       ]

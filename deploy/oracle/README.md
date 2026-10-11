@@ -43,3 +43,35 @@ local health endpoint respond. Provider, credential and database files are
 preserved. Image deployment does not automatically revert database migrations.
 
 The initial release uses this same GitHub Actions workflow.
+
+## CPA and unified model routing
+
+CPA runs separately from Bifrost with `cpa-compose.yaml`. Its listener is bound
+to `127.0.0.1:8317`, and Bifrost reaches it at `http://cpa:8317` through the
+existing `x2api-entry` Docker network. Install the Compose file under `/opt/cpa`
+and the runtime configuration under `/opt/cpa/data/config.yaml`.
+
+Use `cpa-config.example.yaml` as the credential-free template. Replace its API
+key placeholder with the runtime key and set the same value as
+`BIFROST_CPA_KEY` in `/etc/bifrost/bifrost.env`. Keep OAuth JSON files in
+`/opt/cpa/data/auths` with mode `0600`. Credentials use `proxy_url: direct`;
+keep renewable `refresh_token` values when converting imported OAuth accounts.
+Runtime credentials, passwords, account pools and backup files stay outside Git.
+
+Clients can send bare model names to Bifrost. The virtual key assigns provider
+weights, and the adaptive-routing plugin selects eligible providers and keys
+using observed errors and latency. The upstream catalog continues to expose
+provider-prefixed IDs for explicit selection.
+
+The bare `gpt-image-2.5` entry uses the native routing plugin: x2api's
+`gpt-image-2.5` is primary, and CPA's `gpt-image-2` is the fallback. The rule
+applies to `oracle-openai`; explicit provider-prefixed requests remain pinned.
+The x2api image allowlist contains only `gpt-image-2.5`. Claude models are
+excluded from CPA. Gemini images use the chat-completions endpoint, with
+provider-specific `image_config` in `extra_params` and the
+`x-bf-passthrough-extra-params: true` header. Their image payload is available in
+`extra_fields.raw_response.choices[0].message.images`.
+
+Native error-triggered image fallbacks cannot determine whether a timed-out
+upstream already accepted generation, so ambiguous failures can create another
+image. No fault-injection verification of this fallback has been performed.
