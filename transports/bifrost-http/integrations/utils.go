@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -16,6 +17,18 @@ import (
 	"github.com/maximhq/bifrost/transports/bifrost-http/lib"
 	"github.com/valyala/fasthttp"
 )
+
+type bifrostConverterError struct {
+	bifrostError *schemas.BifrostError
+}
+
+// Error 向通用 converter 返回原始网关错误消息。
+func (e *bifrostConverterError) Error() string {
+	if e.bifrostError.Error != nil {
+		return e.bifrostError.Error.Message
+	}
+	return "request conversion failed"
+}
 
 var bifrostContextKeyProvider = schemas.BifrostContextKey("provider")
 
@@ -33,13 +46,20 @@ var availableIntegrations = []string{
 // newBifrostErrorWithCode is like newBifrostError but sets an explicit HTTP status code.
 func newBifrostErrorWithCode(err error, message string, statusCode int) *schemas.BifrostError {
 	e := newBifrostError(err, message)
+	var typed *bifrostConverterError
+	if errors.As(err, &typed) && e.StatusCode != nil {
+		return e
+	}
 	e.StatusCode = &statusCode
 	return e
 }
 
-// newBifrostError wraps a standard error into a BifrostError with IsBifrostError set to false.
-// This helper function reduces code duplication when handling non-Bifrost errors.
+// newBifrostError 保留 typed converter 网关错误，普通错误仍按标准方式包装。
 func newBifrostError(err error, message string) *schemas.BifrostError {
+	var typed *bifrostConverterError
+	if errors.As(err, &typed) && typed.bifrostError != nil {
+		return typed.bifrostError
+	}
 	if err == nil {
 		return &schemas.BifrostError{
 			IsBifrostError: false,

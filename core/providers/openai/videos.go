@@ -2,7 +2,6 @@ package openai
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -11,7 +10,7 @@ import (
 	"github.com/maximhq/bifrost/core/schemas"
 )
 
-// ToOpenAIVideoGenerationRequest converts a Bifrost Video Request to OpenAI format
+// ToOpenAIVideoGenerationRequest 区分标准生成与延长请求，保留延长源和秒数字段。
 func ToOpenAIVideoGenerationRequest(bifrostReq *schemas.BifrostVideoGenerationRequest) (*OpenAIVideoGenerationRequest, error) {
 	if bifrostReq == nil || bifrostReq.Input == nil || bifrostReq.Input.Prompt == "" {
 		return nil, fmt.Errorf("bifrost request, input, or prompt is nil/empty")
@@ -20,6 +19,13 @@ func ToOpenAIVideoGenerationRequest(bifrostReq *schemas.BifrostVideoGenerationRe
 	req := &OpenAIVideoGenerationRequest{
 		Model:  bifrostReq.Model,
 		Prompt: bifrostReq.Input.Prompt,
+	}
+	if bifrostReq.Input.Extension != nil {
+		req.ExtraParams = map[string]interface{}{"video_extension": bifrostReq.Input.Extension}
+		if bifrostReq.Params != nil {
+			req.Seconds = bifrostReq.Params.Seconds
+		}
+		return req, nil
 	}
 
 	if bifrostReq.Input.InputReference != nil {
@@ -136,7 +142,18 @@ func parseVideoEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *
 		}
 	}
 
-	mimeType := http.DetectContentType(openaiReq.Video.Bytes)
+	if err := writeOpenAIVideoFile(writer, openaiReq.Video.Bytes); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return providerUtils.NewBifrostOperationError("failed to close multipart writer", err)
+	}
+	return nil
+}
+
+// writeOpenAIVideoFile 复用编辑和延长请求的标准视频文件 part 编码。
+func writeOpenAIVideoFile(writer *multipart.Writer, data []byte) *schemas.BifrostError {
+	mimeType := http.DetectContentType(data)
 	if !validOpenAIVideoEditMimeTypes[mimeType] {
 		mimeType = "video/mp4"
 	}
@@ -147,12 +164,8 @@ func parseVideoEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *
 	if err != nil {
 		return providerUtils.NewBifrostOperationError("failed to create form part for video", err)
 	}
-	if _, err := part.Write(openaiReq.Video.Bytes); err != nil {
+	if _, err := part.Write(data); err != nil {
 		return providerUtils.NewBifrostOperationError("failed to write video file data", err)
-	}
-
-	if err := writer.Close(); err != nil {
-		return providerUtils.NewBifrostOperationError("failed to close multipart writer", err)
 	}
 
 	return nil
@@ -234,34 +247,67 @@ func parseVideoGenerationFormDataBodyFromRequest(writer *multipart.Writer, opena
 	if err := writer.WriteField("prompt", openaiReq.Prompt); err != nil {
 		return providerUtils.NewBifrostOperationError("failed to write prompt field", err)
 	}
-
-	// Add optional model field
-	if openaiReq.Model != "" {
-		if err := writer.WriteField("model", openaiReq.Model); err != nil {
-			return providerUtils.NewBifrostOperationError("failed to write model field", err)
-		}
-	}
-	if source, extending := openaiReq.ExtraParams["video"]; extending {
-		for _, name := range []string{"video", "duration", "video_extension_start_time"} {
-			value, exists := openaiReq.ExtraParams[name]
-			if name == "video" {
-				value, exists = source, true
+	if extension, extending := openaiReq.ExtraParams["video_extension"].(*schemas.VideoExtensionInput); extending {
+		if providerName == schemas.ModelProvider("grok2api") {
+			if err := writer.WriteField("model", openaiReq.Model); err != nil {
+				return providerUtils.NewBifrostOperationError("failed to write model", err)
 			}
-			if !exists {
-				continue
+			source := map[string]string{}
+			switch {
+			case extension.Video.URL != "":
+				source["url"] = extension.Video.URL
+			case extension.Video.FileID != "":
+				source["file_id"] = extension.Video.FileID
+			default:
+				return providerUtils.NewBifrostOperationError("grok2api extensions require a resolved URL or file_id", nil)
 			}
-			raw, err := json.Marshal(value)
+			raw, err := providerUtils.MarshalSorted(source)
 			if err != nil {
-				return providerUtils.NewBifrostOperationError("invalid "+name, err)
+				return providerUtils.NewBifrostOperationError("invalid source video", err)
 			}
-			if err := writer.WriteField(name, string(raw)); err != nil {
-				return providerUtils.NewBifrostOperationError("failed to write "+name, err)
+			if err := writer.WriteField("video", string(raw)); err != nil {
+				return providerUtils.NewBifrostOperationError("failed to write video", err)
+			}
+			if extension.Duration != nil {
+				if err := writer.WriteField("duration", fmt.Sprint(*extension.Duration)); err != nil {
+					return providerUtils.NewBifrostOperationError("failed to write duration", err)
+				}
+			}
+			if extension.VideoExtensionStartTime != nil {
+				if err := writer.WriteField("video_extension_start_time", fmt.Sprint(*extension.VideoExtensionStartTime)); err != nil {
+					return providerUtils.NewBifrostOperationError("failed to write video_extension_start_time", err)
+				}
+			}
+		} else {
+			if openaiReq.Seconds == nil {
+				return providerUtils.NewBifrostOperationError("seconds is required for OpenAI extensions", nil)
+			}
+			if err := writer.WriteField("seconds", *openaiReq.Seconds); err != nil {
+				return providerUtils.NewBifrostOperationError("failed to write seconds", err)
+			}
+			if len(extension.Video.Video) > 0 {
+				if err := writeOpenAIVideoFile(writer, extension.Video.Video); err != nil {
+					return err
+				}
+			} else if extension.Video.ID != "" {
+				if err := writer.WriteField("video[id]", extension.Video.ID); err != nil {
+					return providerUtils.NewBifrostOperationError("failed to write video[id]", err)
+				}
+			} else {
+				return providerUtils.NewBifrostOperationError("OpenAI extensions require a video file or id", nil)
 			}
 		}
 		if err := writer.Close(); err != nil {
 			return providerUtils.NewBifrostOperationError("failed to close multipart writer", err)
 		}
 		return nil
+	}
+
+	// Add optional model field
+	if openaiReq.Model != "" {
+		if err := writer.WriteField("model", openaiReq.Model); err != nil {
+			return providerUtils.NewBifrostOperationError("failed to write model field", err)
+		}
 	}
 
 	// Add optional seconds field

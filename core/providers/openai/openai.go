@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/tidwall/gjson"
 
 	providerUtils "github.com/maximhq/bifrost/core/providers/utils"
 	schemas "github.com/maximhq/bifrost/core/schemas"
@@ -4345,10 +4346,51 @@ func (provider *OpenAIProvider) OCR(ctx *schemas.BifrostContext, key schemas.Key
 	return nil, providerUtils.NewUnsupportedOperationError(schemas.OCRRequest, provider.GetProviderKey())
 }
 
-// VideoGeneration performs a video generation request via the OpenAI API.
+// VideoGeneration 在提供方权限边界内读取 Grok 延长源任务，并隔离生成与读取路径。
 func (provider *OpenAIProvider) VideoGeneration(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoGenerationRequest) (*schemas.BifrostVideoGenerationResponse, *schemas.BifrostError) {
 	if err := providerUtils.CheckOperationAllowed(schemas.OpenAI, provider.customProviderConfig, schemas.VideoGenerationRequest); err != nil {
 		return nil, err
+	}
+	if request.Input != nil && request.Input.Extension != nil {
+		if ctx.Value(schemas.BifrostContextKeyDirectKey) != nil {
+			return nil, &schemas.BifrostError{IsBifrostError: true, StatusCode: schemas.Ptr(403), AllowFallbacks: schemas.Ptr(false),
+				Error: &schemas.ErrorField{Message: "video extensions do not support direct keys"}}
+		}
+		if binding := request.SourceBinding; binding != nil {
+			if err := binding.Validate(ctx, request); err != nil {
+				return nil, err
+			}
+			if binding.Provider != provider.GetProviderKey() || (binding.KeyID != "" && binding.KeyID != key.ID) {
+				return nil, &schemas.BifrostError{IsBifrostError: true, StatusCode: schemas.Ptr(400), AllowFallbacks: schemas.Ptr(false),
+					Error: &schemas.ErrorField{Message: "video extension provider key must match the source key"}}
+			}
+		}
+		extension := request.Input.Extension
+		if provider.GetProviderKey() == schemas.ModelProvider("grok2api") && extension.Video.ID != "" {
+			sourceCtx := schemas.NewBifrostContext(ctx, schemas.NoDeadline)
+			defer sourceCtx.Cancel()
+			// nil 屏蔽父请求固定的 extensions URLPath，让 retrieve override 正常生效。
+			sourceCtx.SetValue(schemas.BifrostContextKeyURLPath, nil)
+			sourceCtx.SetValue(schemas.BifrostContextKeyVideoOutputRequested, false)
+			source, sourceErr := provider.VideoRetrieve(sourceCtx, key, &schemas.BifrostVideoRetrieveRequest{
+				Provider: provider.GetProviderKey(), ID: extension.Video.ID,
+			})
+			if sourceErr != nil {
+				return nil, sourceErr
+			}
+			sourceURL := source.ContentURL
+			if value := providerUtils.GetJSONField(source.Video, "url"); value.Exists() && value.Type == gjson.String && value.String() != "" {
+				sourceURL = value.String()
+			}
+			if source.Status != schemas.VideoStatusCompleted || sourceURL == "" {
+				return nil, providerUtils.NewBifrostOperationError("source video is not completed or has no reusable URL", nil)
+			}
+			copyRequest, copyInput, copyExtension := *request, *request.Input, *extension
+			copyExtension.Video = schemas.VideoInput{URL: sourceURL}
+			copyInput.Extension = &copyExtension
+			copyRequest.Input = &copyInput
+			request = &copyRequest
+		}
 	}
 
 	return HandleOpenAIVideoGenerationRequest(
@@ -4534,7 +4576,7 @@ func (provider *OpenAIProvider) VideoList(ctx *schemas.BifrostContext, key schem
 	)
 }
 
-// HandleOpenAIVideoGenerationRequest 复用视频任务协议，延长时以同一凭据解析源任务引用。
+// HandleOpenAIVideoGenerationRequest 发送标准视频或延长请求，并将 Grok request_id 映射为任务 ID。
 func HandleOpenAIVideoGenerationRequest(
 	ctx *schemas.BifrostContext,
 	client *fasthttp.Client,
@@ -4574,28 +4616,6 @@ func HandleOpenAIVideoGenerationRequest(
 	}
 	if reqBody == nil {
 		return nil, providerUtils.NewBifrostOperationError("video generation input is not provided", nil)
-	}
-	if source, ok := reqBody.ExtraParams["video"].(map[string]string); ok && source["id"] != "" && providerName != schemas.OpenAI {
-		videoID := providerUtils.StripVideoIDProviderSuffix(source["id"], providerName)
-		escapedID, idErr := providerUtils.EscapeResourceID(videoID, "video_id")
-		if idErr != nil {
-			return nil, idErr
-		}
-		// 延长操作先以同一上游凭据读取源任务，避免把 Bifrost 的提供方后缀或未完成任务交给上游。
-		sourceURL := strings.TrimSuffix(url, "/extensions") + "/" + escapedID
-		sourceVideo, sourceErr := HandleOpenAIVideoRetrieveRequest(
-			ctx, client, sourceURL,
-			&schemas.BifrostVideoRetrieveRequest{Provider: providerName, ID: videoID},
-			key, extraHeaders, authHeaders, providerName, false, false, nil, logger,
-		)
-		if sourceErr != nil {
-			return nil, sourceErr
-		}
-		if sourceVideo.Status != schemas.VideoStatusCompleted || sourceVideo.Video == nil || sourceVideo.Video.URL == nil || *sourceVideo.Video.URL == "" {
-			return nil, providerUtils.NewBifrostOperationError("source video is not completed or has no reusable URL", nil)
-		}
-		reqBody.ExtraParams = maps.Clone(reqBody.ExtraParams)
-		reqBody.ExtraParams["video"] = map[string]string{"url": *sourceVideo.Video.URL}
 	}
 
 	// Create multipart form
@@ -4647,6 +4667,19 @@ func HandleOpenAIVideoGenerationRequest(
 		return nil, bifrostErr
 	}
 
+	if response.ID == "" && request.Input.Extension != nil && providerName == schemas.ModelProvider("grok2api") {
+		taskID := providerUtils.GetJSONField(responseBody, "request_id")
+		if taskID.Type != gjson.String || strings.TrimSpace(taskID.String()) == "" {
+			return nil, providerUtils.NewBifrostOperationError("video extension response has no task id", nil)
+		}
+		response.ID = taskID.String()
+		if response.Status == "" {
+			response.Status = schemas.VideoStatusQueued
+		}
+		if response.Object == "" {
+			response.Object = "video"
+		}
+	}
 	if response.ID != "" {
 		response.ID = providerUtils.AddVideoIDProviderSuffix(response.ID, providerName)
 	}
@@ -5427,7 +5460,7 @@ func HandleOpenAIImageEditRequest(
 	mt, mh := providerUtils.StartPhaseSpan(ctx, "request-marshal")
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	if err := parseImageEditFormDataBodyFromRequest(writer, openaiReq, providerName); err != nil {
+	if err := parseImageEditFormDataBodyFromRequest(writer, openaiReq, providerName, ctx); err != nil {
 		if mt != nil {
 			mt.EndSpan(mh, schemas.SpanStatusError, "multipart encode failed")
 		}
@@ -5441,7 +5474,7 @@ func HandleOpenAIImageEditRequest(
 	bodyData := body.Bytes()
 	if len(openaiReq.SelectionRegions) > 0 || len(openaiReq.MultiRegionEdits) > 0 {
 		var encodeErr error
-		bodyData, encodeErr = encodeRegionImageEdit(openaiReq)
+		bodyData, encodeErr = encodeRegionImageEdit(ctx, openaiReq)
 		if encodeErr != nil {
 			return nil, providerUtils.NewBifrostOperationError("failed to encode region image edit", encodeErr)
 		}
@@ -5564,7 +5597,7 @@ func HandleOpenAIImageEditStreamRequest(
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	if bifrostErr := parseImageEditFormDataBodyFromRequest(writer, reqBody, providerName); bifrostErr != nil {
+	if bifrostErr := parseImageEditFormDataBodyFromRequest(writer, reqBody, providerName, ctx); bifrostErr != nil {
 		if mt != nil {
 			mt.EndSpan(mh, schemas.SpanStatusError, "multipart encode failed")
 		}

@@ -1,5 +1,7 @@
 package schemas
 
+import "encoding/json"
+
 // VideoStatus is the lifecycle status of a video job.
 type VideoStatus string
 
@@ -63,12 +65,35 @@ type VideoObject struct {
 // --- Video Generation ---
 
 type BifrostVideoGenerationRequest struct {
-	Provider       ModelProvider              `json:"provider"`
-	Model          string                     `json:"model"`
-	Input          *VideoGenerationInput      `json:"input"`
-	Params         *VideoGenerationParameters `json:"params,omitempty"`
-	Fallbacks      []Fallback                 `json:"fallbacks,omitempty"`
-	RawRequestBody []byte                     `json:"-"`
+	Provider       ModelProvider                `json:"provider"`
+	Model          string                       `json:"model"`
+	Input          *VideoGenerationInput        `json:"input"`
+	Params         *VideoGenerationParameters   `json:"params,omitempty"`
+	Fallbacks      []Fallback                   `json:"fallbacks,omitempty"`
+	RawRequestBody []byte                       `json:"-"`
+	SourceBinding  *VideoExtensionSourceBinding `json:"-"`
+}
+
+type VideoExtensionSourceBinding struct {
+	Provider ModelProvider
+	Model    string
+	KeyID    string
+}
+
+// Validate 校验延长源绑定，路由只能保留原提供方、模型与注册账号，不能增加回退。
+func (binding *VideoExtensionSourceBinding) Validate(ctx *BifrostContext, request *BifrostVideoGenerationRequest) *BifrostError {
+	if ctx.Value(BifrostContextKeyDirectKey) != nil {
+		return &BifrostError{IsBifrostError: true, StatusCode: Ptr(403), AllowFallbacks: Ptr(false),
+			Error: &ErrorField{Message: "video extensions do not support direct keys"}}
+	}
+	keyID, _ := ctx.Value(BifrostContextKeyAPIKeyID).(string)
+	if request == nil || request.Input == nil || request.Input.Extension == nil ||
+		request.Provider != binding.Provider || request.Model != binding.Model || len(request.Fallbacks) > 0 ||
+		(binding.KeyID != "" && keyID != binding.KeyID) {
+		return &BifrostError{IsBifrostError: true, StatusCode: Ptr(400), AllowFallbacks: Ptr(false),
+			Error: &ErrorField{Message: "video extension routing must preserve the source provider, model and key without fallbacks"}}
+	}
+	return nil
 }
 
 func (b *BifrostVideoGenerationRequest) GetRawRequestBody() []byte {
@@ -83,9 +108,16 @@ func (b *BifrostVideoGenerationRequest) GetExtraParams() map[string]interface{} 
 }
 
 type VideoGenerationInput struct {
-	Prompt         string  `json:"prompt"`
-	InputReference *string `json:"input_reference,omitempty"` // Primary image for image-to-video (OpenAI-compatible)
-	VideoURI       *string `json:"video_uri,omitempty"`       // Source video for video-to-video and video tool tasks
+	Prompt         string               `json:"prompt"`
+	InputReference *string              `json:"input_reference,omitempty"` // Primary image for image-to-video (OpenAI-compatible)
+	VideoURI       *string              `json:"video_uri,omitempty"`       // Source video for video-to-video and video tool tasks
+	Extension      *VideoExtensionInput `json:"extension,omitempty"`
+}
+
+type VideoExtensionInput struct {
+	Video                   VideoInput `json:"video"`
+	Duration                *int       `json:"duration,omitempty"`
+	VideoExtensionStartTime *float64   `json:"video_extension_start_time,omitempty"`
 }
 
 type VideoGenerationParameters struct {
@@ -110,7 +142,7 @@ const DefaultVideoDuration = "8"
 // BifrostVideoGenerationResponse represents the video generation job response in bifrost format.
 type BifrostVideoGenerationResponse struct {
 	ContentURL         string             `json:"content_url,omitempty"`
-	Video              *VideoOutput       `json:"video,omitempty"`
+	Video              json.RawMessage    `json:"video,omitempty"`
 	ID                 string             `json:"id,omitempty"`
 	CompletedAt        *int64             `json:"completed_at,omitempty"`          // Unix timestamp (seconds) when the job completed
 	CreatedAt          int64              `json:"created_at,omitempty"`            // Unix timestamp (seconds) when the job was created
@@ -163,15 +195,15 @@ func getSecondsFromVideoRequest(req *BifrostRequest) *string {
 	return nil
 }
 
-// BackfillParams populates response fields from the original request that are needed
-// for cost calculation but may not be returned by the provider.
-// - Seconds (duration from request params or default)
+// BackfillParams 回填计费字段，延长请求保留上游返回的拼接总时长。
 func (r *BifrostVideoGenerationResponse) BackfillParams(req *BifrostRequest) {
 	if r == nil || req == nil {
 		return
 	}
 	seconds := getSecondsFromVideoRequest(req)
-	if seconds != nil {
+	isExtension := req.VideoGenerationRequest != nil && req.VideoGenerationRequest.Input != nil &&
+		req.VideoGenerationRequest.Input.Extension != nil
+	if seconds != nil && !isExtension {
 		r.Seconds = seconds
 	}
 	if r.Model == "" {
@@ -215,12 +247,13 @@ type VideoEditInput struct {
 	Prompt string     `json:"prompt"`
 }
 
-// VideoInput is the source video for an edit, in whichever form the caller supplied it. Exactly
-// one of the three is expected; providers that cannot accept a given form reject it.
+// VideoInput is the source video for an edit or extension. Exactly one source is expected;
+// providers that cannot accept a given form reject it. FileID is used by Grok extensions.
 type VideoInput struct {
-	Video []byte `json:"video,omitempty"` // raw bytes, from a multipart upload
-	URL   string `json:"url,omitempty"`   // public URL or data URI
-	ID    string `json:"id,omitempty"`    // provider-side video ID
+	Video  []byte `json:"video,omitempty"` // raw bytes, from a multipart upload
+	URL    string `json:"url,omitempty"`   // public URL or data URI
+	ID     string `json:"id,omitempty"`    // provider-side video ID
+	FileID string `json:"file_id,omitempty"`
 }
 
 // VideoEditParameters holds the knobs video edit APIs actually accept. Geometry and duration are

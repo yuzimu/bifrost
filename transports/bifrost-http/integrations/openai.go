@@ -3802,7 +3802,8 @@ func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interfac
 		return errors.New("invalid request type for image edit")
 	}
 	if strings.HasPrefix(string(ctx.Request.Header.ContentType()), "application/json") {
-		return parseOpenAIRegionEditJSON(ctx.Request.Body(), imageEditReq)
+		return parseOpenAIRegionEditJSON(ctx.Request.Body(), imageEditReq,
+			strings.EqualFold(string(ctx.Request.Header.Peek("x-bf-passthrough-extra-params")), "true"))
 	}
 
 	// Parse multipart form
@@ -3818,12 +3819,12 @@ func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interfac
 	}
 	imageEditReq.Model = modelValues[0]
 
-	// Extract prompt (required)
+	// 多区域编辑允许仅使用各组 prompt，统一校验在选区字段解析后执行。
 	promptValues := form.Value["prompt"]
-	if len(promptValues) == 0 || promptValues[0] == "" {
-		return errors.New("prompt field is required")
+	prompt := ""
+	if len(promptValues) > 0 {
+		prompt = promptValues[0]
 	}
-	prompt := promptValues[0]
 
 	// Extract images (required) - handle both "image[]" and "image"
 	var imageFiles []*multipart.FileHeader
@@ -3896,6 +3897,47 @@ func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interfac
 	if sizeValues := form.Value["size"]; len(sizeValues) > 0 && sizeValues[0] != "" {
 		size := sizeValues[0]
 		imageEditReq.Size = &size
+	}
+	if values := form.Value["resolution"]; len(values) > 0 {
+		imageEditReq.Resolution = schemas.Ptr(values[0])
+	}
+	if values := form.Value["aspect_ratio"]; len(values) > 0 {
+		imageEditReq.AspectRatio = schemas.Ptr(values[0])
+	}
+	if values := form.Value["storage_options"]; len(values) > 0 {
+		if !json.Valid([]byte(values[0])) {
+			return errors.New("storage_options must be valid JSON")
+		}
+		imageEditReq.StorageOptions = json.RawMessage(values[0])
+	}
+	if values := form.Value["extra_params"]; len(values) > 0 {
+		if !strings.EqualFold(string(ctx.Request.Header.Peek("x-bf-passthrough-extra-params")), "true") {
+			return errors.New("extra_params requires x-bf-passthrough-extra-params: true")
+		}
+		var extra map[string]interface{}
+		if err := json.Unmarshal([]byte(values[0]), &extra); err != nil {
+			return err
+		}
+		imageEditReq.SetExtraParams(extra)
+	}
+	for name, values := range form.Value {
+		switch name {
+		case "model", "prompt", "selection_regions", "multi_region_edits", "n", "size", "quality", "response_format",
+			"background", "input_fidelity", "partial_images", "output_format", "num_inference_steps", "seed", "output_compression",
+			"negative_prompt", "user", "type", "stream", "fallbacks", "resolution", "aspect_ratio", "storage_options", "extra_params":
+		default:
+			return fmt.Errorf("unsupported image edit field %s", name)
+		}
+		if name != "fallbacks" && len(values) != 1 {
+			return fmt.Errorf("%s must occur once", name)
+		}
+	}
+	for name := range form.File {
+		switch name {
+		case "image", "image[]", "mask":
+		default:
+			return fmt.Errorf("unsupported image edit file %s", name)
+		}
 	}
 
 	if qualityValues := form.Value["quality"]; len(qualityValues) > 0 && qualityValues[0] != "" {
@@ -4004,7 +4046,7 @@ func parseOpenAIImageEditMultipartRequest(ctx *fasthttp.RequestCtx, req interfac
 		imageEditReq.Fallbacks = fallbackValues
 	}
 
-	return nil
+	return validateOpenAIRegionEdit(imageEditReq)
 }
 
 // parseOpenAIImageVariationMultipartRequest parses multipart/form-data for image variation requests

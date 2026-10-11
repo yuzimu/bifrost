@@ -5510,6 +5510,10 @@ func (bifrost *Bifrost) getProviderByKey(providerKey schemas.ModelProvider) sche
 
 // shouldTryFallbacks handles the primary error and returns true if we should proceed with fallbacks, false if we should return immediately
 func (bifrost *Bifrost) shouldTryFallbacks(req *schemas.BifrostRequest, primaryErr *schemas.BifrostError) bool {
+	// 延长任务的源账号和模型已绑定，任何失败都不能转为新的生成或其他回退。
+	if video := req.VideoGenerationRequest; video != nil && video.SourceBinding != nil {
+		return false
+	}
 	// If no primary error, we succeeded
 	if primaryErr == nil {
 		bifrost.logger.Debug("no primary error, we should not try fallbacks")
@@ -5707,6 +5711,16 @@ func populateLatencyExtraFields(ctx *schemas.BifrostContext, resp *schemas.Bifro
 func (bifrost *Bifrost) handleRequest(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) (resp *schemas.BifrostResponse, bifrostErr *schemas.BifrostError) {
 	defer bifrost.releaseBifrostRequest(req)
 	provider, model, fallbacks := req.GetRequestFields()
+	if video := req.VideoGenerationRequest; video != nil && video.Input != nil &&
+		video.Input.Extension != nil && video.SourceBinding == nil {
+		return nil, &schemas.BifrostError{IsBifrostError: true, StatusCode: schemas.Ptr(400), AllowFallbacks: schemas.Ptr(false),
+			Error: &schemas.ErrorField{Message: "video extensions require a gateway source binding"}}
+	}
+	var extensionBinding *schemas.VideoExtensionSourceBinding
+	if video := req.VideoGenerationRequest; video != nil && video.SourceBinding != nil {
+		binding := *video.SourceBinding
+		extensionBinding = &binding
+	}
 
 	// Handle nil context early to prevent blocking
 	if ctx == nil {
@@ -5773,6 +5787,15 @@ func (bifrost *Bifrost) handleRequest(ctx *schemas.BifrostContext, req *schemas.
 	preDispatchSpan := bifrost.startCoreSpan(ctx, "miscellaneous")
 	// Re-read after PreRequestHook — provider/model/fallbacks may have changed.
 	provider, model, fallbacks = req.GetRequestFields()
+	// 延长源绑定在最终路由后复核，拒绝规则改绑和跨提供方回退。
+	if extensionBinding != nil {
+		if err := extensionBinding.Validate(ctx, req.VideoGenerationRequest); err != nil {
+			bifrost.endCoreSpan(preDispatchSpan)
+			flushPluginLogs(ctx)
+			return nil, err
+		}
+		req.VideoGenerationRequest.SourceBinding = extensionBinding
+	}
 	// Empty provider/model after PreRequestHook means no plugin
 	// could pick a provider for this model — the caller's input is unresolvable.
 	validateErr := validateRequestAfterPreRequestHooks(req)
@@ -6087,6 +6110,11 @@ func (bifrost *Bifrost) handleStreamRequest(ctx *schemas.BifrostContext, req *sc
 // It consolidates queue setup, plugin pipeline execution, enqueue logic, and response handling
 func (bifrost *Bifrost) tryRequest(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) (*schemas.BifrostResponse, *schemas.BifrostError) {
 	provider, model, _ := req.GetRequestFields()
+	var extensionBinding *schemas.VideoExtensionSourceBinding
+	if video := req.VideoGenerationRequest; video != nil && video.SourceBinding != nil {
+		binding := *video.SourceBinding
+		extensionBinding = &binding
+	}
 	pq, err := bifrost.getProviderQueue(provider)
 	if err != nil {
 		bifrostErr := newBifrostError(err)
@@ -6165,6 +6193,17 @@ func (bifrost *Bifrost) tryRequest(ctx *schemas.BifrostContext, req *schemas.Bif
 		bifrostErr := newBifrostErrorFromMsg("bifrost request after plugin hooks cannot be nil")
 		bifrostErr.PopulateExtraFields(req.RequestType, provider, model, model)
 		return nil, bifrostErr
+	}
+
+	// 保留正常短路及 nil 错误，只有继续发送时才复核绑定并结算已执行的 hooks。
+	if extensionBinding != nil {
+		if err := extensionBinding.Validate(ctx, preReq.VideoGenerationRequest); err != nil {
+			_, _ = pipeline.RunPostLLMHooks(ctx, nil, err, preCount)
+			drainAndAttachPluginLogs(ctx)
+			err.AllowFallbacks = schemas.Ptr(false)
+			return nil, err
+		}
+		preReq.VideoGenerationRequest.SourceBinding = extensionBinding
 	}
 
 	// "miscellaneous" phase: field re-read + channel-message setup before enqueue.

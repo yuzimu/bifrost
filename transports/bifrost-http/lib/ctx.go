@@ -703,7 +703,7 @@ func ConvertToBifrostContext(ctx *fasthttp.RequestCtx, store HandlerStore) (*sch
 		}
 		// Add passthrough extra params header support
 		if keyStr == "x-bf-passthrough-extra-params" {
-			if valueStr := string(value); valueStr == "true" {
+			if strings.EqualFold(string(value), "true") {
 				bifrostCtx.SetValue(schemas.BifrostContextKeyPassthroughExtraParams, true)
 			}
 			return true

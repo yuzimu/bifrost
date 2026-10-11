@@ -11,7 +11,7 @@ import (
 )
 
 // encodeRegionImageEdit 保留选区及参考图信息，避免 JSON 扩展被标准表单转换丢弃。
-func encodeRegionImageEdit(request *OpenAIImageEditRequest) ([]byte, error) {
+func encodeRegionImageEdit(ctx *schemas.BifrostContext, request *OpenAIImageEditRequest) ([]byte, error) {
 	images := make([]map[string]string, 0, len(request.Input.Images))
 	for _, image := range request.Input.Images {
 		source := image.URL
@@ -23,7 +23,7 @@ func encodeRegionImageEdit(request *OpenAIImageEditRequest) ([]byte, error) {
 		}
 		images = append(images, map[string]string{"url": source})
 	}
-	return providerUtils.MarshalSorted(struct {
+	body, err := providerUtils.MarshalSorted(struct {
 		Model  string              `json:"model"`
 		Prompt string              `json:"prompt"`
 		Images []map[string]string `json:"images"`
@@ -32,6 +32,19 @@ func encodeRegionImageEdit(request *OpenAIImageEditRequest) ([]byte, error) {
 		Model: request.Model, Prompt: request.Input.Prompt, Images: images,
 		ImageEditParameters: request.ImageEditParameters,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Value(schemas.BifrostContextKeyPassthroughExtraParams) == true {
+		for name := range request.ExtraParams {
+			if name == "input" || name == "image" || name == "stream" || name == "fallbacks" ||
+				name == "selection_regions" || name == "multi_region_edits" || name == "mask" || providerUtils.JSONFieldExists(body, name) {
+				return nil, fmt.Errorf("extra_params.%s conflicts with an image edit field", name)
+			}
+		}
+		return providerUtils.MergeExtraParamsIntoJSON(body, request.ExtraParams)
+	}
+	return body, nil
 }
 
 // ToOpenAIImageGenerationRequest converts a Bifrost Image Request to OpenAI format
@@ -147,7 +160,7 @@ func ToOpenAIImageEditRequest(bifrostReq *schemas.BifrostImageEditRequest) *Open
 }
 
 // parseImageEditFormDataBodyFromRequest 保留标准编辑字段并透传显式选区扩展。
-func parseImageEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *OpenAIImageEditRequest, providerName schemas.ModelProvider) *schemas.BifrostError {
+func parseImageEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *OpenAIImageEditRequest, providerName schemas.ModelProvider, contexts ...*schemas.BifrostContext) *schemas.BifrostError {
 	// Add model field (required)
 	if err := writer.WriteField("model", openaiReq.Model); err != nil {
 		return providerUtils.NewBifrostOperationError("failed to write model field", err)
@@ -236,6 +249,39 @@ func parseImageEditFormDataBodyFromRequest(writer *multipart.Writer, openaiReq *
 	if openaiReq.User != nil {
 		if err := writer.WriteField("user", *openaiReq.User); err != nil {
 			return providerUtils.NewBifrostOperationError("failed to write user field", err)
+		}
+	}
+	if openaiReq.Resolution != nil {
+		if err := writer.WriteField("resolution", *openaiReq.Resolution); err != nil {
+			return providerUtils.NewBifrostOperationError("failed to write resolution", err)
+		}
+	}
+	if openaiReq.AspectRatio != nil {
+		if err := writer.WriteField("aspect_ratio", *openaiReq.AspectRatio); err != nil {
+			return providerUtils.NewBifrostOperationError("failed to write aspect_ratio", err)
+		}
+	}
+	if len(openaiReq.StorageOptions) > 0 {
+		if err := writer.WriteField("storage_options", string(openaiReq.StorageOptions)); err != nil {
+			return providerUtils.NewBifrostOperationError("failed to write storage_options", err)
+		}
+	}
+	if len(contexts) > 0 && contexts[0].Value(schemas.BifrostContextKeyPassthroughExtraParams) == true {
+		if _, err := encodeRegionImageEdit(contexts[0], openaiReq); err != nil {
+			return providerUtils.NewBifrostOperationError("invalid image edit extra_params", err)
+		}
+		for name, value := range openaiReq.ExtraParams {
+			text, ok := value.(string)
+			if !ok {
+				raw, err := providerUtils.MarshalSorted(value)
+				if err != nil {
+					return providerUtils.NewBifrostOperationError("invalid extra_params."+name, err)
+				}
+				text = string(raw)
+			}
+			if err := writer.WriteField(name, text); err != nil {
+				return providerUtils.NewBifrostOperationError("failed to write "+name, err)
+			}
 		}
 	}
 
