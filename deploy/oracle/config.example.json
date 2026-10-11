@@ -53,7 +53,24 @@
           },
           {
             "provider": "x2api",
-            "allowed_models": ["chatgpt-latest", "gpt-image-2.5", "whisper-1"],
+            "allowed_models": [
+              "chatgpt-latest", "gpt-image-2.5", "whisper-1",
+              "gemini-nano-banana-2.1", "gemini-3.1-flash-lite-image", "gemini-3-pro-image",
+              "flow/BELUGA", "flow/HARBOR_SEAL", "flow/GEM_PIX_2",
+              "flow/abra_t2v_4s", "flow/abra_t2v_6s", "flow/abra_t2v_8s", "flow/abra_t2v_10s",
+              "flow/abra_t2v_4s_360p", "flow/abra_t2v_6s_360p", "flow/abra_t2v_8s_360p", "flow/abra_t2v_10s_360p",
+              "flow/veo_3_1_t2v_lite", "flow/veo_3_1_t2v_fast", "flow/veo_3_1_t2v_fast_portrait",
+              "flow/veo_3_1_t2v", "flow/veo_3_1_t2v_portrait",
+              "flow/veo_3_1_extension_lite", "flow/veo_3_1_extend_landscape", "flow/veo_3_1_extend_portrait",
+              "aistudio/gemini-3.8-flash", "aistudio/gemini-3.5-flash-lite", "aistudio/gemini-3.1-pro-preview",
+              "aistudio/gemini-3.6-flash", "aistudio/gemini-3.1-flash-lite", "aistudio/gemini-3-flash-preview",
+              "aistudio/gemini-nano-banana-2.1", "aistudio/gemini-3.1-flash-lite-image", "aistudio/gemini-3.1-flash-image",
+              "aistudio/gemini-3-pro-image", "aistudio/gemini-2.5-flash-image",
+              "aistudio/gemini-pro-latest", "aistudio/gemini-flash-latest", "aistudio/gemini-flash-lite-latest",
+              "aistudio/gemini-robotics-er-2-preview", "aistudio/gemma-4-26b-a4b-it", "aistudio/gemma-4-31b-it",
+              "aistudio/gemini-3.1-flash-lite-preview", "aistudio/gemini-3.5-flash", "aistudio/gemini-3.7-flash",
+              "aistudio/veo-3.1-fast-generate-preview", "aistudio/veo-3.1-lite-generate-preview"
+            ],
             "weight": 1,
             "key_ids": ["oracle-x2api"]
           },
@@ -160,7 +177,24 @@
           "id": "oracle-x2api",
           "name": "x2api-gateway",
           "value": "env.BIFROST_X2API_KEY",
-          "models": ["chatgpt-latest", "gpt-image-2.5", "whisper-1"],
+          "models": [
+            "chatgpt-latest", "gpt-image-2.5", "whisper-1",
+            "gemini-nano-banana-2.1", "gemini-3.1-flash-lite-image", "gemini-3-pro-image",
+            "flow/BELUGA", "flow/HARBOR_SEAL", "flow/GEM_PIX_2",
+            "flow/abra_t2v_4s", "flow/abra_t2v_6s", "flow/abra_t2v_8s", "flow/abra_t2v_10s",
+            "flow/abra_t2v_4s_360p", "flow/abra_t2v_6s_360p", "flow/abra_t2v_8s_360p", "flow/abra_t2v_10s_360p",
+            "flow/veo_3_1_t2v_lite", "flow/veo_3_1_t2v_fast", "flow/veo_3_1_t2v_fast_portrait",
+            "flow/veo_3_1_t2v", "flow/veo_3_1_t2v_portrait",
+            "flow/veo_3_1_extension_lite", "flow/veo_3_1_extend_landscape", "flow/veo_3_1_extend_portrait",
+            "aistudio/gemini-3.8-flash", "aistudio/gemini-3.5-flash-lite", "aistudio/gemini-3.1-pro-preview",
+            "aistudio/gemini-3.6-flash", "aistudio/gemini-3.1-flash-lite", "aistudio/gemini-3-flash-preview",
+            "aistudio/gemini-nano-banana-2.1", "aistudio/gemini-3.1-flash-lite-image", "aistudio/gemini-3.1-flash-image",
+            "aistudio/gemini-3-pro-image", "aistudio/gemini-2.5-flash-image",
+            "aistudio/gemini-pro-latest", "aistudio/gemini-flash-latest", "aistudio/gemini-flash-lite-latest",
+            "aistudio/gemini-robotics-er-2-preview", "aistudio/gemma-4-26b-a4b-it", "aistudio/gemma-4-31b-it",
+            "aistudio/gemini-3.1-flash-lite-preview", "aistudio/gemini-3.5-flash", "aistudio/gemini-3.7-flash",
+            "aistudio/veo-3.1-fast-generate-preview", "aistudio/veo-3.1-lite-generate-preview"
+          ],
           "weight": 1
         }
       ]
