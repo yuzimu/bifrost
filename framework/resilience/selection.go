@@ -92,31 +92,39 @@ func policyCircuitID(p compiledPolicy, t target) (circuitID, bool) {
 	return circuitID{policy: p.Name, target: t}, true
 }
 
+// policyAvailableLocked 仅检查指定策略的共享或逐 key 熔断状态，不混用其他策略的备用目标。
+func (r *Runtime) policyAvailableLocked(p compiledPolicy, t target, now time.Time, id uint64) bool {
+	cid, ok := policyCircuitID(p, t)
+	if !ok && t.key == "" && policyMatches(p, t) && len(p.PrimaryKeyIDs) > 0 {
+		allOpen := true
+		for _, key := range p.PrimaryKeyIDs {
+			perKey := t
+			perKey.key = key
+			c := r.circuits[circuitID{policy: p.Name, target: perKey}]
+			if c == nil || c.state == Closed || (!now.Before(c.openUntil) && (c.probe == 0 || c.probe == id)) {
+				allOpen = false
+				break
+			}
+		}
+		if allOpen {
+			return false
+		}
+	}
+	if !ok {
+		return true
+	}
+	if c := r.circuits[cid]; c != nil && c.state != Closed {
+		if now.Before(c.openUntil) || (c.probe != 0 && c.probe != id) {
+			return false
+		}
+	}
+	return true
+}
+
 func (r *Runtime) availableLocked(t target, now time.Time, id uint64, ignoreHold bool) bool {
 	for _, p := range r.config.Load().policies {
-		cid, ok := policyCircuitID(p, t)
-		if !ok && t.key == "" && policyMatches(p, t) && len(p.PrimaryKeyIDs) > 0 {
-			allOpen := true
-			for _, key := range p.PrimaryKeyIDs {
-				perKey := t
-				perKey.key = key
-				c := r.circuits[circuitID{policy: p.Name, target: perKey}]
-				if c == nil || c.state == Closed || (!now.Before(c.openUntil) && (c.probe == 0 || c.probe == id)) {
-					allOpen = false
-					break
-				}
-			}
-			if allOpen {
-				return false
-			}
-		}
-		if !ok {
-			continue
-		}
-		if c := r.circuits[cid]; c != nil && c.state != Closed {
-			if now.Before(c.openUntil) || (c.probe != 0 && c.probe != id) {
-				return false
-			}
+		if !r.policyAvailableLocked(p, t, now, id) {
+			return false
 		}
 	}
 	if t.key == "" {

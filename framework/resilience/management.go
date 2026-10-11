@@ -289,7 +289,7 @@ func (r *Runtime) redirectTarget(ctx *schemas.BifrostContext, current schemas.Fa
 		moved := false
 		for _, p := range r.config.Load().policies {
 			t := target{provider: current.Provider, model: current.Model, key: current.KeyID}
-			if !policyMatches(p, t) || r.availableLocked(t, now, AttemptID(ctx), true) {
+			if !policyMatches(p, t) || r.policyAvailableLocked(p, t, now, AttemptID(ctx)) {
 				continue
 			}
 			next := schemas.Fallback{Provider: schemas.ModelProvider(p.FallbackProvider), Model: p.FallbackModel}
