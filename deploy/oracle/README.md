@@ -66,8 +66,13 @@ provider-prefixed IDs for explicit selection.
 The bare `gpt-image-2.5` entry uses the native routing plugin: x2api's
 `gpt-image-2.5` is primary, and CPA's `gpt-image-2` is the fallback. The rule
 applies to `oracle-openai`; explicit provider-prefixed requests remain pinned.
-The x2api image allowlist contains only `gpt-image-2.5`. Claude models are
-excluded from CPA. Gemini images use the chat-completions endpoint, with
+The x2api ChatGPT image entry is `gpt-image-2.5`; the example configuration also
+lists the native `flow/` and `aistudio/` model namespaces and three canonical
+Google image families. Both provider-key and virtual-key allowlists must match.
+These entries grant routing permission; they do not establish account readiness
+or successful inference. Select `x2api/flow/<model>` or
+`x2api/aistudio/<model>` explicitly when checking an individual channel.
+Claude models are excluded from CPA. CPA Gemini images use the chat-completions endpoint, with
 provider-specific `image_config` in `extra_params` and the
 `x-bf-passthrough-extra-params: true` header. Their image payload is available in
 `extra_fields.raw_response.choices[0].message.images`.
@@ -75,3 +80,9 @@ provider-specific `image_config` in `extra_params` and the
 Native error-triggered image fallbacks cannot determine whether a timed-out
 upstream already accepted generation, so ambiguous failures can create another
 image. No fault-injection verification of this fallback has been performed.
+
+For native X2API Google models, keep the channel fallback policy inside X2API,
+which tracks upstream acceptance and parameter qualification. Do not attach the
+ChatGPT/CPA fallback rule to Google media requests. Flow video extension and
+recovery use X2API's own `mode` and `source_video_id` contract; the standard
+Bifrost `/videos/extensions` contract is different and must not be substituted.
