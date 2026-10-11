@@ -86,3 +86,7 @@ which tracks upstream acceptance and parameter qualification. Do not attach the
 ChatGPT/CPA fallback rule to Google media requests. Flow video extension and
 recovery use X2API's own `mode` and `source_video_id` contract; the standard
 Bifrost `/videos/extensions` contract is different and must not be substituted.
+Use `response_format=b64_json` for X2API images through `api.mooo.si`: the current
+URL response retains the upstream internal media origin. Native video generation,
+content retrieval and extension are available through `x2api.mooo.si` using the
+X2API key. The Bifrost virtual key and upstream X2API key are separate credentials.
