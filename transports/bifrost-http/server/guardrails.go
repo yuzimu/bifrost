@@ -22,6 +22,10 @@ type hostGuardrailPlugin struct {
 }
 
 type guardrailInputReadyKey struct{ plugin *hostGuardrailPlugin }
+type guardrailInputTarget struct {
+	provider schemas.ModelProvider
+	model    string
+}
 type guardrailJudgeInternalKey struct{}
 
 func (*hostGuardrailPlugin) GuardrailPriority() bool { return true }
@@ -29,10 +33,13 @@ func (*hostGuardrailPlugin) GuardrailPriority() bool { return true }
 // Cleanup 不销毁热更新前请求的快照，完成和取消仍由护栏请求 manager 回收。
 func (*hostGuardrailPlugin) Cleanup() error { return nil }
 
-// PreLLMHook 同一 attempt 只校验一次；前置校验和普通 pipeline 共用输出状态。
+// PreLLMHook 复用同一目标的前置校验，路由改变后按实际目标重新匹配规则。
 func (p *hostGuardrailPlugin) PreLLMHook(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) (*schemas.BifrostRequest, *schemas.LLMPluginShortCircuit, error) {
 	if internal, _ := ctx.Value(guardrailJudgeInternalKey{}).(bool); internal {
 		return req, nil, nil
+	}
+	if req == nil {
+		return p.Plugin.PreLLMHook(ctx, req)
 	}
 	if req != nil && req.RequestType == schemas.RealtimeRequest {
 		if err := p.ValidateRealtimeOutput(ctx, req); err != nil {
@@ -40,12 +47,14 @@ func (p *hostGuardrailPlugin) PreLLMHook(ctx *schemas.BifrostContext, req *schem
 		}
 	}
 	key := guardrailInputReadyKey{p}
-	if ready, _ := ctx.Value(key).(bool); ready {
+	provider, model, _ := req.GetRequestFields()
+	target := guardrailInputTarget{provider: provider, model: model}
+	if ready, ok := ctx.Value(key).(guardrailInputTarget); ok && ready == target {
 		return req, nil, nil
 	}
 	next, short, err := p.Plugin.PreLLMHook(ctx, req)
 	if short == nil && err == nil {
-		ctx.SetValue(key, true)
+		ctx.SetValue(key, target)
 	}
 	return next, short, err
 }
@@ -54,7 +63,7 @@ func (p *hostGuardrailPlugin) PreLLMHook(ctx *schemas.BifrostContext, req *schem
 func (p *hostGuardrailPlugin) PostLLMHook(ctx *schemas.BifrostContext, resp *schemas.BifrostResponse, err *schemas.BifrostError) (*schemas.BifrostResponse, *schemas.BifrostError, error) {
 	final, _ := ctx.Value(schemas.BifrostContextKeyStreamEndIndicator).(bool)
 	if err != nil || ctx.Value(schemas.BifrostContextKeyStreamStartTime) == nil || final {
-		defer ctx.SetValue(guardrailInputReadyKey{p}, false)
+		defer ctx.ClearValue(guardrailInputReadyKey{p})
 	}
 	return p.Plugin.PostLLMHook(ctx, resp, err)
 }

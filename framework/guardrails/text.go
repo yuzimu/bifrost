@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -11,6 +12,50 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
+
+// cloneGuardrailRequest 仅复制会被改写的文本载体，保留原生正文、参数和内部协议字段。
+func cloneGuardrailRequest(req *schemas.BifrostRequest) *schemas.BifrostRequest {
+	next := *req
+	if req.ChatRequest != nil {
+		chat := *req.ChatRequest
+		chat.RawRequestBody = slices.Clone(chat.RawRequestBody)
+		chat.Input = slices.Clone(chat.Input)
+		for i := range chat.Input {
+			chat.Input[i] = schemas.DeepCopyChatMessage(chat.Input[i])
+		}
+		next.ChatRequest = &chat
+	}
+	if req.ResponsesRequest != nil {
+		response := *req.ResponsesRequest
+		response.RawRequestBody = slices.Clone(response.RawRequestBody)
+		response.Input = slices.Clone(response.Input)
+		for i := range response.Input {
+			response.Input[i] = schemas.DeepCopyResponsesMessage(response.Input[i])
+		}
+		if response.Params != nil {
+			params := *response.Params
+			if params.Instructions != nil {
+				params.Instructions = schemas.Ptr(*params.Instructions)
+			}
+			response.Params = &params
+		}
+		next.ResponsesRequest = &response
+	}
+	if req.TextCompletionRequest != nil {
+		text := *req.TextCompletionRequest
+		text.RawRequestBody = slices.Clone(text.RawRequestBody)
+		if text.Input != nil {
+			input := *text.Input
+			if input.PromptStr != nil {
+				input.PromptStr = schemas.Ptr(*input.PromptStr)
+			}
+			input.PromptArray = slices.Clone(input.PromptArray)
+			text.Input = &input
+		}
+		next.TextCompletionRequest = &text
+	}
+	return &next
+}
 
 // syncRawRequest 复用 integration 所有的原生文本协议，不能对整份 JSON 做字符串替换。
 func syncRawRequest(ctx *schemas.BifrostContext, request *schemas.BifrostRequest, result Result) error {

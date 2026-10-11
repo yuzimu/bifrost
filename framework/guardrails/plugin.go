@@ -234,6 +234,21 @@ func (p *Plugin) attachResult(ctx *schemas.BifrostContext, state *requestState, 
 // PreLLMHook 完成输入检查，并在上游开始生成前建立输出流保护。
 func (p *Plugin) PreLLMHook(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) (*schemas.BifrostRequest, *schemas.LLMPluginShortCircuit, error) {
 	s := p.current.Load()
+	if ctx != nil {
+		if previous, id := p.state(ctx, llmStateKey); previous != nil {
+			previous.mu.Lock()
+			s = previous.snapshot
+			if previous.held {
+				if err := ctx.ClearPausedStreamBuffer(); err != nil {
+					previous.mu.Unlock()
+					return req, &schemas.LLMPluginShortCircuit{Error: deny("无法安全更新输出流护栏")}, nil
+				}
+				ctx.ResumeStream()
+			}
+			p.drop(id, previous)
+			previous.mu.Unlock()
+		}
+	}
 	if !s.config.Enabled || len(s.rules) == 0 {
 		return req, nil, nil
 	}
@@ -302,11 +317,7 @@ func (p *Plugin) PreLLMHook(ctx *schemas.BifrostContext, req *schemas.BifrostReq
 			return reject(result.Reason)
 		}
 		if len(result.Rewrites) > 0 {
-			owned, err := cloneStreamValue(req)
-			if err != nil {
-				return reject(err.Error())
-			}
-			req = owned
+			req = cloneGuardrailRequest(req)
 			rows, err = requestRows(req)
 			if err != nil {
 				return reject(err.Error())

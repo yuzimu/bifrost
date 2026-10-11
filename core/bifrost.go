@@ -5770,7 +5770,9 @@ func (bifrost *Bifrost) handleRequest(ctx *schemas.BifrostContext, req *schemas.
 	// (and may mutate other request fields). Mutations commit to req and are observed by
 	// all downstream phases and fallbacks. Plugin errors are non-blocking (logged + skipped).
 	preReqPipeline := bifrost.getPluginPipeline()
-	if guardErr := preReqPipeline.runInputGuardrails(ctx, req); guardErr != nil {
+	var guardErr *schemas.BifrostError
+	req, guardErr = preReqPipeline.runInputGuardrails(ctx, req)
+	if guardErr != nil {
 		bifrost.releasePluginPipeline(preReqPipeline)
 		bifrost.endCoreSpan(setupSpan)
 		return nil, guardErr
@@ -5955,7 +5957,9 @@ func (bifrost *Bifrost) handleStreamRequest(ctx *schemas.BifrostContext, req *sc
 
 	// PreRequestHook: once-per-request phase. See handleRequest for semantics.
 	preReqPipeline := bifrost.getPluginPipeline()
-	if guardErr := preReqPipeline.runInputGuardrails(ctx, req); guardErr != nil {
+	var guardErr *schemas.BifrostError
+	req, guardErr = preReqPipeline.runInputGuardrails(ctx, req)
+	if guardErr != nil {
 		bifrost.releasePluginPipeline(preReqPipeline)
 		return nil, guardErr
 	}
@@ -9111,9 +9115,9 @@ func (p *PluginPipeline) bindGuardrailSnapshot(ctx *schemas.BifrostContext) {
 }
 
 // runInputGuardrails 在路由和缓存之前执行可阻断护栏，不改变普通 pre-request hook 的语义。
-func (p *PluginPipeline) runInputGuardrails(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) *schemas.BifrostError {
+func (p *PluginPipeline) runInputGuardrails(ctx *schemas.BifrostContext, req *schemas.BifrostRequest) (*schemas.BifrostRequest, *schemas.BifrostError) {
 	if skip, _ := ctx.Value(schemas.BifrostContextKeySkipPluginPipeline).(bool); skip {
-		return nil
+		return req, nil
 	}
 	ctx.SetValue(guardrailPreparedContextKey{}, nil)
 	p.bindGuardrailSnapshot(ctx)
@@ -9128,21 +9132,22 @@ func (p *PluginPipeline) runInputGuardrails(ctx *schemas.BifrostContext, req *sc
 				ctx.SetValue(schemas.BifrostContextKeyTraceID, id)
 			}
 		}
-		_, short, err := guardrail.PreLLMHook(ctx, req)
+		next, short, err := guardrail.PreLLMHook(ctx, req)
 		if err != nil {
-			return &schemas.BifrostError{IsBifrostError: true, AllowFallbacks: schemas.Ptr(false),
+			return req, &schemas.BifrostError{IsBifrostError: true, AllowFallbacks: schemas.Ptr(false),
 				StatusCode: schemas.Ptr(403), Error: &schemas.ErrorField{Message: "guardrail evaluation failed"}}
 		}
 		if short != nil {
 			if short.Error != nil {
-				return short.Error
+				return req, short.Error
 			}
-			return &schemas.BifrostError{IsBifrostError: true, AllowFallbacks: schemas.Ptr(false),
+			return req, &schemas.BifrostError{IsBifrostError: true, AllowFallbacks: schemas.Ptr(false),
 				StatusCode: schemas.Ptr(403), Error: &schemas.ErrorField{Message: "guardrail rejected request"}}
 		}
+		req = next
 		ctx.SetValue(guardrailPreparedContextKey{}, guardrail)
 	}
-	return nil
+	return req, nil
 }
 
 // RunLLMPreHooks executes PreHooks in order, tracks how many ran, and returns the final request, any short-circuit decision, and the count.
